@@ -10309,8 +10309,7 @@ body.program-prompt-open { overflow: hidden; }
 
 .program-prompt-btn:focus-visible,
 .program-prompt-continue:focus-visible {
-  outline: 3px solid var(--primary-light);
-  outline-offset: 2px;
+  outline: none;
 }
 
 .program-prompt-btn-title {
