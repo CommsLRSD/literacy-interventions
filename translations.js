@@ -1,5 +1,5 @@
 // ============================================
-// LitLab — Translations (English / French)
+// Literacy Interventions — Translations (English / French)
 // ============================================
 // Assessment Names, Screener Names, and Intervention Names are intentionally
 // NOT translated — they are rendered directly from the JSON data files.
@@ -7,7 +7,7 @@
 const TRANSLATIONS = {
     en: {
         // ── Page title ──
-        page_title: 'LitLab — LRSD Literacy Resource',
+        page_title: 'Literacy Interventions — LRSD Literacy Resource',
 
         // ── Skip link ──
         skip_to_content: 'Skip to content',
@@ -29,15 +29,15 @@ const TRANSLATIONS = {
         // ── PWA install (button, banner, instructions modal) ──
         install_btn: 'Install App',
         install_btn_label: 'Install app',
-        install_banner_region: 'Install LitLab',
-        install_banner_title: 'Install LitLab',
-        install_banner_desc: 'Add LitLab to your device for quick, full-screen access.',
+        install_banner_region: 'Install Literacy Interventions',
+        install_banner_title: 'Install Literacy Interventions',
+        install_banner_desc: 'Add Literacy Interventions to your device for quick, full-screen access.',
         install_banner_install: 'Install',
         install_banner_dismiss: 'Not now',
         install_banner_dismiss_label: 'Dismiss install suggestion',
-        install_modal_title: 'Install LitLab',
+        install_modal_title: 'Install Literacy Interventions',
         install_modal_close_label: 'Close',
-        install_modal_desc: 'Your browser does not offer a one-tap install. Follow these steps to add LitLab to your home screen:',
+        install_modal_desc: 'Your browser does not offer a one-tap install. Follow these steps to add Literacy Interventions to your home screen:',
         install_modal_step1: 'Tap the Share button.',
         install_modal_step2: 'Select \u201cAdd to Home Screen.\u201d',
         install_modal_step3: 'Tap \u201cAdd.\u201d',
@@ -216,7 +216,7 @@ const TRANSLATIONS = {
         about_feedback_btn: 'Provide your feedback',
 
         // ── Footer ──
-        footer_text: '© 2025–2026 LitLab · Louis Riel School Division · Supporting educators in literacy intervention',
+        footer_text: '© 2025–2026 Literacy Interventions · Louis Riel School Division · Supporting educators in literacy intervention',
 
         // ── Selection history / tracker ──
         history_label: 'History',
@@ -340,7 +340,7 @@ const TRANSLATIONS = {
 
     fr: {
         // ── Page title ──
-        page_title: 'LitLab — Ressource en littératie de la DSLR',
+        page_title: 'Literacy Interventions — Ressource en littératie de la DSLR',
 
         // ── Skip link ──
         skip_to_content: 'Passer au contenu',
@@ -362,15 +362,15 @@ const TRANSLATIONS = {
         // ── PWA install (button, banner, instructions modal) ──
         install_btn: 'Installer l\'application',
         install_btn_label: 'Installer l\'application',
-        install_banner_region: 'Installer LitLab',
-        install_banner_title: 'Installer LitLab',
-        install_banner_desc: 'Ajoutez LitLab à votre appareil pour un accès rapide en plein écran.',
+        install_banner_region: 'Installer Literacy Interventions',
+        install_banner_title: 'Installer Literacy Interventions',
+        install_banner_desc: 'Ajoutez Literacy Interventions à votre appareil pour un accès rapide en plein écran.',
         install_banner_install: 'Installer',
         install_banner_dismiss: 'Plus tard',
         install_banner_dismiss_label: 'Masquer la suggestion d\'installation',
-        install_modal_title: 'Installer LitLab',
+        install_modal_title: 'Installer Literacy Interventions',
         install_modal_close_label: 'Fermer',
-        install_modal_desc: 'Votre navigateur n\'offre pas d\'installation en un seul geste. Suivez ces étapes pour ajouter LitLab à votre écran d\'accueil :',
+        install_modal_desc: 'Votre navigateur n\'offre pas d\'installation en un seul geste. Suivez ces étapes pour ajouter Literacy Interventions à votre écran d\'accueil :',
         install_modal_step1: 'Touchez le bouton Partager.',
         install_modal_step2: 'Sélectionnez \u00ab\u00a0Sur l\'écran d\'accueil\u00a0\u00bb.',
         install_modal_step3: 'Touchez \u00ab\u00a0Ajouter\u00a0\u00bb.',
@@ -549,7 +549,7 @@ const TRANSLATIONS = {
         about_feedback_btn: 'Donner votre avis',
 
         // ── Footer ──
-        footer_text: '© 2025–2026 LitLab · Division scolaire Louis-Riel · Soutenir les éducateurs dans les interventions en littératie',
+        footer_text: '© 2025–2026 Literacy Interventions · Division scolaire Louis-Riel · Soutenir les éducateurs dans les interventions en littératie',
 
         // ── Selection history / tracker ──
         history_label: 'Historique',
