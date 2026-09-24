@@ -36,7 +36,9 @@ const appState = {
     rememberedMenuFilters: {},
     programPrompt: {
         pendingProgram: null,
-        onComplete: null
+        onComplete: null,
+        returnToProgramStep: false,
+        previousSelection: null
     }
 };
 
@@ -232,6 +234,7 @@ window.requestTopProgramChange = (program) => requestFlowchartProgramChange(prog
 window.requestTopLanguageChange = (lang) => requestFlowchartLanguageChange(lang);
 window.submitProgramPrompt = submitProgramPrompt;
 window.confirmProgramPromptLanguage = confirmProgramPromptLanguage;
+window.cancelProgramPromptLanguage = cancelProgramPromptLanguage;
 
 // ============================================
 // Initialization
@@ -442,7 +445,30 @@ function closeProgramPrompt() {
     const modal = document.getElementById('program-prompt-modal');
     if (!modal) return;
     modal.hidden = true;
+    modal.dataset.step = 'program';
+    appState.programPrompt.returnToProgramStep = false;
+    appState.programPrompt.previousSelection = null;
     document.body.classList.remove('program-prompt-open');
+}
+
+function setProgramPromptStep(step) {
+    const modal = document.getElementById('program-prompt-modal');
+    const title = document.getElementById('program-prompt-title');
+    const desc = document.getElementById('program-prompt-desc');
+    const backButton = document.getElementById('program-prompt-back');
+    if (!modal || !title || !desc) return;
+    const isLanguageStep = step === 'language';
+    modal.dataset.step = isLanguageStep ? 'language' : 'program';
+    title.textContent = isLanguageStep ? t('program_prompt_language_title') : t('program_prompt_title');
+    desc.textContent = isLanguageStep ? t('program_prompt_language_desc') : t('program_prompt_desc');
+    if (backButton) backButton.hidden = !isLanguageStep;
+}
+
+function focusProgramPromptTarget(selector) {
+    window.requestAnimationFrame(() => {
+        const target = document.querySelector(selector);
+        if (target instanceof HTMLElement) target.focus();
+    });
 }
 
 function openProgramPrompt() {
@@ -452,25 +478,34 @@ function openProgramPrompt() {
     if (!modal) return;
     appState.programPrompt.pendingProgram = null;
     appState.programPrompt.onComplete = null;
+    appState.programPrompt.returnToProgramStep = false;
+    appState.programPrompt.previousSelection = null;
+    setProgramPromptStep('program');
     if (languageBlock) languageBlock.hidden = true;
     if (actions) actions.hidden = false;
     modal.hidden = false;
     document.body.classList.add('program-prompt-open');
+    focusProgramPromptTarget('#program-prompt-actions .program-prompt-btn');
 }
 
-function openProgramLanguagePrompt(program, onComplete) {
+function openProgramLanguagePrompt(program, onComplete, options = {}) {
     const modal = document.getElementById('program-prompt-modal');
     const languageBlock = document.getElementById('program-prompt-language');
-    const languageSelect = document.getElementById('program-prompt-language-select');
     const actions = document.getElementById('program-prompt-actions');
     if (!modal || !languageBlock) return;
     appState.programPrompt.pendingProgram = program;
     appState.programPrompt.onComplete = typeof onComplete === 'function' ? onComplete : null;
-    if (languageSelect) languageSelect.value = appState.language === 'fr' ? 'fr' : 'en';
+    appState.programPrompt.returnToProgramStep = options.returnToProgramStep !== false;
+    appState.programPrompt.previousSelection = {
+        program: appState.selectedProgram,
+        language: appState.language
+    };
+    setProgramPromptStep('language');
     if (actions) actions.hidden = true;
     languageBlock.hidden = false;
     modal.hidden = false;
     document.body.classList.add('program-prompt-open');
+    focusProgramPromptTarget('#program-prompt-language .program-prompt-continue');
 }
 
 function finalizeProgramSelection(program, language) {
@@ -486,23 +521,40 @@ function finalizeProgramSelection(program, language) {
 
 function submitProgramPrompt(program) {
     if (program === PROGRAM_FRENCH_IMMERSION) {
-        openProgramLanguagePrompt(program);
+        openProgramLanguagePrompt(program, null, { returnToProgramStep: true });
         return;
     }
     finalizeProgramSelection(PROGRAM_ENGLISH, 'en');
     closeProgramPrompt();
 }
 
-function confirmProgramPromptLanguage() {
-    const langSelect = document.getElementById('program-prompt-language-select');
+function confirmProgramPromptLanguage(selectedLang) {
     const program = appState.programPrompt.pendingProgram || PROGRAM_FRENCH_IMMERSION;
-    const lang = langSelect && (langSelect.value === 'fr' || langSelect.value === 'en') ? langSelect.value : 'fr';
+    const lang = selectedLang === 'fr' ? 'fr' : 'en';
     finalizeProgramSelection(program, lang);
     const done = appState.programPrompt.onComplete;
     closeProgramPrompt();
     appState.programPrompt.pendingProgram = null;
     appState.programPrompt.onComplete = null;
     if (done) done(lang);
+}
+
+function cancelProgramPromptLanguage() {
+    if (!appState.programPrompt.returnToProgramStep) {
+        const previous = appState.programPrompt.previousSelection;
+        if (previous) {
+            appState.selectedProgram = previous.program;
+            appState.language = previous.language || 'en';
+            applyTranslations();
+            updateTopProgramLangControls();
+        }
+        appState.programPrompt.pendingProgram = null;
+        appState.programPrompt.onComplete = null;
+        closeProgramPrompt();
+        updateTopProgramLangControls();
+        return;
+    }
+    openProgramPrompt();
 }
 
 function setupSubTabs() {
@@ -6854,7 +6906,7 @@ function requestFlowchartProgramChange(program, options = {}) {
         openProgramLanguagePrompt(program, () => {
             initIntegratedFlowchart('tier1');
             refreshVisualFlowchartHeaderControls();
-        });
+        }, { returnToProgramStep: false });
         return;
     }
     const lang = program === PROGRAM_FRENCH_IMMERSION ? (appState.language === 'fr' ? 'fr' : 'en') : 'en';
