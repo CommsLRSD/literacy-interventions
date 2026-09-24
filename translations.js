@@ -83,7 +83,7 @@ const TRANSLATIONS = {
 
         // ── Interventions section ──
         interventions_section_title: 'Teaching Resources',
-        interventions_section_subtitle: 'Quickly filter teaching resources by program, literacy focus, and learner needs',
+        interventions_section_subtitle: 'Quickly filter teaching resources by literacy focus and learner needs',
         wizard_choose_steps: 'Filter to find resources',
         wizard_select_placeholder: 'All',
         wizard_all_pillars: 'All Pillars',
@@ -420,7 +420,7 @@ const TRANSLATIONS = {
 
         // ── Interventions section ──
         interventions_section_title: 'Ressources pédagogiques',
-        interventions_section_subtitle: 'Filtrez rapidement les ressources par programme, domaine de littératie et besoins des élèves',
+        interventions_section_subtitle: 'Filtrez rapidement les ressources par domaine de littératie et besoins des élèves',
         wizard_choose_steps: 'Filtrer pour trouver des ressources',
         wizard_select_placeholder: 'Tous',
         wizard_all_pillars: 'Tous les piliers',
@@ -742,8 +742,8 @@ const FLOWCHART_DEFINITIONS_FR = {
                 subtitle: 'Quel pourcentage d\u2019\u00e9l\u00e8ves est en difficult\u00e9\u00a0?',
                 description: 'D\u2019apr\u00e8s les r\u00e9sultats du d\u00e9pistage, combien d\u2019\u00e9l\u00e8ves sont en dessous du niveau de r\u00e9f\u00e9rence\u00a0?',
                 choices: [
-                    { id: 'more-20', label: '20\u00a0% ou plus', icon: '▲', sublabel: '', type: 'warning', nextNode: 'tier1-move-tier2' },
-                    { id: 'less-20', label: 'Moins de 20\u00a0%', icon: '▼', sublabel: '', type: 'warning', nextNode: 'tier1-reteach' }
+                    { id: 'more-20', label: '20\u00a0% ou plus', icon: '▲', sublabel: '', type: 'warning', nextNode: 'tier1-reteach' },
+                    { id: 'less-20', label: 'Moins de 20\u00a0%', icon: '▼', sublabel: '', type: 'warning', nextNode: 'tier1-move-tier2' }
                 ]
             },
             'tier1-move-tier2': {
@@ -1024,8 +1024,8 @@ const NODE_SUMMARIES_FR = {
         ineffective: { text: 'L\u2019outil de d\u00e9pistage indique Jaune ou Rouge\u00a0\u2014 l\u2019enseignement doit \u00eatre ajust\u00e9 pour cet \u00e9l\u00e8ve. 📋', variant: 'ineffective' }
     },
     'tier1-percentage': {
-        'more-20':   { text: 'Plus de 20\u00a0% des \u00e9l\u00e8ves ne sont pas au niveau de r\u00e9f\u00e9rence\u00a0\u2014 cela pointe vers un \u00e9cart d\u2019enseignement \u00e0 l\u2019\u00e9chelle de la classe. Il est temps d\u2019explorer les soutiens du palier 2\u00a0! 📊', variant: 'ineffective' },
-        'less-20':   { text: 'Moins de 20\u00a0% des \u00e9l\u00e8ves ont besoin d\u2019aide suppl\u00e9mentaire\u00a0\u2014 un r\u00e9enseignement cibl\u00e9 pour un petit groupe est la prochaine \u00e9tape\u00a0! 🔄', variant: 'ineffective' }
+        'more-20':   { text: 'Plus de 20\u00a0% des \u00e9l\u00e8ves ne sont pas au niveau de r\u00e9f\u00e9rence\u00a0\u2014 cela indique un besoin de r\u00e9enseigner l\u2019enseignement de base avec des strat\u00e9gies ajust\u00e9es. 🔄', variant: 'ineffective' },
+        'less-20':   { text: 'Moins de 20\u00a0% des \u00e9l\u00e8ves ont besoin d\u2019aide suppl\u00e9mentaire\u00a0\u2014 la prochaine \u00e9tape est un soutien cibl\u00e9 en petits groupes au palier 2. 📊', variant: 'ineffective' }
     },
     'tier2-principles': {
         text: 'Vous avez \u00e9cart\u00e9 les d\u00e9ficiences visuelles, auditives, les absences, la langue et d\u2019autres obstacles\u00a0\u2014 l\u2019\u00e9l\u00e8ve est pr\u00eat pour une intervention cibl\u00e9e au palier 2\u00a0! ✅',
