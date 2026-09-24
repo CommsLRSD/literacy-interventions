@@ -37,7 +37,8 @@ const appState = {
     programPrompt: {
         pendingProgram: null,
         onComplete: null,
-        returnToProgramStep: false
+        returnToProgramStep: false,
+        previousSelection: null
     }
 };
 
@@ -446,6 +447,7 @@ function closeProgramPrompt() {
     modal.hidden = true;
     modal.dataset.step = 'program';
     appState.programPrompt.returnToProgramStep = false;
+    appState.programPrompt.previousSelection = null;
     document.body.classList.remove('program-prompt-open');
 }
 
@@ -470,6 +472,7 @@ function openProgramPrompt() {
     appState.programPrompt.pendingProgram = null;
     appState.programPrompt.onComplete = null;
     appState.programPrompt.returnToProgramStep = false;
+    appState.programPrompt.previousSelection = null;
     setProgramPromptStep('program');
     if (languageBlock) languageBlock.hidden = true;
     if (actions) actions.hidden = false;
@@ -485,6 +488,10 @@ function openProgramLanguagePrompt(program, onComplete, options = {}) {
     appState.programPrompt.pendingProgram = program;
     appState.programPrompt.onComplete = typeof onComplete === 'function' ? onComplete : null;
     appState.programPrompt.returnToProgramStep = options.returnToProgramStep !== false;
+    appState.programPrompt.previousSelection = {
+        program: appState.selectedProgram,
+        language: appState.language
+    };
     setProgramPromptStep('language');
     if (actions) actions.hidden = true;
     languageBlock.hidden = false;
@@ -525,6 +532,18 @@ function confirmProgramPromptLanguage(selectedLang) {
 
 function cancelProgramPromptLanguage() {
     if (!appState.programPrompt.returnToProgramStep) {
+        const previous = appState.programPrompt.previousSelection;
+        if (previous) {
+            appState.selectedProgram = previous.program;
+            appState.language = previous.language || 'en';
+            applyTranslations();
+            if (appState.selectedProgram) {
+                rerenderForLanguage();
+                applyProgramAcrossApp();
+            } else {
+                updateTopProgramLangControls();
+            }
+        }
         appState.programPrompt.pendingProgram = null;
         appState.programPrompt.onComplete = null;
         closeProgramPrompt();
