@@ -10225,10 +10225,16 @@ body.program-prompt-open { overflow: hidden; }
   line-height: 1.2;
 }
 
-.program-prompt-brand-division {
+.program-prompt-brand-division-wrap {
   width: min(190px, 42%);
-  height: auto;
+  display: flex;
+  justify-content: flex-end;
   flex: 0 0 auto;
+}
+
+.program-prompt-brand-division {
+  width: 100%;
+  height: auto;
 }
 
 .program-prompt-welcome {
@@ -10393,7 +10399,7 @@ body.program-prompt-open { overflow: hidden; }
     align-items: flex-start;
   }
 
-  .program-prompt-brand-division {
+  .program-prompt-brand-division-wrap {
     width: min(210px, 100%);
   }
 }
