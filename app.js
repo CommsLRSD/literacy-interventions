@@ -249,6 +249,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     applyTranslations();
     updateTopProgramLangControls();
 
+    // Program-first onboarding prompt
+    if (!appState.selectedProgram) {
+        openProgramPrompt();
+    } else {
+        applyProgramAcrossApp();
+    }
+
     // Load intervention data
     await loadInterventionData();
     
@@ -283,13 +290,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initialize bubble background on all page sections
     document.querySelectorAll('.content-section').forEach(initBubbles);
-
-    // Program-first onboarding prompt
-    if (!appState.selectedProgram) {
-        openProgramPrompt();
-    } else {
-        applyProgramAcrossApp();
-    }
 
     console.log('Literacy Interventions - Ready!');
 });
@@ -355,7 +355,15 @@ function setupNavigation() {
     });
 }
 
+function ensureProgramSelectionBeforeInteraction() {
+    if (appState.selectedProgram) return true;
+    openProgramPrompt();
+    return false;
+}
+
 function navigateToPage(pageName) {
+    if (!ensureProgramSelectionBeforeInteraction()) return;
+
     // Update state
     appState.currentPage = pageName;
     
@@ -6783,6 +6791,7 @@ function updateScreenerIndicator() {
 
 function openInteractiveFlowchart() {
     console.log('Opening Interactive Flowchart');
+    if (!ensureProgramSelectionBeforeInteraction()) return;
     
     // Show and initialize the flowchart container
     const flowchartContainer = document.getElementById('flowchart-container');
@@ -6791,10 +6800,6 @@ function openInteractiveFlowchart() {
         flowchartContainer.style.display = 'block';
     }
     
-    // Program is chosen from the onboarding prompt/top selector.
-    if (!appState.selectedProgram) {
-        appState.selectedProgram = PROGRAM_ENGLISH;
-    }
     initIntegratedFlowchart('tier1');
     
     // Scroll to the top of the flowchart
@@ -6892,6 +6897,7 @@ function refreshVisualFlowchartHeaderControls() {
 
 function openTierFlowchart(tierName) {
     console.log(`Opening ${tierName} flowchart directly`);
+    if (!ensureProgramSelectionBeforeInteraction()) return;
     
     // Validate tierName
     if (!['tier1', 'tier2', 'tier3'].includes(tierName)) {

@@ -1304,30 +1304,6 @@
                 </button>
             </div>
 
-            <div class="program-prompt-overlay" id="program-prompt-modal" hidden>
-                <div class="program-prompt-card" role="dialog" aria-modal="true" aria-labelledby="program-prompt-title" aria-describedby="program-prompt-desc">
-                    <h2 class="program-prompt-title" id="program-prompt-title" data-i18n="program_prompt_title">Choose your program</h2>
-                    <p class="program-prompt-desc" id="program-prompt-desc" data-i18n="program_prompt_desc">Select which program you are working in.</p>
-                    <div class="program-prompt-actions" id="program-prompt-actions">
-                        <button type="button" class="program-prompt-btn" onclick="submitProgramPrompt('English')">
-                            <span data-i18n="fc_program_english">English</span>
-                        </button>
-                        <button type="button" class="program-prompt-btn" onclick="submitProgramPrompt('French Immersion')">
-                            <span data-i18n="fc_program_french_immersion">French Immersion</span>
-                        </button>
-                    </div>
-                    <div class="program-prompt-language" id="program-prompt-language" hidden>
-                        <label class="program-prompt-language-label" for="program-prompt-language-select" data-i18n="program_prompt_language_label">Choose your language</label>
-                        <select id="program-prompt-language-select" class="program-prompt-language-select">
-                            <option value="en" data-i18n-opt="fc_language_english">English</option>
-                            <option value="fr" data-i18n-opt="fc_language_french">French</option>
-                        </select>
-                        <button type="button" class="program-prompt-continue" onclick="confirmProgramPromptLanguage()">
-                            <span data-i18n="program_prompt_continue">Continue</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
             <div class="install-modal-body">
                 <p class="install-modal-desc" id="install-modal-desc" data-i18n="install_modal_desc">Your browser does not offer a one-tap install. Follow these steps to add Literacy Interventions to your home screen:</p>
                 <ol class="install-modal-steps">
@@ -1349,6 +1325,31 @@
             </div>
             <div class="install-modal-footer">
                 <button class="install-modal-btn" type="button" id="install-modal-done" data-i18n="install_modal_done">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="program-prompt-overlay" id="program-prompt-modal" hidden>
+        <div class="program-prompt-card" role="dialog" aria-modal="true" aria-labelledby="program-prompt-title" aria-describedby="program-prompt-desc">
+            <h2 class="program-prompt-title" id="program-prompt-title" data-i18n="program_prompt_title">Choose your program</h2>
+            <p class="program-prompt-desc" id="program-prompt-desc" data-i18n="program_prompt_desc">Select which program you are working in.</p>
+            <div class="program-prompt-actions" id="program-prompt-actions">
+                <button type="button" class="program-prompt-btn" onclick="submitProgramPrompt('English')">
+                    <span data-i18n="fc_program_english">English</span>
+                </button>
+                <button type="button" class="program-prompt-btn" onclick="submitProgramPrompt('French Immersion')">
+                    <span data-i18n="fc_program_french_immersion">French Immersion</span>
+                </button>
+            </div>
+            <div class="program-prompt-language" id="program-prompt-language" hidden>
+                <label class="program-prompt-language-label" for="program-prompt-language-select" data-i18n="program_prompt_language_label">Choose your language</label>
+                <select id="program-prompt-language-select" class="program-prompt-language-select">
+                    <option value="en" data-i18n-opt="fc_language_english">English</option>
+                    <option value="fr" data-i18n-opt="fc_language_french">French</option>
+                </select>
+                <button type="button" class="program-prompt-continue" onclick="confirmProgramPromptLanguage()">
+                    <span data-i18n="program_prompt_continue">Continue</span>
+                </button>
             </div>
         </div>
     </div>
