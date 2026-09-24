@@ -10182,57 +10182,206 @@ body.install-modal-open { overflow: hidden; }
 body.program-prompt-open { overflow: hidden; }
 
 .program-prompt-card {
-  width: min(460px, 100%);
-  background: var(--bg);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  padding: var(--space-xl);
+  position: relative;
+  width: min(560px, 100%);
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.98) 38%),
+    linear-gradient(145deg, rgba(14, 167, 180, 0.18), rgba(246, 174, 8, 0.18) 48%, rgba(238, 95, 72, 0.16));
+  border: 1px solid rgba(12, 49, 90, 0.08);
+  border-radius: calc(var(--radius-lg) + 8px);
+  box-shadow: 0 24px 60px rgba(12, 49, 90, 0.18);
+  padding: clamp(1.35rem, 3vw, 2rem);
+}
+
+.program-prompt-spark {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.program-prompt-spark-a {
+  width: 170px;
+  height: 170px;
+  top: -75px;
+  right: -48px;
+  background: radial-gradient(circle, rgba(246, 174, 8, 0.28) 0%, rgba(246, 174, 8, 0) 72%);
+}
+
+.program-prompt-spark-b {
+  width: 210px;
+  height: 210px;
+  bottom: -118px;
+  left: -76px;
+  background: radial-gradient(circle, rgba(14, 167, 180, 0.24) 0%, rgba(14, 167, 180, 0) 70%);
+}
+
+.program-prompt-badge {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: var(--space-sm);
+  padding: 0.38rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow: var(--shadow-sm);
+}
+
+.program-prompt-badge::before {
+  content: "✨";
 }
 
 .program-prompt-title {
+  position: relative;
+  z-index: 1;
   margin-bottom: var(--space-xs);
   color: var(--primary);
+  font-size: clamp(1.65rem, 3vw, 2.15rem);
 }
 
 .program-prompt-desc {
+  position: relative;
+  z-index: 1;
   color: var(--text-secondary);
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-lg);
+  max-width: 34rem;
+  line-height: 1.55;
 }
 
 .program-prompt-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-sm);
+  gap: var(--space-md);
 }
 
 .program-prompt-btn,
 .program-prompt-continue {
-  border: 1px solid var(--primary);
-  background: var(--primary);
-  color: #fff;
-  border-radius: var(--radius);
-  padding: 0.65rem 0.75rem;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  min-height: 100%;
+  border: 1px solid rgba(12, 49, 90, 0.1);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--text);
+  border-radius: calc(var(--radius) + 6px);
+  padding: 1rem 1rem 1.05rem;
   font-weight: 700;
-  text-align: center;
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease),
+    border-color var(--duration) var(--ease),
+    background var(--duration) var(--ease);
+}
+
+.program-prompt-btn:hover,
+.program-prompt-btn:focus-visible,
+.program-prompt-continue:hover,
+.program-prompt-continue:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(14, 167, 180, 0.35);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 16px 30px rgba(12, 49, 90, 0.12);
+}
+
+.program-prompt-btn:first-child {
+  background: linear-gradient(180deg, rgba(218, 241, 243, 0.95), rgba(255, 255, 255, 0.95));
+}
+
+.program-prompt-btn:last-child {
+  background: linear-gradient(180deg, rgba(254, 242, 218, 0.96), rgba(255, 255, 255, 0.95));
+}
+
+.program-prompt-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(12, 49, 90, 0.06);
+  font-size: 1.3rem;
+}
+
+.program-prompt-btn-title {
+  color: var(--primary);
+  font-size: 1.05rem;
+}
+
+.program-prompt-btn-desc {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.45;
 }
 
 .program-prompt-language {
-  margin-top: var(--space-md);
+  position: relative;
+  z-index: 1;
+  margin-top: var(--space-xs);
   display: grid;
-  gap: var(--space-sm);
+  gap: var(--space-md);
 }
 
 .program-prompt-language-label {
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--primary);
 }
 
-.program-prompt-language-select {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.55rem 0.65rem;
-  background: var(--bg);
+.program-prompt-language-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+.program-prompt-continue:first-child {
+  background: linear-gradient(180deg, rgba(218, 241, 243, 0.95), rgba(255, 255, 255, 0.95));
+}
+
+.program-prompt-continue:last-child {
+  background: linear-gradient(180deg, rgba(252, 231, 227, 0.95), rgba(255, 255, 255, 0.95));
+}
+
+.program-prompt-back {
+  justify-self: start;
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-weight: 800;
+  padding: 0.1rem 0;
+}
+
+.program-prompt-back:hover,
+.program-prompt-back:focus-visible {
+  color: var(--primary-light);
+}
+
+#program-prompt-modal[data-step="language"] .program-prompt-card {
+  width: min(520px, 100%);
+}
+
+@media (max-width: 640px) {
+  .program-prompt-actions,
+  .program-prompt-language-options {
+    grid-template-columns: 1fr;
+  }
+
+  .program-prompt-card {
+    padding: 1.2rem;
+  }
 }
 
 /* Respect users who prefer reduced motion: show/hide without movement. */
@@ -10240,9 +10389,17 @@ body.program-prompt-open { overflow: hidden; }
   .install-banner,
   .install-modal-overlay,
   .install-modal,
-  .install-app-btn {
+  .install-app-btn,
+  .program-prompt-btn,
+  .program-prompt-continue {
     transition: none;
   }
   .install-banner { transform: translate(-50%, 0); }
   .install-modal { transform: none; }
+  .program-prompt-btn:hover,
+  .program-prompt-btn:focus-visible,
+  .program-prompt-continue:hover,
+  .program-prompt-continue:focus-visible {
+    transform: none;
+  }
 }
