@@ -44,6 +44,8 @@ const STORAGE_KEY_PREFIX = 'literacy-interventions';
 const LEGACY_STORAGE_KEY_PREFIX = 'litlab';
 const PROGRAM_ENGLISH = 'English';
 const PROGRAM_FRENCH_IMMERSION = 'French Immersion';
+const PROGRAM_PREFERENCE_KEY = `${STORAGE_KEY_PREFIX}-program-preference`;
+const LEGACY_PROGRAM_PREFERENCE_KEY = `${LEGACY_STORAGE_KEY_PREFIX}-program-preference`;
 
 function getStoredValue(storage, key, legacyKey) {
     try {
@@ -62,6 +64,37 @@ function getStoredValue(storage, key, legacyKey) {
 function setStoredValue(storage, key, value) {
     try {
         storage.setItem(key, value);
+    } catch (e) {
+        // Ignore storage failures so the UI still works for the current visit.
+    }
+}
+
+function normalizeProgramLanguage(program, language) {
+    const normalizedProgram = program === PROGRAM_FRENCH_IMMERSION ? PROGRAM_FRENCH_IMMERSION : PROGRAM_ENGLISH;
+    if (normalizedProgram === PROGRAM_ENGLISH) return 'en';
+    return language === 'fr' ? 'fr' : 'en';
+}
+
+function getStoredProgramPreference() {
+    try {
+        const raw = getStoredValue(localStorage, PROGRAM_PREFERENCE_KEY, LEGACY_PROGRAM_PREFERENCE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        const program = parsed.program === PROGRAM_FRENCH_IMMERSION ? PROGRAM_FRENCH_IMMERSION : PROGRAM_ENGLISH;
+        const language = normalizeProgramLanguage(program, parsed.language);
+        return { program, language };
+    } catch (e) {
+        return null;
+    }
+}
+
+function storeProgramPreference(program, language) {
+    try {
+        setStoredValue(localStorage, PROGRAM_PREFERENCE_KEY, JSON.stringify({
+            program,
+            language: normalizeProgramLanguage(program, language)
+        }));
     } catch (e) {
         // Ignore storage failures so the UI still works for the current visit.
     }
@@ -206,6 +239,12 @@ window.confirmProgramPromptLanguage = confirmProgramPromptLanguage;
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Literacy Interventions - Initializing...');
 
+    const storedPreference = getStoredProgramPreference();
+    if (storedPreference) {
+        appState.selectedProgram = storedPreference.program;
+        appState.language = storedPreference.language;
+    }
+
     // Apply initial translations (English by default) and sync controls
     applyTranslations();
     updateTopProgramLangControls();
@@ -246,7 +285,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.content-section').forEach(initBubbles);
 
     // Program-first onboarding prompt
-    openProgramPrompt();
+    if (!appState.selectedProgram) {
+        openProgramPrompt();
+    } else {
+        applyProgramAcrossApp();
+    }
 
     console.log('Literacy Interventions - Ready!');
 });
@@ -381,7 +424,6 @@ function applyProgramAcrossApp() {
     if (schedulesData) renderScheduleCalendar(schedulesData);
     updateProgramScopedContent();
     updateTopProgramLangControls();
-    refreshProgramLangMiniUI();
 }
 
 function shouldConfirmProgramSwitch() {
@@ -426,7 +468,8 @@ function openProgramLanguagePrompt(program, onComplete) {
 function finalizeProgramSelection(program, language) {
     appState.selectedProgram = program;
     appState.selectedScreener = null;
-    appState.language = language || (program === PROGRAM_FRENCH_IMMERSION ? 'fr' : 'en');
+    appState.language = normalizeProgramLanguage(program, language || (program === PROGRAM_FRENCH_IMMERSION ? 'fr' : 'en'));
+    storeProgramPreference(appState.selectedProgram, appState.language);
     applyTranslations();
     updateTopProgramLangControls();
     rerenderForLanguage();
@@ -1074,8 +1117,8 @@ const FLOWCHART_DEFINITIONS = {
                 subtitle: 'What percentage of students are unsuccessful?',
                 description: 'Based on screener results, how many students are below benchmark?',
                 choices: [
-                    { id: 'more-20', label: '20% or more', icon: '▲', sublabel: '', type: 'warning', nextNode: 'tier1-move-tier2' },
-                    { id: 'less-20', label: 'Fewer than 20%', icon: '▼', sublabel: '', type: 'warning', nextNode: 'tier1-reteach' }
+                    { id: 'more-20', label: '20% or more', icon: '▲', sublabel: '', type: 'warning', nextNode: 'tier1-reteach' },
+                    { id: 'less-20', label: 'Fewer than 20%', icon: '▼', sublabel: '', type: 'warning', nextNode: 'tier1-move-tier2' }
                 ],
                 // Once a choice is made, the completed card should show only the
                 // chosen option's own text as its title — no separate generic
@@ -1395,7 +1438,6 @@ function initIntegratedFlowchart(tierId) {
             <div class="flowchart-content-area" id="flowchart-content">
                 <div class="journey-shell${showTier1SuccessSidebar ? ' journey-shell-tier1' : ''}">
                     <div class="fc-sidebar-col">
-                        ${renderProgramLangMiniHtml()}
                         ${showTier1SuccessSidebar ? `
                         <aside class="tier1-success-sidebar" aria-label="Tier 1 instruction effectiveness guidance">
                             <div class="tier1-success-sidebar-head">
@@ -2105,9 +2147,9 @@ function getVisualFlowchartEntries() {
 }
 
 // The visual pathway modal's header carries its own copy of the "Your
-// Decisions" view switcher (standard / summary / visual) plus the program
-// and language mini selector, since the underlying panel is made inert while
-// the modal is open and would otherwise be unreachable.
+// Decisions" view switcher (standard / summary / visual), since the
+// underlying panel is made inert while the modal is open and would otherwise
+// be unreachable.
 function renderVisualFlowchartHeaderControlsHtml() {
     // The visual pathway is itself the currently active view whenever this
     // header renders, so only its button is pressed — layoutMode here just
@@ -2126,7 +2168,6 @@ function renderVisualFlowchartHeaderControlsHtml() {
                     <span class="material-symbols-rounded layout-toggle-icon-visual" aria-hidden="true" translate="no">account_tree</span>
                 </button>
             </div>
-            ${renderProgramLangMiniHtml('visual-flowchart-program-lang-mini')}
         </div>`;
 }
 
@@ -4068,8 +4109,8 @@ const NODE_SUMMARIES = {
         ineffective: { text: 'The literacy screener showed Yellow or Red — instruction needs some adjustment for this student. 📋', variant: 'ineffective' }
     },
     'tier1-percentage': {
-        'more-20':   { text: 'More than 20% of students aren\'t at benchmark — this points to a whole-class instructional gap. Time to look at Tier 2 supports! 📊', variant: 'ineffective' },
-        'less-20':   { text: 'Fewer than 20% of students need extra help — targeted reteaching for a small group is the next step! 🔄', variant: 'ineffective' }
+        'more-20':   { text: 'More than 20% of students aren\'t at benchmark — this points to a whole-class instructional gap, so reteach core instruction with adjusted strategies next. 🔄', variant: 'ineffective' },
+        'less-20':   { text: 'Fewer than 20% of students need extra help — the next step is targeted Tier 2 small-group support. 📊', variant: 'ineffective' }
     },
 
     // ── Tier 2 ──
@@ -6782,35 +6823,6 @@ function getProgramLanguageFilter() {
     return appState.selectedProgram === PROGRAM_FRENCH_IMMERSION ? '' : PROGRAM_ENGLISH;
 }
 
-// Small, sleek program/language selector rendered beside the flowchart
-// (above the Tier 1 success sidebar, or above the decision-summary panel on
-// other tiers) so switching programs never requires a full takeover screen.
-function renderProgramLangMiniHtml(id = 'program-lang-mini') {
-    const program = appState.selectedProgram || PROGRAM_ENGLISH;
-    const isFrench = program === PROGRAM_FRENCH_IMMERSION;
-    const lang = appState.language === 'fr' ? 'fr' : 'en';
-
-    return `
-        <div class="program-lang-mini" id="${escapeAttr(id)}">
-            <div class="program-lang-mini-field">
-                <span class="program-lang-mini-label">${escapeHtml(t('fc_program_mini_label'))}</span>
-                <select class="program-lang-mini-select" aria-label="${escapeAttr(t('fc_program_mini_label'))}" onchange="requestFlowchartProgramChange(this.value)">
-                    <option value="English"${!isFrench ? ' selected' : ''}>${escapeHtml(t('fc_program_english'))}</option>
-                    <option value="${PROGRAM_FRENCH_IMMERSION}"${isFrench ? ' selected' : ''}>${escapeHtml(t('fc_program_french_immersion'))}</option>
-                </select>
-            </div>
-            ${isFrench ? `
-            <div class="program-lang-mini-field">
-                <span class="program-lang-mini-label">${escapeHtml(t('fc_language_mini_label'))}</span>
-                <select class="program-lang-mini-select" aria-label="${escapeAttr(t('fc_language_mini_label'))}" onchange="requestFlowchartLanguageChange(this.value)">
-                    <option value="en"${lang === 'en' ? ' selected' : ''}>${escapeHtml(t('fc_language_english'))}</option>
-                    <option value="fr"${lang === 'fr' ? ' selected' : ''}>${escapeHtml(t('fc_language_french'))}</option>
-                </select>
-            </div>` : ''}
-        </div>
-    `;
-}
-
 // True once the user has made at least one choice in the current flowchart
 // session (as opposed to simply sitting on the very first step).
 function hasFlowchartProgress() {
@@ -6818,15 +6830,6 @@ function hasFlowchartProgress() {
     if (!vf) return false;
     return (vf.selectedPath && vf.selectedPath.length > 1) ||
         (vf.choices && Object.keys(vf.choices).length > 0);
-}
-
-// Re-render every mini selector instance in place (the panel copy and, when
-// open, the visual pathway header copy) — used to reset a <select> back to
-// its previous value when the user cancels the reset-confirmation dialog.
-function refreshProgramLangMiniUI() {
-    document.querySelectorAll('.program-lang-mini').forEach(mini => {
-        mini.outerHTML = renderProgramLangMiniHtml(mini.id);
-    });
 }
 
 // Called when the user picks a different program in the mini selector. If
@@ -6839,7 +6842,6 @@ function requestFlowchartProgramChange(program, options = {}) {
         const ok = window.confirm(t('fc_program_change_confirm'));
         if (!ok) {
             updateTopProgramLangControls();
-            refreshProgramLangMiniUI();
             return;
         }
     }
@@ -6865,7 +6867,6 @@ function requestFlowchartLanguageChange(lang) {
         const ok = window.confirm(t('fc_program_change_confirm'));
         if (!ok) {
             updateTopProgramLangControls();
-            refreshProgramLangMiniUI();
             return;
         }
     }
@@ -7311,19 +7312,15 @@ function getResourceUrlLang(item, url) {
 // options always reflect the other filters currently applied, then re-render
 // the results.
 function renderMenuFilterOptions() {
-    const programSel = document.getElementById('filter-program');
     const pillarSel = document.getElementById('filter-pillar');
     const typeSel = document.getElementById('filter-type');
     const screenerSel = document.getElementById('filter-screener');
     const subtestSel = document.getElementById('filter-subtest');
     const gradeSel = document.getElementById('filter-grade');
     const evidenceSel = document.getElementById('filter-evidence');
-    if (!programSel || !pillarSel || !typeSel || !screenerSel) return;
+    if (!pillarSel || !typeSel || !screenerSel) return;
 
     if (gradeSel) gradeSel.innerHTML = buildFacetOptionsHtml(distinctGradeValues(menuState), menuState.grade, translateGrade);
-    programSel.innerHTML = MENU_LANGUAGE_VALUES.map(value => `<option value="${escapeAttr(value)}"${value === menuState.program ? ' selected' : ''}>${escapeHtml(value === PROGRAM_FRENCH_IMMERSION ? t('filter_language_french') : value)}</option>`).join('');
-    programSel.value = appState.selectedProgram || MENU_LANGUAGE_DEFAULT;
-    programSel.disabled = true;
     pillarSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'pillar'), menuState.pillar, translatePillar);
     typeSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'resourceType'), menuState.resourceType, translateResourceType);
     screenerSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'screener'), menuState.screener);
@@ -7371,7 +7368,6 @@ function buildResourceCardHtml(item) {
 const MENU_FILTER_CHIP_FIELDS = [
     { field: 'pillar', labelKey: 'filter_pillar_label', format: (v) => translatePillar(v) },
     { field: 'resourceType', labelKey: 'filter_type_label', format: (v) => translateResourceType(v) },
-    { field: 'program', labelKey: 'filter_language_label', format: (v) => (v === PROGRAM_FRENCH_IMMERSION ? t('filter_language_french') : v) },
     { field: 'screener', labelKey: 'filter_screener_label' },
     { field: 'subtest', labelKey: 'filter_subtest_label' },
     { field: 'tier', labelKey: 'filter_tier_label', format: (v) => t('filter_tier_option')(v) },
@@ -7391,11 +7387,6 @@ function renderActiveFilterChips() {
         .map(def => {
             const raw = menuState[def.field];
             const value = def.format ? def.format(raw) : raw;
-            // Language always has a value (it's a toggle), so it is shown but
-            // cannot be removed from here.
-            if (def.field === 'program') {
-                return `<span class="active-filter-item active-filter-item-static">${escapeHtml(value)}</span>`;
-            }
             return `<button type="button" class="active-filter-item" onclick="clearMenuFilter('${escapeAttr(def.field)}')" title="${escapeHtml(t('filter_remove_filter'))}">${escapeHtml(value)}</button>`;
         });
 
@@ -7418,7 +7409,6 @@ function clearMenuFilter(field) {
 // or a reset, where the change didn't originate from the control itself).
 function syncMenuFilterControls() {
     [
-        ['filter-program', 'program'],
         ['filter-pillar', 'pillar'],
         ['filter-type', 'resourceType'],
         ['filter-screener', 'screener'],
