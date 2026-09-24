@@ -36,7 +36,8 @@ const appState = {
     rememberedMenuFilters: {},
     programPrompt: {
         pendingProgram: null,
-        onComplete: null
+        onComplete: null,
+        returnToProgramStep: false
     }
 };
 
@@ -444,6 +445,7 @@ function closeProgramPrompt() {
     if (!modal) return;
     modal.hidden = true;
     modal.dataset.step = 'program';
+    appState.programPrompt.returnToProgramStep = false;
     document.body.classList.remove('program-prompt-open');
 }
 
@@ -467,6 +469,7 @@ function openProgramPrompt() {
     if (!modal) return;
     appState.programPrompt.pendingProgram = null;
     appState.programPrompt.onComplete = null;
+    appState.programPrompt.returnToProgramStep = false;
     setProgramPromptStep('program');
     if (languageBlock) languageBlock.hidden = true;
     if (actions) actions.hidden = false;
@@ -474,13 +477,14 @@ function openProgramPrompt() {
     document.body.classList.add('program-prompt-open');
 }
 
-function openProgramLanguagePrompt(program, onComplete) {
+function openProgramLanguagePrompt(program, onComplete, options = {}) {
     const modal = document.getElementById('program-prompt-modal');
     const languageBlock = document.getElementById('program-prompt-language');
     const actions = document.getElementById('program-prompt-actions');
     if (!modal || !languageBlock) return;
     appState.programPrompt.pendingProgram = program;
     appState.programPrompt.onComplete = typeof onComplete === 'function' ? onComplete : null;
+    appState.programPrompt.returnToProgramStep = options.returnToProgramStep !== false;
     setProgramPromptStep('language');
     if (actions) actions.hidden = true;
     languageBlock.hidden = false;
@@ -501,7 +505,7 @@ function finalizeProgramSelection(program, language) {
 
 function submitProgramPrompt(program) {
     if (program === PROGRAM_FRENCH_IMMERSION) {
-        openProgramLanguagePrompt(program);
+        openProgramLanguagePrompt(program, null, { returnToProgramStep: true });
         return;
     }
     finalizeProgramSelection(PROGRAM_ENGLISH, 'en');
@@ -520,7 +524,7 @@ function confirmProgramPromptLanguage(selectedLang) {
 }
 
 function cancelProgramPromptLanguage() {
-    if (appState.programPrompt.onComplete) {
+    if (!appState.programPrompt.returnToProgramStep) {
         appState.programPrompt.pendingProgram = null;
         appState.programPrompt.onComplete = null;
         closeProgramPrompt();
@@ -6879,7 +6883,7 @@ function requestFlowchartProgramChange(program, options = {}) {
         openProgramLanguagePrompt(program, () => {
             initIntegratedFlowchart('tier1');
             refreshVisualFlowchartHeaderControls();
-        });
+        }, { returnToProgramStep: false });
         return;
     }
     const lang = program === PROGRAM_FRENCH_IMMERSION ? (appState.language === 'fr' ? 'fr' : 'en') : 'en';

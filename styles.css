@@ -10335,10 +10335,18 @@ body.program-prompt-open { overflow: hidden; }
   gap: var(--space-md);
 }
 
+.program-prompt-language-group {
+  border: none;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+}
+
 .program-prompt-language-label {
   font-size: 0.98rem;
   font-weight: 700;
   color: var(--primary);
+  margin-bottom: var(--space-sm);
 }
 
 .program-prompt-language-options {
