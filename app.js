@@ -464,6 +464,13 @@ function setProgramPromptStep(step) {
     if (backButton) backButton.hidden = !isLanguageStep;
 }
 
+function focusProgramPromptTarget(selector) {
+    window.requestAnimationFrame(() => {
+        const target = document.querySelector(selector);
+        if (target instanceof HTMLElement) target.focus();
+    });
+}
+
 function openProgramPrompt() {
     const modal = document.getElementById('program-prompt-modal');
     const languageBlock = document.getElementById('program-prompt-language');
@@ -478,6 +485,7 @@ function openProgramPrompt() {
     if (actions) actions.hidden = false;
     modal.hidden = false;
     document.body.classList.add('program-prompt-open');
+    focusProgramPromptTarget('#program-prompt-actions .program-prompt-btn');
 }
 
 function openProgramLanguagePrompt(program, onComplete, options = {}) {
@@ -497,6 +505,7 @@ function openProgramLanguagePrompt(program, onComplete, options = {}) {
     languageBlock.hidden = false;
     modal.hidden = false;
     document.body.classList.add('program-prompt-open');
+    focusProgramPromptTarget('#program-prompt-language .program-prompt-continue');
 }
 
 function finalizeProgramSelection(program, language) {
@@ -537,12 +546,7 @@ function cancelProgramPromptLanguage() {
             appState.selectedProgram = previous.program;
             appState.language = previous.language || 'en';
             applyTranslations();
-            if (appState.selectedProgram) {
-                rerenderForLanguage();
-                applyProgramAcrossApp();
-            } else {
-                updateTopProgramLangControls();
-            }
+            updateTopProgramLangControls();
         }
         appState.programPrompt.pendingProgram = null;
         appState.programPrompt.onComplete = null;
