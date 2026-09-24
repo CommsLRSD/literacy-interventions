@@ -54,10 +54,22 @@
                     <span class="install-app-btn-label" data-i18n="install_btn">Install App</span>
                 </button>
 
-                <!-- Language toggle -->
-                <button class="lang-toggle-btn" id="lang-toggle-btn" onclick="toggleLanguage()" aria-label="Switch to French" data-i18n-aria="nav_lang_toggle_label">
-                    <span class="lang-toggle-code" id="lang-toggle-code">FR</span>
-                </button>
+                <div class="top-program-lang" id="top-program-lang">
+                    <label class="top-program-lang-field" for="top-program-select">
+                        <span class="top-program-lang-label" data-i18n="fc_program_mini_label">Program</span>
+                        <select id="top-program-select" class="top-program-lang-select" onchange="requestTopProgramChange(this.value)" aria-label="Program">
+                            <option value="English" data-i18n-opt="fc_program_english">English</option>
+                            <option value="French Immersion" data-i18n-opt="fc_program_french_immersion">French Immersion</option>
+                        </select>
+                    </label>
+                    <label class="top-program-lang-field" for="top-language-select">
+                        <span class="top-program-lang-label" data-i18n="fc_language_mini_label">Language</span>
+                        <select id="top-language-select" class="top-program-lang-select" onchange="requestTopLanguageChange(this.value)" aria-label="Language">
+                            <option value="en" data-i18n-opt="fc_language_english">English</option>
+                            <option value="fr" data-i18n-opt="fc_language_french">French</option>
+                        </select>
+                    </label>
+                </div>
 
                 <!-- Mobile menu button -->
                 <button class="mobile-menu-btn" aria-label="Open navigation menu" aria-expanded="false">
@@ -462,7 +474,7 @@
                         </div>
                     </div>
 
-                    <div class="resource-group">
+                    <div class="resource-group" data-program-scope="English">
                         <h3 class="resource-group-title">
                             <span class="material-symbols-rounded" aria-hidden="true" translate="no">menu_book</span>
                             <span data-i18n="resources_group_english">English program</span>
@@ -481,7 +493,7 @@
                         </div>
                     </div>
 
-                    <div class="resource-group">
+                    <div class="resource-group" data-program-scope="French Immersion">
                         <h3 class="resource-group-title">
                             <span class="material-symbols-rounded" aria-hidden="true" translate="no">translate</span>
                             <span data-i18n="resources_group_french">Français et immersion française</span>
@@ -1294,6 +1306,31 @@
                         aria-label="Close" data-i18n-aria="install_modal_close_label">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
                 </button>
+            </div>
+
+            <div class="program-prompt-overlay" id="program-prompt-modal" hidden>
+                <div class="program-prompt-card" role="dialog" aria-modal="true" aria-labelledby="program-prompt-title" aria-describedby="program-prompt-desc">
+                    <h2 class="program-prompt-title" id="program-prompt-title" data-i18n="program_prompt_title">Choose your program</h2>
+                    <p class="program-prompt-desc" id="program-prompt-desc" data-i18n="program_prompt_desc">Select which program you are working in.</p>
+                    <div class="program-prompt-actions" id="program-prompt-actions">
+                        <button type="button" class="program-prompt-btn" onclick="submitProgramPrompt('English')">
+                            <span data-i18n="fc_program_english">English</span>
+                        </button>
+                        <button type="button" class="program-prompt-btn" onclick="submitProgramPrompt('French Immersion')">
+                            <span data-i18n="fc_program_french_immersion">French Immersion</span>
+                        </button>
+                    </div>
+                    <div class="program-prompt-language" id="program-prompt-language" hidden>
+                        <label class="program-prompt-language-label" for="program-prompt-language-select" data-i18n="program_prompt_language_label">Choose your language</label>
+                        <select id="program-prompt-language-select" class="program-prompt-language-select">
+                            <option value="en" data-i18n-opt="fc_language_english">English</option>
+                            <option value="fr" data-i18n-opt="fc_language_french">French</option>
+                        </select>
+                        <button type="button" class="program-prompt-continue" onclick="confirmProgramPromptLanguage()">
+                            <span data-i18n="program_prompt_continue">Continue</span>
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="install-modal-body">
                 <p class="install-modal-desc" id="install-modal-desc" data-i18n="install_modal_desc">Your browser does not offer a one-tap install. Follow these steps to add Literacy Interventions to your home screen:</p>

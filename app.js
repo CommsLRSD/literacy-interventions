@@ -20,11 +20,9 @@ const appState = {
     // are never forced to re-choose it). Stored as the intervention-menu
     // screener_id, e.g. "DIBELS".
     selectedScreener: null,
-    // Program chosen for the flowchart: 'English' or 'French Immersion'.
-    // Gates which screeners/assessments/interventions are offered throughout
-    // the whole flowchart. Defaults to English; the user can switch it at
-    // any time via the small program/language selector beside the flowchart.
-    selectedProgram: 'English',
+    // Program chosen for the app: 'English' or 'French Immersion'.
+    // A landing prompt collects this choice before normal browsing.
+    selectedProgram: null,
     // Visual flowchart state
     visualFlowchart: {
         nodes: [],
@@ -35,11 +33,17 @@ const appState = {
     visualFlowchartModal: null,
     // Filters last chosen in the Interventions Menu (or a flowchart drilldown),
     // shared between both so context carries over between them.
-    rememberedMenuFilters: {}
+    rememberedMenuFilters: {},
+    programPrompt: {
+        pendingProgram: null,
+        onComplete: null
+    }
 };
 
 const STORAGE_KEY_PREFIX = 'literacy-interventions';
 const LEGACY_STORAGE_KEY_PREFIX = 'litlab';
+const PROGRAM_ENGLISH = 'English';
+const PROGRAM_FRENCH_IMMERSION = 'French Immersion';
 
 function getStoredValue(storage, key, legacyKey) {
     try {
@@ -141,19 +145,19 @@ function applyTranslations() {
 function toggleLanguage() {
     appState.language = appState.language === 'en' ? 'fr' : 'en';
     applyTranslations();
-    updateLanguageToggleBtn();
+    updateTopProgramLangControls();
     rerenderForLanguage();
 }
 
-// Sync the language toggle button label to the current language.
-function updateLanguageToggleBtn() {
-    const btn = document.getElementById('lang-toggle-btn');
-    const code = document.getElementById('lang-toggle-code');
-    if (!btn) return;
-    const label = t('nav_lang_toggle_label');
-    btn.setAttribute('aria-label', label);
-    if (code) code.textContent = t('nav_lang_code');
-    btn.classList.toggle('lang-active-fr', appState.language === 'fr');
+function updateTopProgramLangControls() {
+    const programSelect = document.getElementById('top-program-select');
+    const languageSelect = document.getElementById('top-language-select');
+    const languageField = languageSelect?.closest('.top-program-lang-field');
+    if (programSelect) programSelect.value = appState.selectedProgram || PROGRAM_ENGLISH;
+    if (languageSelect) languageSelect.value = appState.language === 'fr' ? 'fr' : 'en';
+    if (languageField) {
+        languageField.hidden = appState.selectedProgram !== PROGRAM_FRENCH_IMMERSION;
+    }
 }
 
 // Re-render any dynamic sections that are currently visible so they pick up
@@ -191,6 +195,10 @@ function refreshWizardSelectPlaceholders() {
 }
 
 window.toggleLanguage = toggleLanguage;
+window.requestTopProgramChange = (program) => requestFlowchartProgramChange(program, { promptLanguageChoice: true });
+window.requestTopLanguageChange = (lang) => requestFlowchartLanguageChange(lang);
+window.submitProgramPrompt = submitProgramPrompt;
+window.confirmProgramPromptLanguage = confirmProgramPromptLanguage;
 
 // ============================================
 // Initialization
@@ -198,9 +206,9 @@ window.toggleLanguage = toggleLanguage;
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Literacy Interventions - Initializing...');
 
-    // Apply initial translations (English by default) and sync lang toggle
+    // Apply initial translations (English by default) and sync controls
     applyTranslations();
-    updateLanguageToggleBtn();
+    updateTopProgramLangControls();
 
     // Load intervention data
     await loadInterventionData();
@@ -236,6 +244,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initialize bubble background on all page sections
     document.querySelectorAll('.content-section').forEach(initBubbles);
+
+    // Program-first onboarding prompt
+    openProgramPrompt();
 
     console.log('Literacy Interventions - Ready!');
 });
@@ -341,6 +352,106 @@ function navigateToPage(pageName) {
     
     // Smooth scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function getScheduleProgramIdForSelection(program) {
+    return program === PROGRAM_FRENCH_IMMERSION ? 'french' : 'english';
+}
+
+function updateProgramScopedContent() {
+    const selected = appState.selectedProgram || PROGRAM_ENGLISH;
+    document.querySelectorAll('[data-program-scope]').forEach(el => {
+        el.hidden = el.getAttribute('data-program-scope') !== selected;
+    });
+}
+
+function applyProgramAcrossApp() {
+    const selected = appState.selectedProgram || PROGRAM_ENGLISH;
+    setRememberedMenuFilters({ program: selected });
+    if (typeof menuState !== 'undefined') {
+        menuState.program = selected;
+        storeMenuLanguage(selected);
+        if (document.querySelector('.filter-sidebar')) {
+            syncMenuFilterControls();
+            renderMenuFilterOptions();
+            renderMenuResults();
+        }
+    }
+    activeScheduleProgramId = getScheduleProgramIdForSelection(selected);
+    if (schedulesData) renderScheduleCalendar(schedulesData);
+    updateProgramScopedContent();
+    updateTopProgramLangControls();
+    refreshProgramLangMiniUI();
+}
+
+function shouldConfirmProgramSwitch() {
+    return hasFlowchartProgress();
+}
+
+function closeProgramPrompt() {
+    const modal = document.getElementById('program-prompt-modal');
+    if (!modal) return;
+    modal.hidden = true;
+    document.body.classList.remove('program-prompt-open');
+}
+
+function openProgramPrompt() {
+    const modal = document.getElementById('program-prompt-modal');
+    const languageBlock = document.getElementById('program-prompt-language');
+    const actions = document.getElementById('program-prompt-actions');
+    if (!modal) return;
+    appState.programPrompt.pendingProgram = null;
+    appState.programPrompt.onComplete = null;
+    if (languageBlock) languageBlock.hidden = true;
+    if (actions) actions.hidden = false;
+    modal.hidden = false;
+    document.body.classList.add('program-prompt-open');
+}
+
+function openProgramLanguagePrompt(program, onComplete) {
+    const modal = document.getElementById('program-prompt-modal');
+    const languageBlock = document.getElementById('program-prompt-language');
+    const languageSelect = document.getElementById('program-prompt-language-select');
+    const actions = document.getElementById('program-prompt-actions');
+    if (!modal || !languageBlock) return;
+    appState.programPrompt.pendingProgram = program;
+    appState.programPrompt.onComplete = typeof onComplete === 'function' ? onComplete : null;
+    if (languageSelect) languageSelect.value = appState.language === 'fr' ? 'fr' : 'en';
+    if (actions) actions.hidden = true;
+    languageBlock.hidden = false;
+    modal.hidden = false;
+    document.body.classList.add('program-prompt-open');
+}
+
+function finalizeProgramSelection(program, language) {
+    appState.selectedProgram = program;
+    appState.selectedScreener = null;
+    appState.language = language || (program === PROGRAM_FRENCH_IMMERSION ? 'fr' : 'en');
+    applyTranslations();
+    updateTopProgramLangControls();
+    rerenderForLanguage();
+    applyProgramAcrossApp();
+}
+
+function submitProgramPrompt(program) {
+    if (program === PROGRAM_FRENCH_IMMERSION) {
+        openProgramLanguagePrompt(program);
+        return;
+    }
+    finalizeProgramSelection(PROGRAM_ENGLISH, 'en');
+    closeProgramPrompt();
+}
+
+function confirmProgramPromptLanguage() {
+    const langSelect = document.getElementById('program-prompt-language-select');
+    const program = appState.programPrompt.pendingProgram || PROGRAM_FRENCH_IMMERSION;
+    const lang = langSelect && (langSelect.value === 'fr' || langSelect.value === 'en') ? langSelect.value : 'fr';
+    finalizeProgramSelection(program, lang);
+    const done = appState.programPrompt.onComplete;
+    closeProgramPrompt();
+    appState.programPrompt.pendingProgram = null;
+    appState.programPrompt.onComplete = null;
+    if (done) done(lang);
 }
 
 function setupSubTabs() {
@@ -6639,11 +6750,9 @@ function openInteractiveFlowchart() {
         flowchartContainer.style.display = 'block';
     }
     
-    // The flowchart defaults to the English program and starts immediately;
-    // the program/language choice is a small selector beside the flowchart
-    // (see renderProgramLangMiniHtml) rather than a blocking start screen.
+    // Program is chosen from the onboarding prompt/top selector.
     if (!appState.selectedProgram) {
-        appState.selectedProgram = 'English';
+        appState.selectedProgram = PROGRAM_ENGLISH;
     }
     initIntegratedFlowchart('tier1');
     
@@ -6663,22 +6772,22 @@ function isScreenerIdForCurrentProgram(screenerId) {
     // French Immersion gets the French-specific screeners (THaFoL, IDAPEL) as
     // well as the shared English ones (DIBELS, CTOPP-2), so nothing is
     // filtered out. English only gets the shared ones.
-    return appState.selectedProgram === 'French Immersion' ? true : !isFrenchOnlyScreener;
+    return appState.selectedProgram === PROGRAM_FRENCH_IMMERSION ? true : !isFrenchOnlyScreener;
 }
 
 // The wizard's screener dropdown groups by "English" / "French" language;
 // map the chosen program to that same filter value. French Immersion sees
 // both groups (DIBELS/CTOPP-2 plus THaFoL/IDAPEL); English only sees English.
 function getProgramLanguageFilter() {
-    return appState.selectedProgram === 'French Immersion' ? '' : 'English';
+    return appState.selectedProgram === PROGRAM_FRENCH_IMMERSION ? '' : PROGRAM_ENGLISH;
 }
 
 // Small, sleek program/language selector rendered beside the flowchart
 // (above the Tier 1 success sidebar, or above the decision-summary panel on
 // other tiers) so switching programs never requires a full takeover screen.
 function renderProgramLangMiniHtml(id = 'program-lang-mini') {
-    const program = appState.selectedProgram || 'English';
-    const isFrench = program === 'French Immersion';
+    const program = appState.selectedProgram || PROGRAM_ENGLISH;
+    const isFrench = program === PROGRAM_FRENCH_IMMERSION;
     const lang = appState.language === 'fr' ? 'fr' : 'en';
 
     return `
@@ -6687,7 +6796,7 @@ function renderProgramLangMiniHtml(id = 'program-lang-mini') {
                 <span class="program-lang-mini-label">${escapeHtml(t('fc_program_mini_label'))}</span>
                 <select class="program-lang-mini-select" aria-label="${escapeAttr(t('fc_program_mini_label'))}" onchange="requestFlowchartProgramChange(this.value)">
                     <option value="English"${!isFrench ? ' selected' : ''}>${escapeHtml(t('fc_program_english'))}</option>
-                    <option value="French Immersion"${isFrench ? ' selected' : ''}>${escapeHtml(t('fc_program_french_immersion'))}</option>
+                    <option value="${PROGRAM_FRENCH_IMMERSION}"${isFrench ? ' selected' : ''}>${escapeHtml(t('fc_program_french_immersion'))}</option>
                 </select>
             </div>
             ${isFrench ? `
@@ -6723,28 +6832,27 @@ function refreshProgramLangMiniUI() {
 // Called when the user picks a different program in the mini selector. If
 // they have already made choices in the flowchart, confirm first since
 // switching programs resets everything back to the beginning.
-function requestFlowchartProgramChange(program) {
+function requestFlowchartProgramChange(program, options = {}) {
+    const promptLanguageChoice = options.promptLanguageChoice !== false;
     if (program === appState.selectedProgram) return;
-    if (hasFlowchartProgress()) {
+    if (shouldConfirmProgramSwitch()) {
         const ok = window.confirm(t('fc_program_change_confirm'));
         if (!ok) {
+            updateTopProgramLangControls();
             refreshProgramLangMiniUI();
             return;
         }
     }
-    appState.selectedProgram = program;
-    appState.selectedScreener = null;
-    // French Immersion defaults to the French display language (the user can
-    // still switch back to English via the language mini selector).
-    if (program === 'French Immersion') {
-        appState.language = 'fr';
-        applyTranslations();
-        updateLanguageToggleBtn();
+    if (program === PROGRAM_FRENCH_IMMERSION && promptLanguageChoice) {
+        openProgramLanguagePrompt(program, () => {
+            initIntegratedFlowchart('tier1');
+            refreshVisualFlowchartHeaderControls();
+        });
+        return;
     }
+    const lang = program === PROGRAM_FRENCH_IMMERSION ? (appState.language === 'fr' ? 'fr' : 'en') : 'en';
+    finalizeProgramSelection(program, lang);
     initIntegratedFlowchart('tier1');
-    // Keep the visual pathway modal's own header controls (program +
-    // language mini selector) in sync when the switch happens while it's
-    // open, since it isn't rebuilt by initIntegratedFlowchart above.
     refreshVisualFlowchartHeaderControls();
 }
 
@@ -6753,17 +6861,19 @@ function requestFlowchartProgramChange(program) {
 function requestFlowchartLanguageChange(lang) {
     if (lang !== 'en' && lang !== 'fr') return;
     if (lang === appState.language) return;
-    if (hasFlowchartProgress()) {
+    if (shouldConfirmProgramSwitch()) {
         const ok = window.confirm(t('fc_program_change_confirm'));
         if (!ok) {
+            updateTopProgramLangControls();
             refreshProgramLangMiniUI();
             return;
         }
     }
     appState.language = lang;
     applyTranslations();
-    updateLanguageToggleBtn();
+    updateTopProgramLangControls();
     initIntegratedFlowchart('tier1');
+    applyProgramAcrossApp();
     refreshVisualFlowchartHeaderControls();
 }
 
@@ -7016,8 +7126,8 @@ const menuState = {
 // remembered in localStorage so it carries over between visits.
 const MENU_LANGUAGE_KEY = `${STORAGE_KEY_PREFIX}-menu-language`;
 const LEGACY_MENU_LANGUAGE_KEY = `${LEGACY_STORAGE_KEY_PREFIX}-menu-language`;
-const MENU_LANGUAGE_DEFAULT = 'English';
-const MENU_LANGUAGE_VALUES = ['English', 'French Immersion'];
+const MENU_LANGUAGE_DEFAULT = PROGRAM_ENGLISH;
+const MENU_LANGUAGE_VALUES = [PROGRAM_ENGLISH, PROGRAM_FRENCH_IMMERSION];
 
 function getStoredMenuLanguage() {
     try {
@@ -7211,7 +7321,9 @@ function renderMenuFilterOptions() {
     if (!programSel || !pillarSel || !typeSel || !screenerSel) return;
 
     if (gradeSel) gradeSel.innerHTML = buildFacetOptionsHtml(distinctGradeValues(menuState), menuState.grade, translateGrade);
-    programSel.innerHTML = MENU_LANGUAGE_VALUES.map(value => `<option value="${escapeAttr(value)}"${value === menuState.program ? ' selected' : ''}>${escapeHtml(value === 'French Immersion' ? t('filter_language_french') : value)}</option>`).join('');
+    programSel.innerHTML = MENU_LANGUAGE_VALUES.map(value => `<option value="${escapeAttr(value)}"${value === menuState.program ? ' selected' : ''}>${escapeHtml(value === PROGRAM_FRENCH_IMMERSION ? t('filter_language_french') : value)}</option>`).join('');
+    programSel.value = appState.selectedProgram || MENU_LANGUAGE_DEFAULT;
+    programSel.disabled = true;
     pillarSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'pillar'), menuState.pillar, translatePillar);
     typeSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'resourceType'), menuState.resourceType, translateResourceType);
     screenerSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'screener'), menuState.screener);
@@ -7259,7 +7371,7 @@ function buildResourceCardHtml(item) {
 const MENU_FILTER_CHIP_FIELDS = [
     { field: 'pillar', labelKey: 'filter_pillar_label', format: (v) => translatePillar(v) },
     { field: 'resourceType', labelKey: 'filter_type_label', format: (v) => translateResourceType(v) },
-    { field: 'program', labelKey: 'filter_language_label', format: (v) => (v === 'French Immersion' ? t('filter_language_french') : v) },
+    { field: 'program', labelKey: 'filter_language_label', format: (v) => (v === PROGRAM_FRENCH_IMMERSION ? t('filter_language_french') : v) },
     { field: 'screener', labelKey: 'filter_screener_label' },
     { field: 'subtest', labelKey: 'filter_subtest_label' },
     { field: 'tier', labelKey: 'filter_tier_label', format: (v) => t('filter_tier_option')(v) },
@@ -7339,12 +7451,15 @@ function renderMenuResults() {
 
 // Called whenever the user changes one of the standalone menu's filters.
 function onMenuFilterChange(field, value) {
+    if (field === 'program') {
+        menuState.program = appState.selectedProgram || MENU_LANGUAGE_DEFAULT;
+        setRememberedMenuFilters({ program: menuState.program });
+        renderMenuFilterOptions();
+        renderMenuResults();
+        return;
+    }
     menuState[field] = value;
     setRememberedMenuFilters({ [field]: value || null });
-    if (field === 'program') {
-        storeMenuLanguage(value);
-        syncMenuLanguageToggle();
-    }
     renderMenuFilterOptions();
     renderMenuResults();
 }
@@ -7354,7 +7469,7 @@ function resetMenuFilters() {
     appState.rememberedMenuFilters = {};
 
     // The language toggle always has a value; fall back to the remembered one.
-    menuState.program = getStoredMenuLanguage();
+    menuState.program = appState.selectedProgram || getStoredMenuLanguage();
 
     syncMenuFilterControls();
 
@@ -7374,7 +7489,7 @@ function applyRememberedFiltersToMenu() {
     const remembered = appState.rememberedMenuFilters || {};
     menuState.pillar = remembered.pillar || '';
     menuState.resourceType = remembered.resourceType || '';
-    menuState.program = remembered.program || appState.selectedProgram || getStoredMenuLanguage();
+    menuState.program = appState.selectedProgram || remembered.program || getStoredMenuLanguage();
     menuState.screener = remembered.screener || '';
     menuState.subtest = remembered.subtest || '';
     menuState.tier = remembered.tier ? String(remembered.tier) : '';
@@ -7799,20 +7914,20 @@ function renderScheduleCalendar(data) {
     const container = document.getElementById('calendar-container');
     if (!container || !data || !data.programs || !data.programs.length) return;
 
-    const program = data.programs.find(p => p.id === activeScheduleProgramId) || data.programs[0];
+    const forcedProgramId = getScheduleProgramIdForSelection(appState.selectedProgram || PROGRAM_ENGLISH);
+    const program = data.programs.find(p => p.id === forcedProgramId) || data.programs[0];
     activeScheduleProgramId = program.id;
     if (activeScheduleGradeId !== 'all' && !program.grades.some(grade => grade.id === activeScheduleGradeId)) {
         activeScheduleGradeId = 'all';
     }
     const activeGrades = getActiveScheduleGrades(program);
 
-    const filterHtml = data.programs.map(p => `
-        <button type="button" class="cal-filter-btn${p.id === program.id ? ' active' : ''}"
-            role="tab" aria-selected="${p.id === program.id}" data-program="${safeText(p.id)}">
-            <span class="cal-filter-btn-full">${safeText(getScheduleProgramName(p))}</span>
-            <span class="cal-filter-btn-short">${safeText(getScheduleProgramShortName(p))}</span>
+    const filterHtml = `
+        <button type="button" class="cal-filter-btn active" role="tab" aria-selected="true" data-program="${safeText(program.id)}" disabled>
+            <span class="cal-filter-btn-full">${safeText(getScheduleProgramName(program))}</span>
+            <span class="cal-filter-btn-short">${safeText(getScheduleProgramShortName(program))}</span>
         </button>
-    `).join('');
+    `;
 
     const gradeFilterHtml = [
         { id: 'all', label: t('schedule_grade_all') },
@@ -7864,14 +7979,6 @@ function renderScheduleCalendar(data) {
             </div>
         </div>
     `;
-
-    container.querySelectorAll('.cal-filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            activeScheduleProgramId = btn.dataset.program;
-            hideScheduleTooltip();
-            renderScheduleCalendar(data);
-        });
-    });
 
     container.querySelector('#schedule-grade-filter')?.addEventListener('change', event => {
             activeScheduleGradeId = event.target.value || 'all';

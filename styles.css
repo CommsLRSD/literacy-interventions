@@ -481,43 +481,41 @@ body.side-nav-collapsed .main-content { margin-left: var(--side-nav-collapsed-wi
 body.side-nav-collapsed .site-footer { margin-left: var(--side-nav-collapsed-width); }
 
 /* ------------------------------------------------------------
-   Language Toggle Button
+   Top nav program/language controls
    ------------------------------------------------------------ */
 
-.lang-toggle-btn {
+.top-program-lang {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: 1.5px solid var(--border, rgba(0,0,0,0.15));
-  border-radius: 6px;
-  cursor: pointer;
-  padding: 4px 10px;
-  font-family: var(--font-ui, inherit);
-  font-size: 0.75rem;
+  align-items: flex-end;
+  gap: var(--space-sm);
+}
+
+.top-program-lang-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.top-program-lang-label {
+  font-size: 0.65rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--text-muted, #666);
-  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-  flex-shrink: 0;
+  color: var(--text-light);
+  line-height: 1;
 }
 
-.lang-toggle-btn:hover,
-.lang-toggle-btn:focus-visible {
-  background: var(--surface-2, #f0f0f0);
-  border-color: var(--primary, #4a90d9);
-  color: var(--primary, #4a90d9);
-  outline: none;
+.top-program-lang-select {
+  min-width: 136px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
-.lang-toggle-btn.lang-active-fr {
-  background: var(--primary, #4a90d9);
-  border-color: var(--primary, #4a90d9);
-  color: #fff;
-}
-
-.lang-toggle-code {
-  pointer-events: none;
+.top-program-lang-select:disabled {
+  opacity: 0.75;
 }
 
 /* ------------------------------------------------------------
@@ -6476,6 +6474,13 @@ body.step-review-modal-open { overflow: hidden; }
   .main-content, .site-footer { margin-left: 0; }
   body.side-nav-collapsed .main-content,
   body.side-nav-collapsed .site-footer { margin-left: 0; }
+  .top-program-lang { gap: 6px; }
+  .top-program-lang-label { display: none; }
+  .top-program-lang-select {
+    min-width: 98px;
+    font-size: 0.74rem;
+    padding: 4px 6px;
+  }
 
   .home-hero { padding: var(--space-2xl) var(--space-md); }
   .hero-title { font-size: 1.6rem; }
@@ -9906,6 +9911,10 @@ button.horiz-bubble-done:focus-visible .horiz-bubble-revisit {
 .install-app-btn .material-symbols-rounded { font-size: 18px; }
 
 @media (max-width: 560px) {
+  .top-program-lang-select {
+    min-width: 82px;
+    font-size: 0.72rem;
+  }
   /* Icon-only on very small screens to protect the nav layout. */
   .install-app-btn { padding: 6px 9px; }
   .install-app-btn-label { display: none; }
@@ -10155,6 +10164,76 @@ body.install-modal-open { overflow: hidden; }
 
 .install-modal-btn:hover,
 .install-modal-btn:focus-visible { background: var(--primary-light); }
+
+/* Program onboarding prompt */
+.program-prompt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  background: rgba(15, 26, 40, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.program-prompt-overlay[hidden] { display: none; }
+body.program-prompt-open { overflow: hidden; }
+
+.program-prompt-card {
+  width: min(460px, 100%);
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-xl);
+}
+
+.program-prompt-title {
+  margin-bottom: var(--space-xs);
+  color: var(--primary);
+}
+
+.program-prompt-desc {
+  color: var(--text-secondary);
+  margin-bottom: var(--space-md);
+}
+
+.program-prompt-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+.program-prompt-btn,
+.program-prompt-continue {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 0.65rem 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.program-prompt-language {
+  margin-top: var(--space-md);
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.program-prompt-language-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.program-prompt-language-select {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.65rem;
+  background: var(--bg);
+}
 
 /* Respect users who prefer reduced motion: show/hide without movement. */
 @media (prefers-reduced-motion: reduce) {
