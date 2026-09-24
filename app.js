@@ -7717,6 +7717,7 @@ const SCHEDULE_SLOT_COUNT = SCHEDULE_MONTHS.length * SCHEDULE_HALVES_PER_MONTH;
 // Program the single calendar is currently filtered to (null = first program).
 let activeScheduleProgramId = null;
 let activeScheduleGradeId = 'all';
+let activeScheduleGradeSelections = {};
 
 // Map a free-text period/month string (e.g. "Fall (Sep-Oct)", "Winter (Jan)",
 // "Nov") to the calendar month id(s) it covers.
@@ -7972,14 +7973,19 @@ function renderScheduleCalendar(data) {
 
     const forcedProgramId = getScheduleProgramIdForSelection(appState.selectedProgram || PROGRAM_ENGLISH);
     const program = data.programs.find(p => p.id === forcedProgramId) || data.programs[0];
+    const rememberedGrade = Object.prototype.hasOwnProperty.call(activeScheduleGradeSelections, program.id)
+        ? activeScheduleGradeSelections[program.id]
+        : getStoredScheduleGradePreference(program.id);
     if (activeScheduleProgramId !== program.id) {
-        activeScheduleGradeId = getStoredScheduleGradePreference(program.id);
+        activeScheduleGradeId = rememberedGrade;
     }
     activeScheduleProgramId = program.id;
     if (activeScheduleGradeId !== 'all' && !program.grades.some(grade => grade.id === activeScheduleGradeId)) {
         activeScheduleGradeId = 'all';
+        activeScheduleGradeSelections[program.id] = activeScheduleGradeId;
         storeScheduleGradePreference(program.id, activeScheduleGradeId);
     }
+    activeScheduleGradeSelections[program.id] = activeScheduleGradeId;
     const activeGrades = getActiveScheduleGrades(program);
 
     const gradeFilterHtml = [
@@ -8030,6 +8036,7 @@ function renderScheduleCalendar(data) {
 
     container.querySelector('#schedule-grade-filter')?.addEventListener('change', event => {
             activeScheduleGradeId = event.target.value || 'all';
+            activeScheduleGradeSelections[program.id] = activeScheduleGradeId;
             storeScheduleGradePreference(program.id, activeScheduleGradeId);
             hideScheduleTooltip();
             renderScheduleCalendar(data);
