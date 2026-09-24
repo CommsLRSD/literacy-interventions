@@ -94,7 +94,7 @@ function getStoredScheduleGradePreferences() {
         const raw = getStoredValue(localStorage, SCHEDULE_GRADE_PREFERENCE_KEY, LEGACY_SCHEDULE_GRADE_PREFERENCE_KEY);
         if (!raw) return {};
         const parsed = JSON.parse(raw);
-        return parsed && typeof parsed === 'object' ? parsed : {};
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
     } catch (e) {
         return {};
     }
