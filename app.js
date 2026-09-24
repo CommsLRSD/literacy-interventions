@@ -60,6 +60,7 @@ function getStoredValue(storage, key, legacyKey) {
         const legacyValue = storage.getItem(legacyKey);
         if (legacyValue === null) return null;
         storage.setItem(key, legacyValue);
+        storage.removeItem(legacyKey);
         return legacyValue;
     } catch (e) {
         return null;
