@@ -1,5 +1,5 @@
 // ============================================
-// LitLab — Service Worker
+// Literacy Interventions — Service Worker
 // ============================================
 // A service worker is required for browsers (Chrome, Edge, Android) to treat
 // the site as installable and fire the `beforeinstallprompt` event.
@@ -8,7 +8,7 @@
 // the user is online, and the last successful response is served if the
 // network is unavailable.
 
-const CACHE_NAME = 'litlab-v2';
+const CACHE_NAME = 'literacy-interventions-v1';
 
 // Minimal shell cached up front so the app can still start while offline.
 const PRECACHE_URLS = [

@@ -1,73 +1,73 @@
 {
-  "name": "LitLab — LRSD Literacy Resource",
-  "short_name": "LitLab",
+  "name": "Literacy Interventions — LRSD Literacy Resource",
+  "short_name": "Literacy Interventions",
   "description": "Louis Riel School Division literacy intervention resource.",
-  "start_url": "/litlab/",
-  "scope": "/litlab/",
+  "start_url": "/literacy-interventions/",
+  "scope": "/literacy-interventions/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0c315a",
   "icons": [
     {
-      "src": "images/logos/litlab-icon-72x72.png",
+      "src": "images/logos/literacy-interventions-icon-72x72.png",
       "sizes": "72x72",
       "type": "image/png"
     },
     {
-      "src": "images/logos/litlab-icon-96x96.png",
+      "src": "images/logos/literacy-interventions-icon-96x96.png",
       "sizes": "96x96",
       "type": "image/png"
     },
     {
-      "src": "images/logos/litlab-icon-128x128.png",
+      "src": "images/logos/literacy-interventions-icon-128x128.png",
       "sizes": "128x128",
       "type": "image/png"
     },
     {
-      "src": "images/logos/litlab-icon-144x144.png",
+      "src": "images/logos/literacy-interventions-icon-144x144.png",
       "sizes": "144x144",
       "type": "image/png"
     },
     {
-      "src": "images/logos/litlab-icon-152x152.png",
+      "src": "images/logos/literacy-interventions-icon-152x152.png",
       "sizes": "152x152",
       "type": "image/png"
     },
     {
-      "src": "images/logos/litlab-icon-167x167.png",
+      "src": "images/logos/literacy-interventions-icon-167x167.png",
       "sizes": "167x167",
       "type": "image/png"
     },
     {
-      "src": "images/logos/litlab-icon-180x180.png",
+      "src": "images/logos/literacy-interventions-icon-180x180.png",
       "sizes": "180x180",
       "type": "image/png"
     },
     {
-      "src": "images/logos/litlab-icon-192x192.png",
+      "src": "images/logos/literacy-interventions-icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "images/logos/litlab-icon-384x384.png",
+      "src": "images/logos/literacy-interventions-icon-384x384.png",
       "sizes": "384x384",
       "type": "image/png"
     },
     {
-      "src": "images/logos/litlab-icon-512x512.png",
+      "src": "images/logos/literacy-interventions-icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "images/logos/litlab-maskable-192x192.png",
+      "src": "images/logos/literacy-interventions-maskable-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "images/logos/litlab-maskable-512x512.png",
+      "src": "images/logos/literacy-interventions-maskable-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

@@ -8288,7 +8288,7 @@ function exportHistoryCsv() {
     const a = document.createElement('a');
     const stamp = new Date().toISOString().slice(0, 10);
     a.href = url;
-    a.download = `litlab-selection-history-${stamp}.csv`;
+    a.download = `literacy-interventions-selection-history-${stamp}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

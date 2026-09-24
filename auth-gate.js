@@ -28,7 +28,7 @@
     ].join(';');
 
     card.innerHTML =
-        '<p style="font-size:1.5rem;font-weight:700;margin:0 0 .25rem">LitLab</p>' +
+        '<p style="font-size:1.5rem;font-weight:700;margin:0 0 .25rem">Literacy Interventions</p>' +
         '<p style="margin:0 0 1.5rem;color:#666;font-size:.9rem">Louis Riel School Division — Staff Access</p>' +
         '<input id="authPwd" type="password" placeholder="Enter password" autocomplete="current-password" ' +
         'style="width:100%;box-sizing:border-box;padding:.65rem .9rem;font-size:1rem;' +
