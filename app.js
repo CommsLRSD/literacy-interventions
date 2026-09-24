@@ -7977,9 +7977,7 @@ function renderScheduleCalendar(data) {
     const rememberedGrade = Object.prototype.hasOwnProperty.call(activeScheduleGradeSelections, program.id)
         ? activeScheduleGradeSelections[program.id]
         : getStoredScheduleGradePreference(program.id);
-    if (activeScheduleProgramId !== program.id) {
-        activeScheduleGradeId = rememberedGrade;
-    }
+    activeScheduleGradeId = rememberedGrade;
     activeScheduleProgramId = program.id;
     if (activeScheduleGradeId !== 'all' && !program.grades.some(grade => grade.id === activeScheduleGradeId)) {
         activeScheduleGradeId = 'all';
