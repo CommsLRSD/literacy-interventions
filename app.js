@@ -20,8 +20,9 @@ const appState = {
     // are never forced to re-choose it). Stored as the intervention-menu
     // screener_id, e.g. "DIBELS".
     selectedScreener: null,
-    // Program chosen for the app: 'English' or 'French Immersion'.
-    // A landing prompt collects this choice before normal browsing.
+    // Program chosen for the current app visit: 'English' or
+    // 'French Immersion'. A landing prompt collects this choice before normal
+    // browsing.
     selectedProgram: null,
     // Visual flowchart state
     visualFlowchart: {
@@ -48,6 +49,8 @@ const PROGRAM_ENGLISH = 'English';
 const PROGRAM_FRENCH_IMMERSION = 'French Immersion';
 const PROGRAM_PREFERENCE_KEY = `${STORAGE_KEY_PREFIX}-program-preference`;
 const LEGACY_PROGRAM_PREFERENCE_KEY = `${LEGACY_STORAGE_KEY_PREFIX}-program-preference`;
+const SCHEDULE_GRADE_PREFERENCE_KEY = `${STORAGE_KEY_PREFIX}-schedule-grade-preference`;
+const LEGACY_SCHEDULE_GRADE_PREFERENCE_KEY = `${LEGACY_STORAGE_KEY_PREFIX}-schedule-grade-preference`;
 
 function getStoredValue(storage, key, legacyKey) {
     try {
@@ -57,6 +60,7 @@ function getStoredValue(storage, key, legacyKey) {
         const legacyValue = storage.getItem(legacyKey);
         if (legacyValue === null) return null;
         storage.setItem(key, legacyValue);
+        storage.removeItem(legacyKey);
         return legacyValue;
     } catch (e) {
         return null;
@@ -77,26 +81,37 @@ function normalizeProgramLanguage(program, language) {
     return language === 'fr' ? 'fr' : 'en';
 }
 
-function getStoredProgramPreference() {
+function clearStoredProgramPreference() {
     try {
-        const raw = getStoredValue(localStorage, PROGRAM_PREFERENCE_KEY, LEGACY_PROGRAM_PREFERENCE_KEY);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object') return null;
-        const program = parsed.program === PROGRAM_FRENCH_IMMERSION ? PROGRAM_FRENCH_IMMERSION : PROGRAM_ENGLISH;
-        const language = normalizeProgramLanguage(program, parsed.language);
-        return { program, language };
+        localStorage.removeItem(PROGRAM_PREFERENCE_KEY);
+        localStorage.removeItem(LEGACY_PROGRAM_PREFERENCE_KEY);
     } catch (e) {
-        return null;
+        // Ignore storage failures so the UI still works for the current visit.
     }
 }
 
-function storeProgramPreference(program, language) {
+function getStoredScheduleGradePreferences() {
     try {
-        setStoredValue(localStorage, PROGRAM_PREFERENCE_KEY, JSON.stringify({
-            program,
-            language: normalizeProgramLanguage(program, language)
-        }));
+        const raw = getStoredValue(localStorage, SCHEDULE_GRADE_PREFERENCE_KEY, LEGACY_SCHEDULE_GRADE_PREFERENCE_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (e) {
+        return {};
+    }
+}
+
+function getStoredScheduleGradePreference(programId) {
+    const stored = getStoredScheduleGradePreferences();
+    return typeof stored?.[programId] === 'string' ? stored[programId] : 'all';
+}
+
+function storeScheduleGradePreference(programId, gradeId) {
+    if (!programId) return;
+    const stored = getStoredScheduleGradePreferences();
+    stored[programId] = gradeId || 'all';
+    try {
+        setStoredValue(localStorage, SCHEDULE_GRADE_PREFERENCE_KEY, JSON.stringify(stored));
     } catch (e) {
         // Ignore storage failures so the UI still works for the current visit.
     }
@@ -241,12 +256,7 @@ window.cancelProgramPromptLanguage = cancelProgramPromptLanguage;
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Literacy Interventions - Initializing...');
-
-    const storedPreference = getStoredProgramPreference();
-    if (storedPreference) {
-        appState.selectedProgram = storedPreference.program;
-        appState.language = storedPreference.language;
-    }
+    clearStoredProgramPreference();
 
     // Apply initial translations (English by default) and sync controls
     applyTranslations();
@@ -512,7 +522,6 @@ function finalizeProgramSelection(program, language) {
     appState.selectedProgram = program;
     appState.selectedScreener = null;
     appState.language = normalizeProgramLanguage(program, language || (program === PROGRAM_FRENCH_IMMERSION ? 'fr' : 'en'));
-    storeProgramPreference(appState.selectedProgram, appState.language);
     applyTranslations();
     updateTopProgramLangControls();
     rerenderForLanguage();
@@ -7709,6 +7718,7 @@ const SCHEDULE_SLOT_COUNT = SCHEDULE_MONTHS.length * SCHEDULE_HALVES_PER_MONTH;
 // Program the single calendar is currently filtered to (null = first program).
 let activeScheduleProgramId = null;
 let activeScheduleGradeId = 'all';
+let activeScheduleGradeSelections = {};
 
 // Map a free-text period/month string (e.g. "Fall (Sep-Oct)", "Winter (Jan)",
 // "Nov") to the calendar month id(s) it covers.
@@ -7964,18 +7974,18 @@ function renderScheduleCalendar(data) {
 
     const forcedProgramId = getScheduleProgramIdForSelection(appState.selectedProgram || PROGRAM_ENGLISH);
     const program = data.programs.find(p => p.id === forcedProgramId) || data.programs[0];
+    const rememberedGrade = Object.prototype.hasOwnProperty.call(activeScheduleGradeSelections, program.id)
+        ? activeScheduleGradeSelections[program.id]
+        : getStoredScheduleGradePreference(program.id);
+    activeScheduleGradeId = rememberedGrade;
     activeScheduleProgramId = program.id;
     if (activeScheduleGradeId !== 'all' && !program.grades.some(grade => grade.id === activeScheduleGradeId)) {
         activeScheduleGradeId = 'all';
+        activeScheduleGradeSelections[program.id] = activeScheduleGradeId;
+        storeScheduleGradePreference(program.id, activeScheduleGradeId);
     }
+    activeScheduleGradeSelections[program.id] = activeScheduleGradeId;
     const activeGrades = getActiveScheduleGrades(program);
-
-    const filterHtml = `
-        <button type="button" class="cal-filter-btn active" role="tab" aria-selected="true" data-program="${safeText(program.id)}" disabled>
-            <span class="cal-filter-btn-full">${safeText(getScheduleProgramName(program))}</span>
-            <span class="cal-filter-btn-short">${safeText(getScheduleProgramShortName(program))}</span>
-        </button>
-    `;
 
     const gradeFilterHtml = [
         { id: 'all', label: t('schedule_grade_all') },
@@ -7996,15 +8006,10 @@ function renderScheduleCalendar(data) {
         <div class="cal-app">
             <div class="cal-toolbar">
                 <div class="cal-toolbar-title">
+                    <span class="cal-toolbar-label">${t('schedule_program_label')}</span>
                     <span class="cal-toolbar-program">${safeText(getScheduleProgramName(program))}</span>
                 </div>
                 <div class="cal-filters-wrap">
-                    <div class="cal-filter-group">
-                        <span class="cal-filter-label">${t('schedule_filter_label')}</span>
-                        <div class="cal-filter" role="tablist" aria-label="${t('schedule_filter_label')}">
-                            ${filterHtml}
-                        </div>
-                    </div>
                     <div class="cal-filter-group">
                         <label class="cal-filter-label" for="schedule-grade-filter">${t('schedule_grade_filter_label')}</label>
                         <select id="schedule-grade-filter" class="cal-grade-filter">
@@ -8030,6 +8035,8 @@ function renderScheduleCalendar(data) {
 
     container.querySelector('#schedule-grade-filter')?.addEventListener('change', event => {
             activeScheduleGradeId = event.target.value || 'all';
+            activeScheduleGradeSelections[program.id] = activeScheduleGradeId;
+            storeScheduleGradePreference(program.id, activeScheduleGradeId);
             hideScheduleTooltip();
             renderScheduleCalendar(data);
     });
