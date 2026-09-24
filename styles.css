@@ -10310,6 +10310,7 @@ body.program-prompt-open { overflow: hidden; }
 .program-prompt-btn:focus-visible,
 .program-prompt-continue:focus-visible {
   outline: none;
+  border-radius: calc(var(--radius) + 6px);
 }
 
 .program-prompt-btn-title {
