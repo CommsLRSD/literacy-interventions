@@ -1,5 +1,5 @@
 /* ============================================================
-   LRSD LitLab - Modern Minimalist Stylesheet
+   LRSD Literacy Interventions - Modern Minimalist Stylesheet
    ============================================================ */
 
 /* ------------------------------------------------------------
@@ -13,7 +13,7 @@
 }
 
 :root {
-  /* Brand – colours sampled from the LitLab logo */
+  /* Brand – colours sampled from the Literacy Interventions logo */
   --primary: #0c315a;
   --primary-light: #0a7f8a;
   --primary-lighter: #0ea7b4;
