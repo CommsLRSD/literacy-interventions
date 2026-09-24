@@ -25,6 +25,10 @@ const TRANSLATIONS = {
         nav_history: 'History',
         nav_lang_toggle_label: 'Switch to French',
         nav_lang_code: 'FR',
+        program_prompt_title: 'Choose your program',
+        program_prompt_desc: 'Select which program you are working in.',
+        program_prompt_language_label: 'Choose your language',
+        program_prompt_continue: 'Continue',
 
         // ── PWA install (button, banner, instructions modal) ──
         install_btn: 'Install App',
@@ -358,6 +362,10 @@ const TRANSLATIONS = {
         nav_history: 'Historique',
         nav_lang_toggle_label: 'Passer à l\'anglais',
         nav_lang_code: 'EN',
+        program_prompt_title: 'Choisissez votre programme',
+        program_prompt_desc: 'Sélectionnez le programme dans lequel vous travaillez.',
+        program_prompt_language_label: 'Choisissez votre langue',
+        program_prompt_continue: 'Continuer',
 
         // ── PWA install (button, banner, instructions modal) ──
         install_btn: 'Installer l\'application',
