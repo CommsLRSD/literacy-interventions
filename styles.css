@@ -10186,6 +10186,9 @@ body.program-prompt-open { overflow: hidden; }
   position: relative;
   width: min(560px, 100%);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
   background: #fff;
   border: 1px solid rgba(12, 49, 90, 0.1);
   border-radius: calc(var(--radius-lg) + 8px);
@@ -10200,7 +10203,9 @@ body.program-prompt-open { overflow: hidden; }
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-xs);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid rgba(12, 49, 90, 0.12);
 }
 
 .program-prompt-brand-app {
@@ -10240,7 +10245,7 @@ body.program-prompt-open { overflow: hidden; }
 .program-prompt-welcome {
   position: relative;
   z-index: 1;
-  margin: 0 0 var(--space-xs);
+  margin: 0;
   color: var(--text-secondary);
   font-size: 0.96rem;
   font-weight: 600;
@@ -10249,7 +10254,7 @@ body.program-prompt-open { overflow: hidden; }
 .program-prompt-title {
   position: relative;
   z-index: 1;
-  margin-bottom: var(--space-xs);
+  margin: 0;
   color: var(--primary);
   font-size: clamp(1.65rem, 3vw, 2.15rem);
 }
@@ -10258,7 +10263,9 @@ body.program-prompt-open { overflow: hidden; }
   position: relative;
   z-index: 1;
   color: var(--text-secondary);
-  margin-bottom: var(--space-lg);
+  margin: 0;
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid rgba(12, 49, 90, 0.12);
   max-width: 34rem;
   line-height: 1.55;
 }
@@ -10267,6 +10274,7 @@ body.program-prompt-open { overflow: hidden; }
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-md);
+  padding-top: var(--space-xs);
 }
 
 .program-prompt-actions[hidden] {
@@ -10282,7 +10290,7 @@ body.program-prompt-open { overflow: hidden; }
   align-items: flex-start;
   gap: 0.5rem;
   min-height: 100%;
-  border: 1px solid rgba(12, 49, 90, 0.08);
+  border: 3px solid var(--program-prompt-outline, rgba(12, 49, 90, 0.08));
   background: rgba(255, 255, 255, 0.96);
   color: var(--text);
   border-radius: calc(var(--radius) + 6px);
@@ -10302,24 +10310,27 @@ body.program-prompt-open { overflow: hidden; }
 .program-prompt-continue:hover,
 .program-prompt-continue:focus-visible {
   transform: translateY(-2px);
-  border-color: rgba(12, 49, 90, 0.14);
+  border-color: color-mix(in srgb, var(--program-prompt-outline, var(--primary)) 88%, #000 12%);
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 18px 30px rgba(12, 49, 90, 0.12);
 }
 
 .program-prompt-btn-flowchart {
+  --program-prompt-outline: var(--card-yellow-border);
   background: #fef2da;
-  border-color: rgba(250, 173, 10, 0.32);
+  border-color: var(--program-prompt-outline);
 }
 
 .program-prompt-btn-resources {
+  --program-prompt-outline: var(--card-pink-border);
   background: #fce7e3;
-  border-color: rgba(238, 95, 72, 0.24);
+  border-color: var(--program-prompt-outline);
 }
 
 .program-prompt-btn-schedule {
+  --program-prompt-outline: var(--card-blue-border);
   background: #daf1f3;
-  border-color: rgba(14, 168, 177, 0.26);
+  border-color: var(--program-prompt-outline);
 }
 
 .program-prompt-btn-title {
@@ -10337,7 +10348,8 @@ body.program-prompt-open { overflow: hidden; }
 .program-prompt-language {
   position: relative;
   z-index: 1;
-  margin-top: var(--space-xs);
+  margin-top: 0;
+  padding-top: var(--space-xs);
   display: grid;
   gap: var(--space-md);
 }
