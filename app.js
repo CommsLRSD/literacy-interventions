@@ -509,11 +509,8 @@ function submitProgramPrompt(program) {
 }
 
 function confirmProgramPromptLanguage(selectedLang) {
-    const langSelect = document.getElementById('program-prompt-language-select');
     const program = appState.programPrompt.pendingProgram || PROGRAM_FRENCH_IMMERSION;
-    const lang = selectedLang === 'fr' || selectedLang === 'en'
-        ? selectedLang
-        : (langSelect && (langSelect.value === 'fr' || langSelect.value === 'en') ? langSelect.value : 'fr');
+    const lang = selectedLang === 'fr' ? 'fr' : 'en';
     finalizeProgramSelection(program, lang);
     const done = appState.programPrompt.onComplete;
     closeProgramPrompt();

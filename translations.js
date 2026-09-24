@@ -36,7 +36,6 @@ const TRANSLATIONS = {
         program_prompt_language_en_desc: 'Open the app in English.',
         program_prompt_language_fr_desc: 'Open the app in French.',
         program_prompt_back: 'Back',
-        program_prompt_continue: 'Continue',
 
         // ── PWA install (button, banner, instructions modal) ──
         install_btn: 'Install App',
@@ -381,7 +380,6 @@ const TRANSLATIONS = {
         program_prompt_language_en_desc: 'Ouvrir l’application en anglais.',
         program_prompt_language_fr_desc: 'Ouvrir l’application en français.',
         program_prompt_back: 'Retour',
-        program_prompt_continue: 'Continuer',
 
         // ── PWA install (button, banner, instructions modal) ──
         install_btn: 'Installer l\'application',
