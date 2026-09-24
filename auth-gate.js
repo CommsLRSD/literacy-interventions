@@ -1,10 +1,16 @@
 (function () {
-    var KEY = 'litlab_auth';
+    var KEY = 'literacy-interventions-auth';
+    var LEGACY_KEY = 'litlab_auth';
     var PWD = 'lrsd2627';
     var isAuthed = false;
 
     try {
-        isAuthed = sessionStorage.getItem(KEY) === '1';
+        var storedValue = sessionStorage.getItem(KEY);
+        if (storedValue === null) {
+            storedValue = sessionStorage.getItem(LEGACY_KEY);
+            if (storedValue !== null) sessionStorage.setItem(KEY, storedValue);
+        }
+        isAuthed = storedValue === '1';
     } catch (e) {
         isAuthed = false;
     }

@@ -38,6 +38,31 @@ const appState = {
     rememberedMenuFilters: {}
 };
 
+const STORAGE_KEY_PREFIX = 'literacy-interventions';
+const LEGACY_STORAGE_KEY_PREFIX = 'litlab';
+
+function getStoredValue(storage, key, legacyKey) {
+    try {
+        const currentValue = storage.getItem(key);
+        if (currentValue !== null) return currentValue;
+        if (!legacyKey) return null;
+        const legacyValue = storage.getItem(legacyKey);
+        if (legacyValue === null) return null;
+        storage.setItem(key, legacyValue);
+        return legacyValue;
+    } catch (e) {
+        return null;
+    }
+}
+
+function setStoredValue(storage, key, value) {
+    try {
+        storage.setItem(key, value);
+    } catch (e) {
+        // Ignore storage failures so the UI still works for the current visit.
+    }
+}
+
 // ============================================
 // Internationalisation (i18n)
 // ============================================
@@ -363,14 +388,15 @@ function closeMobileMenu() {
 // ============================================
 // Collapsible Side Navigation (desktop)
 // ============================================
-const SIDE_NAV_COLLAPSED_KEY = 'litlab-side-nav-collapsed';
+const SIDE_NAV_COLLAPSED_KEY = `${STORAGE_KEY_PREFIX}-side-nav-collapsed`;
+const LEGACY_SIDE_NAV_COLLAPSED_KEY = `${LEGACY_STORAGE_KEY_PREFIX}-side-nav-collapsed`;
 
 function setupSidebarToggle() {
     const toggleBtn = document.getElementById('sidebar-toggle-btn');
     const sideNav = document.getElementById('side-nav');
     if (!toggleBtn || !sideNav) return;
 
-    const collapsed = localStorage.getItem(SIDE_NAV_COLLAPSED_KEY) === 'true';
+    const collapsed = getStoredValue(localStorage, SIDE_NAV_COLLAPSED_KEY, LEGACY_SIDE_NAV_COLLAPSED_KEY) === 'true';
     setSidebarCollapsed(collapsed);
 
     toggleBtn.addEventListener('click', () => {
@@ -427,7 +453,7 @@ function setSidebarCollapsed(collapsed) {
     toggleBtn.setAttribute('aria-expanded', String(!collapsed));
     toggleBtn.setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Collapse navigation');
     document.getElementById('side-nav-tooltip')?.classList.remove('is-visible');
-    localStorage.setItem(SIDE_NAV_COLLAPSED_KEY, String(collapsed));
+    setStoredValue(localStorage, SIDE_NAV_COLLAPSED_KEY, String(collapsed));
 }
 
 // ============================================
@@ -6988,13 +7014,14 @@ const menuState = {
 
 // Language (program) is a toggle that always has a value; the last choice is
 // remembered in localStorage so it carries over between visits.
-const MENU_LANGUAGE_KEY = 'litlab-menu-language';
+const MENU_LANGUAGE_KEY = `${STORAGE_KEY_PREFIX}-menu-language`;
+const LEGACY_MENU_LANGUAGE_KEY = `${LEGACY_STORAGE_KEY_PREFIX}-menu-language`;
 const MENU_LANGUAGE_DEFAULT = 'English';
 const MENU_LANGUAGE_VALUES = ['English', 'French Immersion'];
 
 function getStoredMenuLanguage() {
     try {
-        const stored = localStorage.getItem(MENU_LANGUAGE_KEY);
+        const stored = getStoredValue(localStorage, MENU_LANGUAGE_KEY, LEGACY_MENU_LANGUAGE_KEY);
         return MENU_LANGUAGE_VALUES.includes(stored) ? stored : MENU_LANGUAGE_DEFAULT;
     } catch (e) {
         // Private browsing modes can throw on localStorage access.
@@ -7004,7 +7031,7 @@ function getStoredMenuLanguage() {
 
 function storeMenuLanguage(value) {
     try {
-        localStorage.setItem(MENU_LANGUAGE_KEY, value);
+        setStoredValue(localStorage, MENU_LANGUAGE_KEY, value);
     } catch (e) {
         // Ignore storage failures — the toggle still works for this session.
     }
@@ -8041,8 +8068,10 @@ window.initializeAssessmentSchedules = initializeAssessmentSchedules;
 // reloads), and surfaces it in an always-accessible side panel. Teachers can
 // add notes to each entry and export the whole history as a CSV file.
 
-const SELECTION_HISTORY_KEY = 'litlab_selection_history';
-const SELECTION_HISTORY_SESSION_KEY = 'litlab_selection_history_session';
+const SELECTION_HISTORY_KEY = `${STORAGE_KEY_PREFIX}-selection-history`;
+const LEGACY_SELECTION_HISTORY_KEY = 'litlab_selection_history';
+const SELECTION_HISTORY_SESSION_KEY = `${STORAGE_KEY_PREFIX}-selection-history-session`;
+const LEGACY_SELECTION_HISTORY_SESSION_KEY = 'litlab_selection_history_session';
 
 function createHistoryToken(size = 8) {
     if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
@@ -8059,7 +8088,7 @@ function createHistoryToken(size = 8) {
 // Load the saved selection history from localStorage (returns an array).
 function loadSelectionHistory() {
     try {
-        const raw = localStorage.getItem(SELECTION_HISTORY_KEY);
+        const raw = getStoredValue(localStorage, SELECTION_HISTORY_KEY, LEGACY_SELECTION_HISTORY_KEY);
         if (!raw) return [];
         const parsed = JSON.parse(raw);
         return Array.isArray(parsed) ? parsed : [];
@@ -8072,7 +8101,7 @@ function loadSelectionHistory() {
 // Persist the selection history array to localStorage.
 function saveSelectionHistory(history) {
     try {
-        localStorage.setItem(SELECTION_HISTORY_KEY, JSON.stringify(history));
+        setStoredValue(localStorage, SELECTION_HISTORY_KEY, JSON.stringify(history));
     } catch (err) {
         console.error('Could not save selection history:', err);
     }
@@ -8087,7 +8116,7 @@ function createSelectionHistorySession() {
 
 function getCurrentSelectionHistorySession() {
     try {
-        const raw = sessionStorage.getItem(SELECTION_HISTORY_SESSION_KEY);
+        const raw = getStoredValue(sessionStorage, SELECTION_HISTORY_SESSION_KEY, LEGACY_SELECTION_HISTORY_SESSION_KEY);
         if (raw) {
             const parsed = JSON.parse(raw);
             if (parsed && parsed.id && parsed.startedAt) return parsed;
@@ -8098,7 +8127,7 @@ function getCurrentSelectionHistorySession() {
 
     const session = createSelectionHistorySession();
     try {
-        sessionStorage.setItem(SELECTION_HISTORY_SESSION_KEY, JSON.stringify(session));
+        setStoredValue(sessionStorage, SELECTION_HISTORY_SESSION_KEY, JSON.stringify(session));
     } catch (err) {
         console.error('Could not save selection history session:', err);
     }
@@ -8423,7 +8452,8 @@ function initBubbles(section) {
 //   3. Already installed / unsupported   → the button stays hidden.
 
 // localStorage key remembering that the user dismissed the install banner.
-const INSTALL_BANNER_DISMISSED_KEY = 'litlab-install-banner-dismissed';
+const INSTALL_BANNER_DISMISSED_KEY = `${STORAGE_KEY_PREFIX}-install-banner-dismissed`;
+const LEGACY_INSTALL_BANNER_DISMISSED_KEY = `${LEGACY_STORAGE_KEY_PREFIX}-install-banner-dismissed`;
 
 // Holds the deferred `beforeinstallprompt` event until the user asks to install.
 let deferredInstallPrompt = null;
@@ -8454,7 +8484,7 @@ function isAppInstalled() {
 // Whether the install banner should still be offered (not dismissed before).
 function isInstallBannerDismissed() {
     try {
-        return localStorage.getItem(INSTALL_BANNER_DISMISSED_KEY) === 'true';
+        return getStoredValue(localStorage, INSTALL_BANNER_DISMISSED_KEY, LEGACY_INSTALL_BANNER_DISMISSED_KEY) === 'true';
     } catch (e) {
         // Private browsing modes can throw on localStorage access.
         return false;
@@ -8464,7 +8494,7 @@ function isInstallBannerDismissed() {
 // Remember the user's choice so the banner is not shown again.
 function rememberInstallBannerDismissed() {
     try {
-        localStorage.setItem(INSTALL_BANNER_DISMISSED_KEY, 'true');
+        setStoredValue(localStorage, INSTALL_BANNER_DISMISSED_KEY, 'true');
     } catch (e) {
         /* Ignore storage failures — the banner simply reappears next visit. */
     }
