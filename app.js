@@ -7512,7 +7512,14 @@ function renderMenuResults() {
 
     renderActiveFilterChips();
 
-    const availableScreeners = distinctTagValues(menuState, 'screener');
+    const screenerRequirementState = {
+        ...menuState,
+        screener: '',
+        subtest: '',
+        grade: '',
+        evidence: ''
+    };
+    const availableScreeners = distinctTagValues(screenerRequirementState, 'screener');
     const hasRequiredScreener = String(menuState.screener || '').trim() !== '' || availableScreeners.length === 0;
     const hasAllRequired = REQUIRED_MENU_FIELDS.every(field => {
         if (field === 'screener') return hasRequiredScreener;
