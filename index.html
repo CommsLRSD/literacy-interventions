@@ -311,8 +311,9 @@
                             <label class="filter-group-label" for="filter-tier" data-i18n="filter_tier_label">Tier</label>
                             <select id="filter-tier" class="styled-select" onchange="onMenuFilterChange('tier', this.value)"><option value="" data-i18n="wizard_select_placeholder">Select...</option><option value="1">Tier 1</option><option value="2">Tier 2</option><option value="3">Tier 3</option></select>
                         </div>
-                        <details class="filter-advanced">
+                        <details class="filter-advanced" aria-describedby="filter-advanced-description">
                             <summary class="filter-advanced-summary" data-i18n="filter_advanced_label">Advanced filters</summary>
+                            <p id="filter-advanced-description" class="sr-only" data-i18n="filter_advanced_description">Contains optional Subtest, Grade Level, and Evidence Classification filters.</p>
                             <div class="filter-group">
                                 <label class="filter-group-label" for="filter-subtest" data-i18n="filter_subtest_label">Subtest</label>
                                 <select id="filter-subtest" class="styled-select" onchange="onMenuFilterChange('subtest', this.value)"></select>
