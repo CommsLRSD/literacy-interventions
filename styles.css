@@ -6784,6 +6784,13 @@ body.step-review-modal-open { overflow: hidden; }
   margin-bottom: var(--space-sm);
 }
 
+.filter-required-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
 /* "Clear Filters" sits at the very bottom of the sidebar, text only */
 .filter-sidebar-footer {
   margin-top: var(--space-sm);
@@ -6845,6 +6852,26 @@ body.step-review-modal-open { overflow: hidden; }
   gap: var(--space-md);
 }
 
+.filter-advanced {
+  margin-top: var(--space-sm);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-sm);
+}
+
+.filter-advanced-summary {
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.filter-advanced[open] .filter-advanced-summary {
+  margin-bottom: var(--space-sm);
+}
+
 .interventions-results-panel {
   flex: 1;
   min-width: 0;
@@ -6863,6 +6890,10 @@ body.step-review-modal-open { overflow: hidden; }
 .active-filters-empty {
   font-size: 0.8rem;
   color: var(--text-light);
+}
+
+.results-empty-required {
+  color: var(--text-secondary);
 }
 
 /* Filter tracker: plain text values separated by a vertical bar */

@@ -7186,9 +7186,11 @@ const menuState = {
     subtest: '',
     tier: '',
     grade: '',
-    evidence: '',
-    search: ''
+    evidence: ''
 };
+
+const NO_SPECIFIC_SCREENER_VALUE = '__no_specific_screener__';
+const REQUIRED_MENU_FIELDS = ['pillar', 'resourceType', 'screener', 'tier'];
 
 // Language (program) is a toggle that always has a value; the last choice is
 // remembered in localStorage so it carries over between visits.
@@ -7244,7 +7246,14 @@ function tagMatches(tag, state, excludeField) {
     if (excludeField !== 'tier' && state.tier && String(tag.tier) !== String(state.tier)) return false;
     if (excludeField !== 'pillar' && state.pillar && tag.pillar !== state.pillar) return false;
     if (excludeField !== 'resourceType' && state.resourceType && tag.resourceType !== state.resourceType) return false;
-    if (excludeField !== 'screener' && state.screener && !(tag.screeners || []).includes(state.screener)) return false;
+    if (excludeField !== 'screener' && state.screener) {
+        const tagScreeners = tag.screeners || [];
+        if (state.screener === NO_SPECIFIC_SCREENER_VALUE) {
+            if (tagScreeners.length) return false;
+        } else if (!tagScreeners.includes(state.screener)) {
+            return false;
+        }
+    }
     if (excludeField !== 'subtest' && state.subtest && !(tag.subtests || []).includes(state.subtest)) return false;
     if (excludeField !== 'evidence' && state.evidence && (tag.evidence || '') !== state.evidence) return false;
     if (excludeField !== 'grade' && state.grade && !(tag.gradeFilter || []).includes(state.grade)) return false;
@@ -7262,10 +7271,6 @@ function getMatchingTags(item, state, excludeField) {
 // satisfies the tier/pillar/resourceType/screener filters together.
 function getFilteredResources(state, excludeField) {
     return getAllResources().filter(item => {
-        if (state.search) {
-            const needle = state.search.trim().toLowerCase();
-            if (needle && !item.name.toLowerCase().includes(needle)) return false;
-        }
         return getMatchingTags(item, state, excludeField).length > 0;
     });
 }
@@ -7276,13 +7281,13 @@ function getFilteredResources(state, excludeField) {
 function distinctTagValues(state, field) {
     const values = new Set();
     getAllResources().forEach(item => {
-        if (state.search) {
-            const needle = state.search.trim().toLowerCase();
-            if (needle && !item.name.toLowerCase().includes(needle)) return;
-        }
         getMatchingTags(item, state, field).forEach(tag => {
             if (field === 'screener') {
-                (tag.screeners || []).forEach(s => values.add(s));
+                if ((tag.screeners || []).length) {
+                    tag.screeners.forEach(s => values.add(s));
+                } else {
+                    values.add(NO_SPECIFIC_SCREENER_VALUE);
+                }
             } else if (field === 'subtest') {
                 (tag.subtests || []).forEach(s => values.add(s));
             } else if (field === 'evidence') {
@@ -7294,7 +7299,12 @@ function distinctTagValues(state, field) {
             }
         });
     });
-    return Array.from(values).sort();
+    const sorted = Array.from(values).sort();
+    if (field !== 'screener') return sorted;
+    const hasNoSpecific = sorted.includes(NO_SPECIFIC_SCREENER_VALUE);
+    const withSpecificOnly = sorted.filter(value => value !== NO_SPECIFIC_SCREENER_VALUE);
+    if (hasNoSpecific) withSpecificOnly.push(NO_SPECIFIC_SCREENER_VALUE);
+    return withSpecificOnly;
 }
 
 function uniqueSorted(values) {
@@ -7313,6 +7323,11 @@ function translateResourceType(typeName) {
     if (appState.language !== 'fr') return typeName;
     const match = (appState.interventionMenuData?.resourceTypes || []).find(rt => rt.name === typeName);
     return match?.name_fr || typeName;
+}
+
+function translateScreener(screenerName) {
+    if (screenerName === NO_SPECIFIC_SCREENER_VALUE) return t('filter_screener_none');
+    return screenerName || '';
 }
 
 // Build the <option> list for one filter select from the values that remain
@@ -7390,7 +7405,7 @@ function renderMenuFilterOptions() {
     if (gradeSel) gradeSel.innerHTML = buildFacetOptionsHtml(distinctGradeValues(menuState), menuState.grade, translateGrade);
     pillarSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'pillar'), menuState.pillar, translatePillar);
     typeSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'resourceType'), menuState.resourceType, translateResourceType);
-    screenerSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'screener'), menuState.screener);
+    screenerSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'screener'), menuState.screener, translateScreener);
     if (subtestSel) subtestSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'subtest'), menuState.subtest);
     if (evidenceSel) evidenceSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'evidence'), menuState.evidence, translateEvidence);
 }
@@ -7435,12 +7450,11 @@ function buildResourceCardHtml(item) {
 const MENU_FILTER_CHIP_FIELDS = [
     { field: 'pillar', labelKey: 'filter_pillar_label', format: (v) => translatePillar(v) },
     { field: 'resourceType', labelKey: 'filter_type_label', format: (v) => translateResourceType(v) },
-    { field: 'screener', labelKey: 'filter_screener_label' },
+    { field: 'screener', labelKey: 'filter_screener_label', format: (v) => translateScreener(v) },
     { field: 'subtest', labelKey: 'filter_subtest_label' },
     { field: 'tier', labelKey: 'filter_tier_label', format: (v) => t('filter_tier_option')(v) },
     { field: 'grade', labelKey: 'filter_grade_label', format: (v) => translateGrade(v) },
-    { field: 'evidence', labelKey: 'filter_evidence_label', format: (v) => translateEvidence(v) },
-    { field: 'search', labelKey: 'filter_search_label' }
+    { field: 'evidence', labelKey: 'filter_evidence_label', format: (v) => translateEvidence(v) }
 ];
 
 function renderActiveFilterChips() {
@@ -7482,8 +7496,7 @@ function syncMenuFilterControls() {
         ['filter-subtest', 'subtest'],
         ['filter-tier', 'tier'],
         ['filter-grade', 'grade'],
-        ['filter-evidence', 'evidence'],
-        ['filter-search', 'search']
+        ['filter-evidence', 'evidence']
     ].forEach(([id, field]) => {
         const el = document.getElementById(id);
         if (el) el.value = menuState[field] || '';
@@ -7498,6 +7511,25 @@ function renderMenuResults() {
     if (!countEl || !listEl) return;
 
     renderActiveFilterChips();
+
+    const screenerRequirementState = {
+        ...menuState,
+        screener: '',
+        subtest: '',
+        grade: '',
+        evidence: ''
+    };
+    const availableScreeners = distinctTagValues(screenerRequirementState, 'screener');
+    const hasRequiredScreener = String(menuState.screener || '').trim() !== '' || availableScreeners.length === 0;
+    const hasAllRequired = REQUIRED_MENU_FIELDS.every(field => {
+        if (field === 'screener') return hasRequiredScreener;
+        return String(menuState[field] || '').trim() !== '';
+    });
+    if (!hasAllRequired) {
+        countEl.textContent = t('filter_results_label')(0);
+        listEl.innerHTML = `<p class="results-empty results-empty-required">${escapeHtml(t('filter_required_results_prompt'))}</p>`;
+        return;
+    }
 
     const filtered = getFilteredResources(menuState, null);
     countEl.textContent = t('filter_results_label')(filtered.length);
@@ -7552,7 +7584,6 @@ function applyRememberedFiltersToMenu() {
     menuState.tier = remembered.tier ? String(remembered.tier) : '';
     menuState.grade = remembered.grade || '';
     menuState.evidence = remembered.evidence || '';
-    menuState.search = '';
 
     syncMenuFilterControls();
 
