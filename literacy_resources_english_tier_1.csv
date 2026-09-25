@@ -1,22 +1,8 @@
 ﻿Literacy Pillar,Resource Type,Resource Name,Related Screeners,Related Subtests,Grade Range,Grade Filter,Notes,Hyperlink URL
-Alphabetic Principle,Instructional Resource,Abracadabra,DIBELS,Letter Naming Fluency,(1-2),"1,2",MLL,https://literacy.concordia.ca/resources/abra/teacher/en/
-Alphabetic Principle,Instructional Resource,UFLI Manual,DIBELS,Letter Naming Fluency,(K-2); (FI 2-3),"K,1,2,FI 2,FI 3",,https://ufli.education.ufl.edu/foundations-materials/
-Alphabetic Principle,Instructional Resource,Orton-Gilingham,DIBELS,Letter Naming Fluency,(K-2),"K,1,2",,https://www.ortonacademy.org/
-Phonemic Awareness,Instructional Resource,Abracadabra,DIBELS; CTOPP-2,Phonemic Segmentation Fluency; Blending; Elision,(1-2),"1,2",MLL,https://literacy.concordia.ca/resources/abra/teacher/en/
+Alphabetic Principle; Phonemic Awareness; Phonics; Reading Fluency; Reading Comprehension,Instructional Resource,Abracadabra,DIBELS; CTOPP-2,Letter Naming Fluency; Phonemic Segmentation Fluency; Blending; Elision; Nonsense Word Fluency: Correct Letter Sounds; Nonsense Word Fluency: Words Read Correctly; Word Reading Fluency; Oral Reading Fluency: Accuracy; Oral Reading Fluency: Words Correct; Maze,(1-2),"1,2",MLL,https://literacy.concordia.ca/resources/abra/teacher/en/
+Alphabetic Principle; Phonics; Reading Fluency; Reading Comprehension; Orthography,Instructional Resource,UFLI Manual,DIBELS,Letter Naming Fluency; Nonsense Word Fluency: Correct Letter Sounds; Nonsense Word Fluency: Words Read Correctly; Word Reading Fluency; Oral Reading Fluency: Accuracy; Oral Reading Fluency: Words Correct; Maze,(K-2); (FI 2-3),"K,1,2,FI 2,FI 3",,https://ufli.education.ufl.edu/foundations-materials/
+Alphabetic Principle; Phonics; Reading Fluency; Reading Comprehension; Orthography,Instructional Resource,Orton-Gilingham,DIBELS,Letter Naming Fluency; Nonsense Word Fluency: Correct Letter Sounds; Nonsense Word Fluency: Words Read Correctly; Word Reading Fluency; Oral Reading Fluency: Accuracy; Oral Reading Fluency: Words Correct; Maze,(K-2),"K,1,2",,https://www.ortonacademy.org/
 Phonemic Awareness,Instructional Resource,Heggerty,DIBELS; CTOPP-2,Phonemic Segmentation Fluency; Blending; Elision,(K-2),"K,1,2",,https://heggerty.org/
 Phonemic Awareness,Instructional Resource,Kilpatrick – Equipped for Reading Success,DIBELS; CTOPP-2,Phonemic Segmentation Fluency; Blending; Elision,(K-2),"K,1,2",,https://equippedforreadingsuccess.com/
-Phonics,Instructional Resource,Abracadabra,DIBELS,Nonsense Word Fluency: Correct Letter Sounds; Nonsense Word Fluency: Words Read Correctly; Word Reading Fluency,(1-2),"1,2",MLL,https://literacy.concordia.ca/resources/abra/teacher/en/
-Phonics,Instructional Resource,UFLI Manual,DIBELS,Nonsense Word Fluency: Correct Letter Sounds; Nonsense Word Fluency: Words Read Correctly; Word Reading Fluency,(K-2); (FI 2-3),"K,1,2,FI 2,FI 3",,https://ufli.education.ufl.edu/foundations-materials/
-Phonics,Instructional Resource,Orton-Gilingham,DIBELS,Nonsense Word Fluency: Correct Letter Sounds; Nonsense Word Fluency: Words Read Correctly; Word Reading Fluency,(K-2),"K,1,2",,https://www.ortonacademy.org/
-Reading Fluency,Instructional Resource,Abracadabra,DIBELS,Oral Reading Fluency: Accuracy; Oral Reading Fluency: Words Correct,(1-2),"1,2",MLL,https://literacy.concordia.ca/resources/abra/teacher/en/
-Reading Fluency,Instructional Resource,UFLI Manual,DIBELS,Oral Reading Fluency: Accuracy; Oral Reading Fluency: Words Correct,(K-2); (FI 2-3),"K,1,2,FI 2,FI 3",,https://ufli.education.ufl.edu/foundations-materials/
-Reading Fluency,Instructional Resource,Orton-Gilingham,DIBELS,Oral Reading Fluency: Accuracy; Oral Reading Fluency: Words Correct,(K-2),"K,1,2",,https://www.ortonacademy.org/
-Vocabulary,Instructional Resource,Word Origins,,,(3-5),"3,4,5",,
-Reading Comprehension,Instructional Resource,Abracadabra,DIBELS,Maze,(1-2),"1,2",MLL,https://literacy.concordia.ca/resources/abra/teacher/en/
-Reading Comprehension,Instructional Resource,UFLI Manual,DIBELS,Maze,(K-2); (FI 2-3),"K,1,2,FI 2,FI 3",,https://ufli.education.ufl.edu/foundations-materials/
-Reading Comprehension,Instructional Resource,Orton-Gilingham,DIBELS,Maze,(K-2),"K,1,2",,https://www.ortonacademy.org/
-Reading Comprehension,Instructional Resource,Word Origins,DIBELS,Maze,(3-5),"3,4,5",,
+Vocabulary; Reading Comprehension; Orthography,Instructional Resource,Word Origins,DIBELS,Maze,(3-5),"3,4,5",,
 Orthography,Instructional Resource,Handwriting without Tears,,,(K-1),"K,1",,
-Orthography,Instructional Resource,UFLI Manual,,,(K-2),"K,1,2",,https://ufli.education.ufl.edu/foundations-materials/
-Orthography,Instructional Resource,Orton-Gilingham,,,(K-2),"K,1,2",,https://www.ortonacademy.org/
-Orthography,Instructional Resource,Word Origins,,,(3-5),"3,4,5",,
