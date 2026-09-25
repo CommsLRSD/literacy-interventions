@@ -10310,6 +10310,7 @@ body.program-prompt-open { overflow: hidden; }
 .program-prompt-btn:focus-visible,
 .program-prompt-continue:focus-visible {
   outline: none;
+  border-radius: calc(var(--radius) + 6px);
 }
 
 .program-prompt-btn-title {
@@ -10361,11 +10362,18 @@ body.program-prompt-open { overflow: hidden; }
 
 .program-prompt-back {
   justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   border: none;
   background: transparent;
   color: var(--primary);
   font-weight: 800;
   padding: 0.1rem 0;
+}
+
+.program-prompt-back .material-symbols-rounded {
+  font-size: 1.1rem;
 }
 
 .program-prompt-back:hover,
