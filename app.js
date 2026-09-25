@@ -7512,7 +7512,12 @@ function renderMenuResults() {
 
     renderActiveFilterChips();
 
-    const hasAllRequired = REQUIRED_MENU_FIELDS.every(field => String(menuState[field] || '').trim() !== '');
+    const availableScreeners = distinctTagValues(menuState, 'screener');
+    const hasRequiredScreener = String(menuState.screener || '').trim() !== '' || availableScreeners.length === 0;
+    const hasAllRequired = REQUIRED_MENU_FIELDS.every(field => {
+        if (field === 'screener') return hasRequiredScreener;
+        return String(menuState[field] || '').trim() !== '';
+    });
     if (!hasAllRequired) {
         countEl.textContent = t('filter_results_label')(0);
         listEl.innerHTML = `<p class="results-empty results-empty-required">${escapeHtml(t('filter_required_results_prompt'))}</p>`;
