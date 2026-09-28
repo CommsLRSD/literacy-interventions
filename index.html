@@ -307,25 +307,51 @@
                     <div class="interventions-page-layout">
                     <aside class="filter-sidebar" aria-label="Teaching resource filters">
                         <div class="filter-sidebar-header">
-                            <h3 class="wizard-title"><span class="material-symbols-rounded" aria-hidden="true" translate="no">tune</span><span data-i18n="wizard_choose_steps">Filter to find resources</span></h3>
+                            <div class="filter-sidebar-title-row">
+                                <h3 class="wizard-title"><span class="material-symbols-rounded" aria-hidden="true" translate="no">tune</span><span data-i18n="wizard_choose_steps">Filter to find resources</span></h3>
+                                <button type="button" class="filter-mobile-close-btn" onclick="closeMenuFiltersDrawer()" data-i18n="filter_mobile_done">Show results</button>
+                            </div>
                             <p class="filter-required-hint" data-i18n="filter_required_hint">Select Literacy Pillar, Resource Type, Tier, and a Screener when available to view resources.</p>
                         </div>
+                        <div class="filter-quickstart">
+                            <div class="filter-quickstart-label" data-i18n="filter_quickstart_label">Quick starts</div>
+                            <div id="menu-presets" class="filter-preset-list" aria-live="polite"></div>
+                        </div>
+                        <div class="filter-guided-flow" aria-live="polite">
+                            <div class="filter-guided-flow-label" data-i18n="filter_guided_flow_label">Progress</div>
+                            <div id="menu-step-bar" class="step-bar menu-step-bar"></div>
+                            <p id="filter-guidance-message" class="filter-guidance-message"></p>
+                        </div>
 
-                        <div class="filter-group">
-                            <label class="filter-group-label" for="filter-pillar" data-i18n="filter_pillar_label">Literacy Pillar</label>
-                            <select id="filter-pillar" class="styled-select" onchange="onMenuFilterChange('pillar', this.value)"></select>
+                        <div class="filter-group filter-group-visual">
+                            <div class="filter-group-heading">
+                                <label class="filter-group-label" for="filter-pillar" data-i18n="filter_pillar_label">Literacy Pillar</label>
+                                <span class="filter-step-badge">1</span>
+                            </div>
+                            <div id="filter-pillar-chips" class="menu-chip-group" role="group" aria-label="Literacy Pillar"></div>
+                            <select id="filter-pillar" class="styled-select" onchange="onMenuFilterChange('pillar', this.value)" hidden></select>
                         </div>
                         <div class="filter-group">
-                            <label class="filter-group-label" for="filter-type" data-i18n="filter_type_label">Resource Type</label>
+                            <div class="filter-group-heading">
+                                <label class="filter-group-label" for="filter-type" data-i18n="filter_type_label">Resource Type</label>
+                                <span class="filter-step-badge">2</span>
+                            </div>
                             <select id="filter-type" class="styled-select" onchange="onMenuFilterChange('resourceType', this.value)"></select>
                         </div>
-                        <div class="filter-group">
-                            <label class="filter-group-label" for="filter-screener" data-i18n="filter_screener_label">Screener</label>
-                            <select id="filter-screener" class="styled-select" onchange="onMenuFilterChange('screener', this.value)"></select>
+                        <div class="filter-group filter-group-visual">
+                            <div class="filter-group-heading">
+                                <label class="filter-group-label" for="filter-tier" data-i18n="filter_tier_label">Tier</label>
+                                <span class="filter-step-badge">3</span>
+                            </div>
+                            <div id="filter-tier-chips" class="menu-chip-group menu-chip-group-tier" role="group" aria-label="Tier"></div>
+                            <select id="filter-tier" class="styled-select" onchange="onMenuFilterChange('tier', this.value)" hidden><option value="" data-i18n="wizard_select_placeholder">Select...</option><option value="1">Tier 1</option><option value="2">Tier 2</option><option value="3">Tier 3</option></select>
                         </div>
                         <div class="filter-group">
-                            <label class="filter-group-label" for="filter-tier" data-i18n="filter_tier_label">Tier</label>
-                            <select id="filter-tier" class="styled-select" onchange="onMenuFilterChange('tier', this.value)"><option value="" data-i18n="wizard_select_placeholder">Select...</option><option value="1">Tier 1</option><option value="2">Tier 2</option><option value="3">Tier 3</option></select>
+                            <div class="filter-group-heading">
+                                <label class="filter-group-label" for="filter-screener" data-i18n="filter_screener_label">Screener</label>
+                                <span class="filter-step-badge">4</span>
+                            </div>
+                            <select id="filter-screener" class="styled-select" onchange="onMenuFilterChange('screener', this.value)"></select>
                         </div>
                         <details class="filter-advanced" aria-describedby="filter-advanced-description">
                             <summary class="filter-advanced-summary" data-i18n="filter_advanced_label">Advanced filters</summary>
@@ -348,11 +374,22 @@
                             <button type="button" class="filter-clear-btn" onclick="restartMenu()" data-i18n="wizard_start_over">Clear Filters</button>
                         </div>
                     </aside><!-- /.filter-sidebar -->
+                    <button type="button" id="filter-mobile-backdrop" class="filter-mobile-backdrop" onclick="closeMenuFiltersDrawer()" aria-hidden="true" tabindex="-1"></button>
 
                     <div id="dropdown-results" class="dropdown-results interventions-results-panel">
                         <div id="active-filters" class="active-filters" aria-live="polite"></div>
                         <div class="results-header-compact">
-                            <div id="results-count-compact" class="results-count-compact">0 results</div>
+                            <div class="results-header-summary">
+                                <div id="results-count-compact" class="results-count-compact">0 results</div>
+                                <div id="results-guidance-preview" class="results-guidance-preview"></div>
+                            </div>
+                            <div class="results-header-actions">
+                                <button type="button" class="filter-mobile-toggle-btn" onclick="openMenuFiltersDrawer()" data-i18n="filter_mobile_show">Filters</button>
+                                <div class="filter-search-wrap">
+                                    <label class="sr-only" for="filter-search" data-i18n="filter_search_label">Search</label>
+                                    <input id="filter-search" class="filter-search-input styled-select" type="search" data-i18n-placeholder="filter_search_placeholder" placeholder="Search by resource name…" oninput="onMenuSearchInput(this.value)">
+                                </div>
+                            </div>
                         </div>
                         <div id="results-list-compact" class="results-list-compact"></div>
                     </div><!-- /.interventions-results-panel -->
