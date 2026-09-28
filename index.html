@@ -37,6 +37,13 @@
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">menu</span>
             </button>
 
+            <!-- Mobile menu button -->
+            <button class="mobile-menu-btn" aria-label="Open navigation menu" aria-expanded="false">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+
             <button class="logo-section" onclick="navigateToPage('home')" aria-label="Go to homepage" style="background:none;border:none;cursor:pointer;padding:0;">
                 <img class="logo-icon" src="images/logos/literacy-interventions-logo.svg" alt="" aria-hidden="true">
                 <h1 class="logo-text">Literacy Interventions</h1>
@@ -70,13 +77,6 @@
                         </select>
                     </label>
                 </div>
-
-                <!-- Mobile menu button -->
-                <button class="mobile-menu-btn" aria-label="Open navigation menu" aria-expanded="false">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
             </div>
         </div>
     </nav>
@@ -127,22 +127,6 @@
     <!-- Mobile nav overlay -->
     <div class="mobile-nav-overlay" role="dialog" aria-label="Navigation menu" aria-hidden="true">
         <div class="mobile-nav-content">
-            <div class="mobile-menu-program-lang" id="mobile-program-lang">
-                <label class="top-program-lang-field" for="mobile-program-select">
-                    <span class="top-program-lang-label" data-i18n="fc_program_mini_label">Program</span>
-                    <select id="mobile-program-select" class="top-program-lang-select" onchange="requestTopProgramChange(this.value)" aria-label="Program">
-                        <option value="English" data-i18n-opt="fc_program_english">English</option>
-                        <option value="French Immersion" data-i18n-opt="fc_program_french_immersion">French Immersion</option>
-                    </select>
-                </label>
-                <label class="top-program-lang-field" for="mobile-language-select" hidden>
-                    <span class="top-program-lang-label" data-i18n="fc_language_mini_label">Language</span>
-                    <select id="mobile-language-select" class="top-program-lang-select" onchange="requestTopLanguageChange(this.value)" aria-label="Language">
-                        <option value="en" data-i18n-opt="fc_language_english">English</option>
-                        <option value="fr" data-i18n-opt="fc_language_french">French</option>
-                    </select>
-                </label>
-            </div>
             <button class="mobile-nav-item active" data-page="home">
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">home</span>
                 <span data-i18n="nav_home">Home</span>
@@ -180,6 +164,22 @@
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">info</span>
                 <span data-i18n="nav_about">About</span>
             </button>
+            <div class="mobile-menu-program-lang" id="mobile-program-lang">
+                <label class="top-program-lang-field" for="mobile-program-select">
+                    <span class="top-program-lang-label" data-i18n="fc_program_mini_label">Program</span>
+                    <select id="mobile-program-select" class="top-program-lang-select" onchange="requestTopProgramChange(this.value)" aria-label="Program">
+                        <option value="English" data-i18n-opt="fc_program_english">English</option>
+                        <option value="French Immersion" data-i18n-opt="fc_program_french_immersion">French Immersion</option>
+                    </select>
+                </label>
+                <label class="top-program-lang-field" for="mobile-language-select" hidden>
+                    <span class="top-program-lang-label" data-i18n="fc_language_mini_label">Language</span>
+                    <select id="mobile-language-select" class="top-program-lang-select" onchange="requestTopLanguageChange(this.value)" aria-label="Language">
+                        <option value="en" data-i18n-opt="fc_language_english">English</option>
+                        <option value="fr" data-i18n-opt="fc_language_french">French</option>
+                    </select>
+                </label>
+            </div>
         </div>
     </div>
 
@@ -1276,6 +1276,7 @@
 
     <!-- Footer -->
     <footer class="site-footer" role="contentinfo">
+        <img class="site-footer-division-logo" src="images/logos/lrsd-logo-fullcolour.svg" alt="Louis Riel School Division">
         <p data-i18n="footer_text">&copy; 2025–2026 Literacy Interventions &middot; Louis Riel School Division &middot; Supporting educators in literacy intervention</p>
     </footer>
 
