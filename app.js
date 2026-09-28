@@ -7205,11 +7205,37 @@ const menuState = {
     subtest: '',
     tier: '',
     grade: '',
-    evidence: ''
+    evidence: '',
+    search: ''
 };
 
 const NO_SPECIFIC_SCREENER_VALUE = '__no_specific_screener__';
 const REQUIRED_MENU_FIELDS = ['pillar', 'resourceType', 'screener', 'tier'];
+const MENU_VISUAL_FIELDS = ['pillar', 'tier'];
+const MENU_PRESETS = [
+    {
+        id: 'tier1-classroom',
+        labelKey: 'filter_preset_tier1_label',
+        descKey: 'filter_preset_tier1_desc',
+        values: { pillar: 'Phonemic Awareness', resourceType: 'Instructional Resource', tier: '1' }
+    },
+    {
+        id: 'phonics-intervention',
+        labelKey: 'filter_preset_phonics_label',
+        descKey: 'filter_preset_phonics_desc',
+        values: { pillar: 'Phonics', resourceType: 'Intervention', tier: '2' }
+    },
+    {
+        id: 'reading-comprehension',
+        labelKey: 'filter_preset_comprehension_label',
+        descKey: 'filter_preset_comprehension_desc',
+        values: { pillar: 'Reading Comprehension', resourceType: 'Instructional Resource', tier: '1' }
+    }
+];
+const menuUiState = {
+    initialized: false,
+    mobileFiltersOpen: false
+};
 
 // Language (program) is a toggle that always has a value; the last choice is
 // remembered in localStorage so it carries over between visits.
@@ -7330,6 +7356,20 @@ function uniqueSorted(values) {
     return Array.from(new Set(values.filter(Boolean))).sort();
 }
 
+function getMenuFieldLabel(field) {
+    const labels = {
+        pillar: t('filter_pillar_label'),
+        resourceType: t('filter_type_label'),
+        tier: t('filter_tier_label'),
+        screener: t('filter_screener_label'),
+        subtest: t('filter_subtest_label'),
+        grade: t('filter_grade_label'),
+        evidence: t('filter_evidence_label'),
+        search: t('filter_search_label')
+    };
+    return labels[field] || field;
+}
+
 function translatePillar(pillarName) {
     if (!pillarName) return '';
     if (appState.language !== 'fr') return pillarName;
@@ -7347,6 +7387,33 @@ function translateResourceType(typeName) {
 function translateScreener(screenerName) {
     if (screenerName === NO_SPECIFIC_SCREENER_VALUE) return t('filter_screener_none');
     return screenerName || '';
+}
+
+function getMenuAvailableScreeners(state) {
+    const screenerRequirementState = {
+        ...state,
+        screener: '',
+        subtest: '',
+        grade: '',
+        evidence: '',
+        search: ''
+    };
+    return distinctTagValues(screenerRequirementState, 'screener');
+}
+
+function isMenuFieldComplete(field, state = menuState) {
+    if (field === 'screener') {
+        return String(state.screener || '').trim() !== '' || getMenuAvailableScreeners(state).length === 0;
+    }
+    return String(state[field] || '').trim() !== '';
+}
+
+function hasAllRequiredMenuFilters(state = menuState) {
+    return REQUIRED_MENU_FIELDS.every(field => isMenuFieldComplete(field, state));
+}
+
+function getNextRequiredMenuField(state = menuState) {
+    return REQUIRED_MENU_FIELDS.find(field => !isMenuFieldComplete(field, state)) || '';
 }
 
 // Build the <option> list for one filter select from the values that remain
@@ -7409,6 +7476,81 @@ function getResourceUrlLang(item, url) {
     return idx === 0 ? 'EN' : (idx === 1 ? 'FR' : '');
 }
 
+function renderMenuChoiceButtons(containerId, field, values, selected, translate) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = values.map(value => {
+        const isSelected = String(value) === String(selected);
+        const label = translate ? translate(value) : value;
+        return `
+            <button type="button" class="menu-chip-btn${isSelected ? ' menu-chip-btn-selected' : ''}" data-menu-filter-chip="true" data-field="${escapeAttr(field)}" data-value="${escapeAttr(value)}" aria-pressed="${isSelected ? 'true' : 'false'}">
+                ${escapeHtml(label)}
+            </button>
+        `;
+    }).join('');
+}
+
+function sanitizeMenuStateSelections() {
+    const baselineState = {
+        program: menuState.program,
+        pillar: '',
+        resourceType: '',
+        screener: '',
+        subtest: '',
+        tier: '',
+        grade: '',
+        evidence: '',
+        search: ''
+    };
+    const availableValues = {
+        pillar: distinctTagValues(baselineState, 'pillar'),
+        resourceType: distinctTagValues(baselineState, 'resourceType'),
+        tier: distinctTagValues(baselineState, 'tier').map(String),
+        screener: distinctTagValues(menuState, 'screener'),
+        subtest: distinctTagValues(menuState, 'subtest'),
+        grade: distinctGradeValues(menuState),
+        evidence: distinctTagValues(menuState, 'evidence')
+    };
+    ['pillar', 'resourceType', 'tier', 'screener', 'subtest', 'grade', 'evidence'].forEach(field => {
+        const value = menuState[field];
+        if (value && !availableValues[field].includes(String(value))) {
+            menuState[field] = '';
+        }
+    });
+}
+
+function renderMenuPresets() {
+    const el = document.getElementById('menu-presets');
+    if (!el) return;
+    el.innerHTML = MENU_PRESETS.map(preset => `
+        <button type="button" class="filter-preset-btn" data-menu-preset="${escapeAttr(preset.id)}">
+            <span class="filter-preset-title">${escapeHtml(t(preset.labelKey))}</span>
+            <span class="filter-preset-desc">${escapeHtml(t(preset.descKey))}</span>
+        </button>
+    `).join('');
+}
+
+function renderMenuGuidedFlow() {
+    const stepBar = document.getElementById('menu-step-bar');
+    const messageEl = document.getElementById('filter-guidance-message');
+    if (!stepBar || !messageEl) return;
+
+    const steps = REQUIRED_MENU_FIELDS.map(field => {
+        const complete = isMenuFieldComplete(field);
+        const next = !complete && field === getNextRequiredMenuField();
+        const label = getMenuFieldLabel(field);
+        const status = complete ? t('filter_step_complete') : (next ? t('filter_step_current') : t('filter_step_upcoming'));
+        return `<span class="step-pill${complete ? ' completed' : ''}${next ? ' active' : ''}"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(status)}</span></span>`;
+    });
+    stepBar.innerHTML = steps.join('<span class="step-connector" aria-hidden="true"></span>');
+
+    const nextField = getNextRequiredMenuField();
+    const previewCount = getFilteredResources({ ...menuState, search: '' }, null).length;
+    messageEl.textContent = nextField
+        ? `${t('filter_next_label')} ${t('filter_guidance_pick')} ${getMenuFieldLabel(nextField)}.`
+        : t('filter_preview_results_label')(previewCount);
+}
+
 // Repopulate every select in the standalone Interventions Menu so its
 // options always reflect the other filters currently applied, then re-render
 // the results.
@@ -7419,7 +7561,10 @@ function renderMenuFilterOptions() {
     const subtestSel = document.getElementById('filter-subtest');
     const gradeSel = document.getElementById('filter-grade');
     const evidenceSel = document.getElementById('filter-evidence');
+    const searchInput = document.getElementById('filter-search');
     if (!pillarSel || !typeSel || !screenerSel) return;
+
+    sanitizeMenuStateSelections();
 
     if (gradeSel) gradeSel.innerHTML = buildFacetOptionsHtml(distinctGradeValues(menuState), menuState.grade, translateGrade);
     pillarSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'pillar'), menuState.pillar, translatePillar);
@@ -7427,6 +7572,15 @@ function renderMenuFilterOptions() {
     screenerSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'screener'), menuState.screener, translateScreener);
     if (subtestSel) subtestSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'subtest'), menuState.subtest);
     if (evidenceSel) evidenceSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'evidence'), menuState.evidence, translateEvidence);
+    renderMenuChoiceButtons('filter-pillar-chips', 'pillar', distinctTagValues(menuState, 'pillar'), menuState.pillar, translatePillar);
+    renderMenuChoiceButtons('filter-tier-chips', 'tier', distinctTagValues(menuState, 'tier').map(String), String(menuState.tier || ''), value => t('filter_tier_option')(value));
+    renderMenuPresets();
+    renderMenuGuidedFlow();
+    if (searchInput) {
+        searchInput.value = menuState.search || '';
+        searchInput.disabled = !hasAllRequiredMenuFilters();
+        searchInput.placeholder = t(searchInput.disabled ? 'filter_search_disabled_placeholder' : 'filter_search_placeholder');
+    }
 }
 
 function buildResourceLinksHtml(item) {
@@ -7442,9 +7596,17 @@ function buildResourceLinksHtml(item) {
     }).join('');
 }
 
+function buildResourceMetaPillsHtml(matchingTags) {
+    const gradeText = uniqueSorted(matchingTags.map(tag => tag.gradeRangeText)).join('; ');
+    const screenerText = uniqueSorted(matchingTags.flatMap(tag => (tag.screeners || []).length ? tag.screeners : [NO_SPECIFIC_SCREENER_VALUE])).map(translateScreener).join(', ');
+    const pills = [];
+    if (gradeText) pills.push(`<span class="resource-card-pill"><strong>${escapeHtml(t('filter_grades_label'))}:</strong> ${escapeHtml(gradeText)}</span>`);
+    if (screenerText) pills.push(`<span class="resource-card-pill"><strong>${escapeHtml(t('filter_screeners_label'))}:</strong> ${escapeHtml(screenerText)}</span>`);
+    return pills.join('');
+}
+
 function buildResourceCardHtml(item) {
     const matchingTags = getMatchingTags(item, menuState);
-    const gradeText = uniqueSorted(matchingTags.map(tag => tag.gradeRangeText)).join('; ');
     const notes = uniqueSorted(matchingTags.map(tag => tag.notes)).join('; ');
     const evidenceLevel = getResourceEvidenceLevel({ tags: matchingTags });
 
@@ -7455,8 +7617,8 @@ function buildResourceCardHtml(item) {
                     <span class="resource-card-name-text">${escapeHtml(item.name)}</span>
                     ${getEvidenceBadgeHtml(evidenceLevel)}
                 </div>
-                ${gradeText ? `<div class="resource-card-meta">${escapeHtml(gradeText)}</div>` : ''}
-                ${notes ? `<div class="resource-card-meta resource-card-notes">${escapeHtml(notes)}</div>` : ''}
+                <div class="resource-card-pill-row">${buildResourceMetaPillsHtml(matchingTags)}</div>
+                ${notes ? `<div class="resource-card-note-block"><span class="resource-card-note-label">${escapeHtml(t('filter_notes_label'))}</span><div class="resource-card-meta resource-card-notes">${escapeHtml(notes)}</div></div>` : ''}
             </div>
             <div class="resource-card-links">${buildResourceLinksHtml(item)}</div>
         </div>
@@ -7473,25 +7635,30 @@ const MENU_FILTER_CHIP_FIELDS = [
     { field: 'subtest', labelKey: 'filter_subtest_label' },
     { field: 'tier', labelKey: 'filter_tier_label', format: (v) => t('filter_tier_option')(v) },
     { field: 'grade', labelKey: 'filter_grade_label', format: (v) => translateGrade(v) },
-    { field: 'evidence', labelKey: 'filter_evidence_label', format: (v) => translateEvidence(v) }
+    { field: 'evidence', labelKey: 'filter_evidence_label', format: (v) => translateEvidence(v) },
+    { field: 'search', labelKey: 'filter_search_label', format: (v) => v }
 ];
 
 function renderActiveFilterChips() {
     const el = document.getElementById('active-filters');
     if (!el) return;
 
-    // Plain text of each chosen value (no category labels, no pills),
-    // separated by a vertical bar; clicking one removes that filter.
     const items = MENU_FILTER_CHIP_FIELDS
         .filter(def => String(menuState[def.field] || '').trim() !== '')
         .map(def => {
             const raw = menuState[def.field];
             const value = def.format ? def.format(raw) : raw;
-            return `<button type="button" class="active-filter-item" onclick="clearMenuFilter('${escapeAttr(def.field)}')" title="${escapeHtml(t('filter_remove_filter'))}">${escapeHtml(value)}</button>`;
+            return `
+                <button type="button" class="active-filter-pill" onclick="clearMenuFilter('${escapeAttr(def.field)}')" title="${escapeHtml(t('filter_remove_filter'))}">
+                    <span class="active-filter-pill-label">${escapeHtml(t(def.labelKey))}</span>
+                    <span class="active-filter-pill-value">${escapeHtml(value)}</span>
+                    <span class="active-filter-pill-remove" aria-hidden="true">×</span>
+                </button>
+            `;
         });
 
     el.innerHTML = items.length
-        ? items.join('<span class="active-filter-sep" aria-hidden="true">|</span>')
+        ? items.join('')
         : `<span class="active-filters-empty">${escapeHtml(t('filter_active_none'))}</span>`;
 }
 
@@ -7499,7 +7666,7 @@ function renderActiveFilterChips() {
 function clearMenuFilter(field) {
     if (!(field in menuState)) return;
     menuState[field] = '';
-    setRememberedMenuFilters({ [field]: null });
+    if (field !== 'search') setRememberedMenuFilters({ [field]: null });
     syncMenuFilterControls();
     renderMenuFilterOptions();
     renderMenuResults();
@@ -7515,7 +7682,8 @@ function syncMenuFilterControls() {
         ['filter-subtest', 'subtest'],
         ['filter-tier', 'tier'],
         ['filter-grade', 'grade'],
-        ['filter-evidence', 'evidence']
+        ['filter-evidence', 'evidence'],
+        ['filter-search', 'search']
     ].forEach(([id, field]) => {
         const el = document.getElementById(id);
         if (el) el.value = menuState[field] || '';
@@ -7524,34 +7692,60 @@ function syncMenuFilterControls() {
     syncMenuLanguageToggle();
 }
 
+function matchesMenuSearch(item) {
+    const query = String(menuState.search || '').trim().toLowerCase();
+    if (!query) return true;
+    return String(item.name || '').toLowerCase().includes(query);
+}
+
+function setMenuDrawerOpen(isOpen) {
+    const isMobile = window.innerWidth <= 900;
+    const sidebar = document.querySelector('.filter-sidebar');
+    const backdrop = document.getElementById('filter-mobile-backdrop');
+    const toggle = document.querySelector('.filter-mobile-toggle-btn');
+    if (!sidebar || !backdrop) return;
+    const open = Boolean(isOpen && isMobile);
+    menuUiState.mobileFiltersOpen = open;
+    sidebar.classList.toggle('filter-sidebar-open', open);
+    backdrop.classList.toggle('filter-mobile-backdrop-visible', open);
+    backdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
+    document.body.classList.toggle('menu-filters-open', open);
+    if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function openMenuFiltersDrawer() {
+    setMenuDrawerOpen(true);
+}
+
+function closeMenuFiltersDrawer() {
+    setMenuDrawerOpen(false);
+}
+
 function renderMenuResults() {
     const countEl = document.getElementById('results-count-compact');
     const listEl = document.getElementById('results-list-compact');
+    const previewEl = document.getElementById('results-guidance-preview');
     if (!countEl || !listEl) return;
 
     renderActiveFilterChips();
-
-    const screenerRequirementState = {
-        ...menuState,
-        screener: '',
-        subtest: '',
-        grade: '',
-        evidence: ''
-    };
-    const availableScreeners = distinctTagValues(screenerRequirementState, 'screener');
-    const hasRequiredScreener = String(menuState.screener || '').trim() !== '' || availableScreeners.length === 0;
-    const hasAllRequired = REQUIRED_MENU_FIELDS.every(field => {
-        if (field === 'screener') return hasRequiredScreener;
-        return String(menuState[field] || '').trim() !== '';
-    });
+    const hasAllRequired = hasAllRequiredMenuFilters();
     if (!hasAllRequired) {
-        countEl.textContent = t('filter_results_label')(0);
-        listEl.innerHTML = `<p class="results-empty results-empty-required">${escapeHtml(t('filter_required_results_prompt'))}</p>`;
+        const nextField = getNextRequiredMenuField();
+        const previewCount = getFilteredResources({ ...menuState, search: '' }, null).length;
+        countEl.textContent = t('filter_preview_results_label')(previewCount);
+        if (previewEl) previewEl.textContent = nextField ? `${t('filter_next_label')} ${getMenuFieldLabel(nextField)}` : '';
+        listEl.innerHTML = `
+            <div class="results-empty results-empty-required">
+                <strong>${escapeHtml(nextField ? `${t('filter_next_label')} ${getMenuFieldLabel(nextField)}` : t('filter_required_results_prompt'))}</strong>
+                <div class="results-empty-detail">${escapeHtml(t('filter_preview_results_label')(previewCount))}</div>
+            </div>
+        `;
         return;
     }
 
-    const filtered = getFilteredResources(menuState, null);
+    const filtered = getFilteredResources(menuState, null).filter(matchesMenuSearch);
     countEl.textContent = t('filter_results_label')(filtered.length);
+    if (previewEl) previewEl.textContent = menuState.search ? `${getMenuFieldLabel('search')}: ${menuState.search}` : '';
     listEl.innerHTML = filtered.length
         ? filtered.map(buildResourceCardHtml).join('')
         : `<p class="results-empty">${escapeHtml(t('filter_results_none'))}</p>`;
@@ -7567,9 +7761,52 @@ function onMenuFilterChange(field, value) {
         return;
     }
     menuState[field] = value;
-    setRememberedMenuFilters({ [field]: value || null });
+    if (field !== 'search') setRememberedMenuFilters({ [field]: value || null });
     renderMenuFilterOptions();
     renderMenuResults();
+}
+
+function onMenuSearchInput(value) {
+    menuState.search = value || '';
+    syncMenuFilterControls();
+    renderMenuResults();
+}
+
+function toggleMenuFilterChip(field, value) {
+    if (!MENU_VISUAL_FIELDS.includes(field)) return;
+    onMenuFilterChange(field, String(menuState[field] || '') === String(value) ? '' : value);
+}
+
+function getFirstMenuScreenerValue(state) {
+    const options = getMenuAvailableScreeners(state);
+    return options.length ? options[0] : '';
+}
+
+function applyMenuPreset(presetId) {
+    const preset = MENU_PRESETS.find(item => item.id === presetId);
+    if (!preset) return;
+    Object.assign(menuState, {
+        pillar: preset.values.pillar || '',
+        resourceType: preset.values.resourceType || '',
+        tier: preset.values.tier || '',
+        screener: '',
+        subtest: '',
+        grade: '',
+        evidence: '',
+        search: ''
+    });
+    menuState.program = appState.selectedProgram || getStoredMenuLanguage();
+    menuState.screener = getFirstMenuScreenerValue(menuState);
+    setRememberedMenuFilters({
+        pillar: menuState.pillar || null,
+        resourceType: menuState.resourceType || null,
+        tier: menuState.tier || null,
+        screener: menuState.screener || null
+    });
+    syncMenuFilterControls();
+    renderMenuFilterOptions();
+    renderMenuResults();
+    if (window.innerWidth <= 900) closeMenuFiltersDrawer();
 }
 
 function resetMenuFilters() {
@@ -7588,6 +7825,7 @@ function resetMenuFilters() {
 // "Clear Filters" button in the standalone Interventions Menu.
 function restartMenu() {
     resetMenuFilters();
+    closeMenuFiltersDrawer();
 }
 
 // Pre-fill the standalone menu's filters from whatever the user last chose
@@ -7603,6 +7841,7 @@ function applyRememberedFiltersToMenu() {
     menuState.tier = remembered.tier ? String(remembered.tier) : '';
     menuState.grade = remembered.grade || '';
     menuState.evidence = remembered.evidence || '';
+    menuState.search = '';
 
     syncMenuFilterControls();
 
@@ -7612,6 +7851,24 @@ function applyRememberedFiltersToMenu() {
 
 function initializeInterventionsFilterMenu() {
     if (!document.querySelector('.filter-sidebar')) return;
+    if (!menuUiState.initialized) {
+        document.addEventListener('click', event => {
+            const presetBtn = event.target.closest('[data-menu-preset]');
+            if (presetBtn) {
+                applyMenuPreset(presetBtn.dataset.menuPreset);
+                return;
+            }
+            const chipBtn = event.target.closest('[data-menu-filter-chip]');
+            if (chipBtn) toggleMenuFilterChip(chipBtn.dataset.field, chipBtn.dataset.value);
+        });
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 900) closeMenuFiltersDrawer();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && menuUiState.mobileFiltersOpen) closeMenuFiltersDrawer();
+        });
+        menuUiState.initialized = true;
+    }
     applyRememberedFiltersToMenu();
 }
 
@@ -7714,9 +7971,12 @@ window.switchVisualFlowchartToLayout = switchVisualFlowchartToLayout;
 
 // Interventions Menu filter system
 window.onMenuFilterChange = onMenuFilterChange;
+window.onMenuSearchInput = onMenuSearchInput;
 window.clearMenuFilter = clearMenuFilter;
 window.setMenuLanguage = setMenuLanguage;
 window.restartMenu = restartMenu;
+window.openMenuFiltersDrawer = openMenuFiltersDrawer;
+window.closeMenuFiltersDrawer = closeMenuFiltersDrawer;
 window.initializeInterventionsFilterMenu = initializeInterventionsFilterMenu;
 window.applyRememberedFiltersToMenu = applyRememberedFiltersToMenu;
 
