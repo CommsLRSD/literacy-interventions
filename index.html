@@ -57,14 +57,14 @@
                 <div class="top-program-lang" id="top-program-lang">
                     <label class="top-program-lang-field" for="top-program-select">
                         <span class="top-program-lang-label" data-i18n="fc_program_mini_label">Program</span>
-                        <select id="top-program-select" class="top-program-lang-select" onchange="requestTopProgramChange(this.value)" aria-label="Program">
+                        <select id="top-program-select" class="top-program-lang-select" data-program-control="program" onchange="requestTopProgramChange(this.value)" aria-label="Program">
                             <option value="English" data-i18n-opt="fc_program_english">English</option>
                             <option value="French Immersion" data-i18n-opt="fc_program_french_immersion">French Immersion</option>
                         </select>
                     </label>
-                    <label class="top-program-lang-field" for="top-language-select" hidden>
+                    <label class="top-program-lang-field" for="top-language-select" data-program-language-field hidden>
                         <span class="top-program-lang-label" data-i18n="fc_language_mini_label">Language</span>
-                        <select id="top-language-select" class="top-program-lang-select" onchange="requestTopLanguageChange(this.value)" aria-label="Language">
+                        <select id="top-language-select" class="top-program-lang-select" data-program-control="language" onchange="requestTopLanguageChange(this.value)" aria-label="Language">
                             <option value="en" data-i18n-opt="fc_language_english">English</option>
                             <option value="fr" data-i18n-opt="fc_language_french">French</option>
                         </select>
@@ -72,7 +72,7 @@
                 </div>
 
                 <!-- Mobile menu button -->
-                <button class="mobile-menu-btn" aria-label="Open navigation menu" aria-expanded="false">
+                <button class="mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="mobile-nav-overlay">
                     <span></span>
                     <span></span>
                     <span></span>
@@ -125,8 +125,24 @@
     </nav>
 
     <!-- Mobile nav overlay -->
-    <div class="mobile-nav-overlay" role="dialog" aria-label="Navigation menu" aria-hidden="true">
+    <div class="mobile-nav-overlay" id="mobile-nav-overlay" role="dialog" aria-label="Navigation menu" aria-hidden="true">
         <div class="mobile-nav-content">
+            <div class="mobile-nav-controls">
+                <label class="mobile-nav-control" for="mobile-program-select">
+                    <span class="mobile-nav-control-label" data-i18n="fc_program_mini_label">Program</span>
+                    <select id="mobile-program-select" class="mobile-nav-select" data-program-control="program" onchange="requestTopProgramChange(this.value)" aria-label="Program">
+                        <option value="English" data-i18n-opt="fc_program_english">English</option>
+                        <option value="French Immersion" data-i18n-opt="fc_program_french_immersion">French Immersion</option>
+                    </select>
+                </label>
+                <label class="mobile-nav-control" for="mobile-language-select" data-program-language-field hidden>
+                    <span class="mobile-nav-control-label" data-i18n="fc_language_mini_label">Language</span>
+                    <select id="mobile-language-select" class="mobile-nav-select" data-program-control="language" onchange="requestTopLanguageChange(this.value)" aria-label="Language">
+                        <option value="en" data-i18n-opt="fc_language_english">English</option>
+                        <option value="fr" data-i18n-opt="fc_language_french">French</option>
+                    </select>
+                </label>
+            </div>
             <button class="mobile-nav-item active" data-page="home">
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">home</span>
                 <span data-i18n="nav_home">Home</span>
@@ -1335,9 +1351,6 @@
                     <img class="program-prompt-brand-app-icon" src="images/logos/literacy-interventions-logo.svg" alt="" aria-hidden="true">
                     <span class="program-prompt-brand-app-name" data-i18n="program_prompt_badge">Literacy Interventions</span>
                 </div>
-                <div class="program-prompt-brand-division-wrap">
-                    <img class="program-prompt-brand-division" src="images/logos/lrsd-logo-fullcolour.svg" alt="Louis Riel School Division">
-                </div>
             </div>
             <h2 class="program-prompt-title" id="program-prompt-title" data-i18n="program_prompt_title">Choose your program</h2>
             <p class="program-prompt-desc" id="program-prompt-desc" data-i18n="program_prompt_desc">Select the program you are working in to open the right version of the app.</p>
@@ -1365,6 +1378,11 @@
                     <span class="material-symbols-rounded" aria-hidden="true" translate="no">arrow_back</span>
                     <span data-i18n="program_prompt_back">Back</span>
                 </button>
+            </div>
+            <div class="program-prompt-footer">
+                <div class="program-prompt-brand-division-wrap">
+                    <img class="program-prompt-brand-division" src="images/logos/lrsd-logo-fullcolour.svg" alt="Louis Riel School Division">
+                </div>
             </div>
         </div>
     </div>

@@ -200,14 +200,15 @@ function toggleLanguage() {
 }
 
 function updateTopProgramLangControls() {
-    const programSelect = document.getElementById('top-program-select');
-    const languageSelect = document.getElementById('top-language-select');
-    const languageField = languageSelect?.closest('.top-program-lang-field');
-    if (programSelect) programSelect.value = appState.selectedProgram || PROGRAM_ENGLISH;
-    if (languageSelect) languageSelect.value = appState.language === 'fr' ? 'fr' : 'en';
-    if (languageField) {
-        languageField.hidden = appState.selectedProgram !== PROGRAM_FRENCH_IMMERSION;
-    }
+    document.querySelectorAll('[data-program-control="program"]').forEach(select => {
+        select.value = appState.selectedProgram || PROGRAM_ENGLISH;
+    });
+    document.querySelectorAll('[data-program-control="language"]').forEach(select => {
+        select.value = appState.language === 'fr' ? 'fr' : 'en';
+    });
+    document.querySelectorAll('[data-program-language-field]').forEach(field => {
+        field.hidden = appState.selectedProgram !== PROGRAM_FRENCH_IMMERSION;
+    });
 }
 
 // Re-render any dynamic sections that are currently visible so they pick up
@@ -245,8 +246,14 @@ function refreshWizardSelectPlaceholders() {
 }
 
 window.toggleLanguage = toggleLanguage;
-window.requestTopProgramChange = (program) => requestFlowchartProgramChange(program, { promptLanguageChoice: true });
-window.requestTopLanguageChange = (lang) => requestFlowchartLanguageChange(lang);
+window.requestTopProgramChange = (program) => {
+    closeMobileMenu();
+    requestFlowchartProgramChange(program, { promptLanguageChoice: true });
+};
+window.requestTopLanguageChange = (lang) => {
+    closeMobileMenu();
+    requestFlowchartLanguageChange(lang);
+};
 window.submitProgramPrompt = submitProgramPrompt;
 window.confirmProgramPromptLanguage = confirmProgramPromptLanguage;
 window.cancelProgramPromptLanguage = cancelProgramPromptLanguage;
@@ -587,25 +594,38 @@ function setupSubTabs() {
 // Mobile Menu
 // ============================================
 function setupMobileMenu() {
-    const menuBtn = document.querySelector('.mobile-menu-btn');
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const overlay = document.getElementById('mobile-nav-overlay');
     if (menuBtn) {
         menuBtn.addEventListener('click', toggleMobileMenu);
     }
+    overlay?.addEventListener('click', (event) => {
+        if (event.target === overlay) closeMobileMenu();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && appState.mobileMenuOpen) {
+            closeMobileMenu();
+        }
+    });
 }
 
 function toggleMobileMenu() {
     appState.mobileMenuOpen = !appState.mobileMenuOpen;
-    const menuBtn = document.querySelector('.mobile-menu-btn');
-    const overlay = document.querySelector('.mobile-nav-overlay');
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const overlay = document.getElementById('mobile-nav-overlay');
     
     menuBtn?.classList.toggle('active', appState.mobileMenuOpen);
+    menuBtn?.setAttribute('aria-expanded', appState.mobileMenuOpen ? 'true' : 'false');
     overlay?.classList.toggle('active', appState.mobileMenuOpen);
+    overlay?.setAttribute('aria-hidden', appState.mobileMenuOpen ? 'false' : 'true');
 }
 
 function closeMobileMenu() {
     appState.mobileMenuOpen = false;
-    document.querySelector('.mobile-menu-btn')?.classList.remove('active');
-    document.querySelector('.mobile-nav-overlay')?.classList.remove('active');
+    document.getElementById('mobile-menu-btn')?.classList.remove('active');
+    document.getElementById('mobile-menu-btn')?.setAttribute('aria-expanded', 'false');
+    document.getElementById('mobile-nav-overlay')?.classList.remove('active');
+    document.getElementById('mobile-nav-overlay')?.setAttribute('aria-hidden', 'true');
 }
 
 // ============================================
