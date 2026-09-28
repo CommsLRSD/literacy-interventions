@@ -335,20 +335,6 @@ strong { font-weight: 600; }
   height: 2px;
   background: var(--text);
   border-radius: 2px;
-  transition: transform var(--duration-slow) var(--ease),
-              opacity var(--duration-slow) var(--ease);
-}
-
-.mobile-menu-btn.active span:nth-child(1) {
-  transform: translateY(7px) rotate(45deg);
-}
-
-.mobile-menu-btn.active span:nth-child(2) {
-  opacity: 0;
-}
-
-.mobile-menu-btn.active span:nth-child(3) {
-  transform: translateY(-7px) rotate(-45deg);
 }
 
 /* ------------------------------------------------------------
@@ -6425,12 +6411,21 @@ body.step-review-modal-open { overflow: hidden; }
    ------------------------------------------------------------ */
 
 .site-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
   text-align: center;
   padding: var(--space-lg) var(--space-md);
   color: var(--text-light);
   font-size: 0.8rem;
   border-top: 1px solid var(--border);
   background: var(--bg-alt);
+}
+
+.site-footer-division-logo {
+  width: min(220px, 70vw);
+  height: auto;
 }
 
 /* ------------------------------------------------------------
@@ -6483,9 +6478,9 @@ body.step-review-modal-open { overflow: hidden; }
   .mobile-menu-program-lang {
     display: grid;
     gap: var(--space-sm);
-    margin-bottom: var(--space-sm);
-    padding: 0 var(--space-sm) var(--space-sm);
-    border-bottom: 1px solid var(--border);
+    margin-top: var(--space-sm);
+    padding: var(--space-sm) var(--space-sm) 0;
+    border-top: 1px solid var(--border);
   }
   .mobile-menu-program-lang .top-program-lang-field {
     gap: 0.35rem;
@@ -10253,6 +10248,8 @@ body.program-prompt-open { overflow: hidden; }
   justify-content: flex-start;
   gap: 1rem;
   margin-bottom: 0;
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid rgba(12, 49, 90, 0.14);
 }
 
 .program-prompt-brand-app {
@@ -10263,16 +10260,16 @@ body.program-prompt-open { overflow: hidden; }
 }
 
 .program-prompt-brand-app-icon {
-  width: 2.9rem;
-  height: 2.9rem;
+  width: 3.7rem;
+  height: 3.7rem;
   flex: 0 0 auto;
 }
 
 .program-prompt-brand-app-name {
   color: var(--primary);
-  font-size: 0.82rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-size: 0.94rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   line-height: 1.2;
 }
@@ -10314,7 +10311,8 @@ body.program-prompt-open { overflow: hidden; }
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-md);
-  padding-top: var(--space-xs);
+  padding: var(--space-xs) 0 var(--space-md);
+  border-bottom: 1px solid rgba(12, 49, 90, 0.12);
 }
 
 .program-prompt-actions[hidden] {
@@ -10380,7 +10378,8 @@ body.program-prompt-open { overflow: hidden; }
   position: relative;
   z-index: 1;
   margin-top: 0;
-  padding-top: var(--space-xs);
+  padding: var(--space-xs) 0 var(--space-md);
+  border-bottom: 1px solid rgba(12, 49, 90, 0.12);
   display: grid;
   gap: var(--space-md);
 }
