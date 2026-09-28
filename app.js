@@ -200,14 +200,18 @@ function toggleLanguage() {
 }
 
 function updateTopProgramLangControls() {
-    const programSelect = document.getElementById('top-program-select');
-    const languageSelect = document.getElementById('top-language-select');
-    const languageField = languageSelect?.closest('.top-program-lang-field');
-    if (programSelect) programSelect.value = appState.selectedProgram || PROGRAM_ENGLISH;
-    if (languageSelect) languageSelect.value = appState.language === 'fr' ? 'fr' : 'en';
-    if (languageField) {
-        languageField.hidden = appState.selectedProgram !== PROGRAM_FRENCH_IMMERSION;
-    }
+    const selectedProgram = appState.selectedProgram || PROGRAM_ENGLISH;
+    const selectedLanguage = appState.language === 'fr' ? 'fr' : 'en';
+    const showLanguage = selectedProgram === PROGRAM_FRENCH_IMMERSION;
+
+    document.querySelectorAll('#top-program-select, #mobile-program-select').forEach(select => {
+        select.value = selectedProgram;
+    });
+    document.querySelectorAll('#top-language-select, #mobile-language-select').forEach(select => {
+        select.value = selectedLanguage;
+        const languageField = select.closest('.top-program-lang-field');
+        if (languageField) languageField.hidden = !showLanguage;
+    });
 }
 
 // Re-render any dynamic sections that are currently visible so they pick up
@@ -588,9 +592,18 @@ function setupSubTabs() {
 // ============================================
 function setupMobileMenu() {
     const menuBtn = document.querySelector('.mobile-menu-btn');
+    const overlay = document.querySelector('.mobile-nav-overlay');
     if (menuBtn) {
         menuBtn.addEventListener('click', toggleMobileMenu);
     }
+    overlay?.addEventListener('click', (event) => {
+        if (event.target === overlay) closeMobileMenu();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && appState.mobileMenuOpen) {
+            closeMobileMenu();
+        }
+    });
 }
 
 function toggleMobileMenu() {
@@ -600,12 +613,18 @@ function toggleMobileMenu() {
     
     menuBtn?.classList.toggle('active', appState.mobileMenuOpen);
     overlay?.classList.toggle('active', appState.mobileMenuOpen);
+    menuBtn?.setAttribute('aria-expanded', String(appState.mobileMenuOpen));
+    overlay?.setAttribute('aria-hidden', String(!appState.mobileMenuOpen));
 }
 
 function closeMobileMenu() {
     appState.mobileMenuOpen = false;
-    document.querySelector('.mobile-menu-btn')?.classList.remove('active');
-    document.querySelector('.mobile-nav-overlay')?.classList.remove('active');
+    const menuBtn = document.querySelector('.mobile-menu-btn');
+    const overlay = document.querySelector('.mobile-nav-overlay');
+    menuBtn?.classList.remove('active');
+    overlay?.classList.remove('active');
+    menuBtn?.setAttribute('aria-expanded', 'false');
+    overlay?.setAttribute('aria-hidden', 'true');
 }
 
 // ============================================
