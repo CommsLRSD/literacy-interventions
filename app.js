@@ -242,9 +242,8 @@ function rerenderForLanguage() {
 // Refresh the programmatically-set option/placeholder text in the
 // interventions filter menu so it picks up the new language immediately.
 function refreshWizardSelectPlaceholders() {
-    if (document.querySelector('.filter-sidebar')) {
-        renderMenuFilterOptions();
-        renderMenuResults();
+    if (document.getElementById('menu-search-panel')) {
+        refreshMenuUI();
     }
 }
 
@@ -439,10 +438,9 @@ function applyProgramAcrossApp() {
     if (typeof menuState !== 'undefined') {
         menuState.program = selected;
         storeMenuLanguage(selected);
-        if (document.querySelector('.filter-sidebar')) {
+        if (document.getElementById('menu-search-panel')) {
             syncMenuFilterControls();
-            renderMenuFilterOptions();
-            renderMenuResults();
+            refreshMenuUI();
         }
     }
     activeScheduleProgramId = getScheduleProgramIdForSelection(selected);
@@ -7211,30 +7209,17 @@ const menuState = {
 
 const NO_SPECIFIC_SCREENER_VALUE = '__no_specific_screener__';
 const REQUIRED_MENU_FIELDS = ['pillar', 'resourceType', 'screener', 'tier'];
-const MENU_VISUAL_FIELDS = ['pillar', 'tier'];
-const MENU_PRESETS = [
-    {
-        id: 'tier1-classroom',
-        labelKey: 'filter_preset_tier1_label',
-        descKey: 'filter_preset_tier1_desc',
-        values: { pillar: 'Phonemic Awareness', resourceType: 'Instructional Resource', tier: '1' }
-    },
-    {
-        id: 'phonics-intervention',
-        labelKey: 'filter_preset_phonics_label',
-        descKey: 'filter_preset_phonics_desc',
-        values: { pillar: 'Phonics', resourceType: 'Intervention', tier: '2' }
-    },
-    {
-        id: 'reading-comprehension',
-        labelKey: 'filter_preset_comprehension_label',
-        descKey: 'filter_preset_comprehension_desc',
-        values: { pillar: 'Reading Comprehension', resourceType: 'Instructional Resource', tier: '1' }
-    }
-];
+// Every one of these fields is presented as a group of clickable chip
+// buttons (no dropdowns) in the search panel; clicking a selected chip
+// again clears that filter.
+const MENU_CHIP_FIELDS = ['pillar', 'resourceType', 'tier', 'screener', 'subtest', 'grade', 'evidence'];
+// 'search' = the full-panel filter form; 'results' = the results list with
+// a compact criteria bar. Editing filters from the criteria bar's dropdown
+// re-renders the results live without leaving the 'results' view.
 const menuUiState = {
     initialized: false,
-    mobileFiltersOpen: false
+    view: 'search',
+    criteriaOpen: false
 };
 
 // Language (program) is a toggle that always has a value; the last choice is
@@ -7519,68 +7504,51 @@ function sanitizeMenuStateSelections() {
     });
 }
 
-function renderMenuPresets() {
-    const el = document.getElementById('menu-presets');
-    if (!el) return;
-    el.innerHTML = MENU_PRESETS.map(preset => `
-        <button type="button" class="filter-preset-btn" data-menu-preset="${escapeAttr(preset.id)}">
-            <span class="filter-preset-title">${escapeHtml(t(preset.labelKey))}</span>
-            <span class="filter-preset-desc">${escapeHtml(t(preset.descKey))}</span>
-        </button>
-    `).join('');
+// Shows what's still needed before Search can be pressed (no progress bar —
+// just a small inline hint next to the Search button).
+function updateMenuSearchHint() {
+    const btn = document.getElementById('menu-search-submit-btn');
+    const hint = document.getElementById('menu-search-hint');
+    const complete = hasAllRequiredMenuFilters();
+    if (btn) btn.disabled = !complete;
+    if (hint) {
+        const nextField = getNextRequiredMenuField();
+        hint.textContent = complete ? '' : `${t('filter_next_label')} ${getMenuFieldLabel(nextField)}`;
+    }
 }
 
-function renderMenuGuidedFlow() {
-    const stepBar = document.getElementById('menu-step-bar');
-    const messageEl = document.getElementById('filter-guidance-message');
-    if (!stepBar || !messageEl) return;
-
-    const steps = REQUIRED_MENU_FIELDS.map(field => {
-        const complete = isMenuFieldComplete(field);
-        const next = !complete && field === getNextRequiredMenuField();
-        const label = getMenuFieldLabel(field);
-        const status = complete ? t('filter_step_complete') : (next ? t('filter_step_current') : t('filter_step_upcoming'));
-        return `<span class="step-pill${complete ? ' completed' : ''}${next ? ' active' : ''}"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(status)}</span></span>`;
-    });
-    stepBar.innerHTML = steps.join('<span class="step-connector" aria-hidden="true"></span>');
-
-    const nextField = getNextRequiredMenuField();
-    const previewCount = getFilteredResources({ ...menuState, search: '' }, null).length;
-    messageEl.textContent = nextField
-        ? `${t('filter_next_label')} ${t('filter_guidance_pick')} ${getMenuFieldLabel(nextField)}.`
-        : t('filter_preview_results_label')(previewCount);
-}
-
-// Repopulate every select in the standalone Interventions Menu so its
-// options always reflect the other filters currently applied, then re-render
-// the results.
+// Repopulate every chip group in the standalone Interventions Menu so the
+// available choices always reflect the other filters currently applied.
+// Does not touch the results list — call refreshMenuUI() (or
+// renderMenuResults() directly) for that.
 function renderMenuFilterOptions() {
-    const pillarSel = document.getElementById('filter-pillar');
-    const typeSel = document.getElementById('filter-type');
-    const screenerSel = document.getElementById('filter-screener');
-    const subtestSel = document.getElementById('filter-subtest');
-    const gradeSel = document.getElementById('filter-grade');
-    const evidenceSel = document.getElementById('filter-evidence');
-    const searchInput = document.getElementById('filter-search');
-    if (!pillarSel || !typeSel || !screenerSel) return;
+    const pillarChips = document.getElementById('filter-pillar-chips');
+    if (!pillarChips) return;
 
     sanitizeMenuStateSelections();
 
-    if (gradeSel) gradeSel.innerHTML = buildFacetOptionsHtml(distinctGradeValues(menuState), menuState.grade, translateGrade);
-    pillarSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'pillar'), menuState.pillar, translatePillar);
-    typeSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'resourceType'), menuState.resourceType, translateResourceType);
-    screenerSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'screener'), menuState.screener, translateScreener);
-    if (subtestSel) subtestSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'subtest'), menuState.subtest);
-    if (evidenceSel) evidenceSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(menuState, 'evidence'), menuState.evidence, translateEvidence);
     renderMenuChoiceButtons('filter-pillar-chips', 'pillar', distinctTagValues(menuState, 'pillar'), menuState.pillar, translatePillar);
+    renderMenuChoiceButtons('filter-type-chips', 'resourceType', distinctTagValues(menuState, 'resourceType'), menuState.resourceType, translateResourceType);
     renderMenuChoiceButtons('filter-tier-chips', 'tier', distinctTagValues(menuState, 'tier').map(String), String(menuState.tier || ''), value => t('filter_tier_option')(value));
-    renderMenuPresets();
-    renderMenuGuidedFlow();
-    if (searchInput) {
-        searchInput.value = menuState.search || '';
-        searchInput.disabled = !hasAllRequiredMenuFilters();
-        searchInput.placeholder = t(searchInput.disabled ? 'filter_search_disabled_placeholder' : 'filter_search_placeholder');
-    }
+    renderMenuChoiceButtons('filter-screener-chips', 'screener', distinctTagValues(menuState, 'screener'), menuState.screener, translateScreener);
+    renderMenuChoiceButtons('filter-subtest-chips', 'subtest', distinctTagValues(menuState, 'subtest'), menuState.subtest);
+    renderMenuChoiceButtons('filter-grade-chips', 'grade', distinctGradeValues(menuState), menuState.grade, translateGrade);
+    renderMenuChoiceButtons('filter-evidence-chips', 'evidence', distinctTagValues(menuState, 'evidence'), menuState.evidence, translateEvidence);
+    updateMenuSearchHint();
+
+    // Only touch the input's value when it actually changed (e.g. a preset
+    // reset), so typing in it doesn't get its own cursor position reset.
+    const searchInput = document.getElementById('filter-search');
+    const searchValue = menuState.search || '';
+    if (searchInput && searchInput.value !== searchValue) searchInput.value = searchValue;
+}
+
+// Refreshes the filter chip groups and, when the results view is showing,
+// the criteria summary + results list. Every filter-change handler funnels
+// through this single entry point instead of repeating the view check.
+function refreshMenuUI() {
+    renderMenuFilterOptions();
+    renderMenuResults();
 }
 
 function buildResourceLinksHtml(item) {
@@ -7625,70 +7593,40 @@ function buildResourceCardHtml(item) {
     `;
 }
 
-// The "running list" of filters the user has picked, shown above the
-// results so the current scope is always visible; each chip removes just
-// that one filter.
+// Fields shown in the criteria summary row above the results, in display
+// order. Clicking the summary row toggles the same chip panel back open
+// (as a dropdown) so any of these can be changed; results refilter live.
 const MENU_FILTER_CHIP_FIELDS = [
     { field: 'pillar', labelKey: 'filter_pillar_label', format: (v) => translatePillar(v) },
     { field: 'resourceType', labelKey: 'filter_type_label', format: (v) => translateResourceType(v) },
+    { field: 'tier', labelKey: 'filter_tier_label', format: (v) => t('filter_tier_option')(v) },
     { field: 'screener', labelKey: 'filter_screener_label', format: (v) => translateScreener(v) },
     { field: 'subtest', labelKey: 'filter_subtest_label' },
-    { field: 'tier', labelKey: 'filter_tier_label', format: (v) => t('filter_tier_option')(v) },
     { field: 'grade', labelKey: 'filter_grade_label', format: (v) => translateGrade(v) },
     { field: 'evidence', labelKey: 'filter_evidence_label', format: (v) => translateEvidence(v) },
-    { field: 'search', labelKey: 'filter_search_label', format: (v) => v }
+    { field: 'search', labelKey: 'filter_search_label', format: (v) => `"${v}"` }
 ];
 
-function renderActiveFilterChips() {
-    const el = document.getElementById('active-filters');
+// The single-line, click-to-expand summary of the active search criteria
+// shown above the results.
+function renderMenuCriteriaSummary() {
+    const el = document.getElementById('menu-criteria-summary-text');
     if (!el) return;
-
-    const items = MENU_FILTER_CHIP_FIELDS
+    const parts = MENU_FILTER_CHIP_FIELDS
         .filter(def => String(menuState[def.field] || '').trim() !== '')
         .map(def => {
-            const raw = menuState[def.field];
-            const value = def.format ? def.format(raw) : raw;
-            return `
-                <button type="button" class="active-filter-pill" onclick="clearMenuFilter('${escapeAttr(def.field)}')" title="${escapeHtml(t('filter_remove_filter'))}">
-                    <span class="active-filter-pill-label">${escapeHtml(t(def.labelKey))}</span>
-                    <span class="active-filter-pill-value">${escapeHtml(value)}</span>
-                    <span class="active-filter-pill-remove" aria-hidden="true">×</span>
-                </button>
-            `;
+            const value = def.format ? def.format(menuState[def.field]) : menuState[def.field];
+            const label = def.labelKey ? t(def.labelKey) : '';
+            return label ? `${label}: ${value}` : value;
         });
-
-    el.innerHTML = items.length
-        ? items.join('')
-        : `<span class="active-filters-empty">${escapeHtml(t('filter_active_none'))}</span>`;
+    el.textContent = parts.length ? parts.join(' · ') : t('filter_active_none');
 }
 
-// Remove one filter from the running chip list.
-function clearMenuFilter(field) {
-    if (!(field in menuState)) return;
-    menuState[field] = '';
-    if (field !== 'search') setRememberedMenuFilters({ [field]: null });
-    syncMenuFilterControls();
-    renderMenuFilterOptions();
-    renderMenuResults();
-}
-
-// Push menuState back into the sidebar controls (used after a chip removal
-// or a reset, where the change didn't originate from the control itself).
+// Push menuState back into the panel controls (used after a reset, where
+// the change didn't originate from the control itself).
 function syncMenuFilterControls() {
-    [
-        ['filter-pillar', 'pillar'],
-        ['filter-type', 'resourceType'],
-        ['filter-screener', 'screener'],
-        ['filter-subtest', 'subtest'],
-        ['filter-tier', 'tier'],
-        ['filter-grade', 'grade'],
-        ['filter-evidence', 'evidence'],
-        ['filter-search', 'search']
-    ].forEach(([id, field]) => {
-        const el = document.getElementById(id);
-        if (el) el.value = menuState[field] || '';
-    });
-
+    const searchInput = document.getElementById('filter-search');
+    if (searchInput) searchInput.value = menuState.search || '';
     syncMenuLanguageToggle();
 }
 
@@ -7698,54 +7636,62 @@ function matchesMenuSearch(item) {
     return String(item.name || '').toLowerCase().includes(query);
 }
 
-function setMenuDrawerOpen(isOpen) {
-    const isMobile = window.innerWidth <= 900;
-    const sidebar = document.querySelector('.filter-sidebar');
-    const backdrop = document.getElementById('filter-mobile-backdrop');
-    const toggle = document.querySelector('.filter-mobile-toggle-btn');
-    if (!sidebar || !backdrop) return;
-    const open = Boolean(isOpen && isMobile);
-    menuUiState.mobileFiltersOpen = open;
-    sidebar.classList.toggle('filter-sidebar-open', open);
-    backdrop.classList.toggle('filter-mobile-backdrop-visible', open);
-    backdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
-    document.body.classList.toggle('menu-filters-open', open);
-    if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+// Toggles the two top-level page states: the full-width search panel, and
+// the results list with its compact, click-to-expand criteria bar.
+function applyMenuViewState() {
+    const layout = document.getElementById('interventions-menu-layout');
+    if (!layout) return;
+    const inResults = menuUiState.view === 'results';
+    layout.classList.toggle('menu-view-search', !inResults);
+    layout.classList.toggle('menu-view-results', inResults);
+    layout.classList.toggle('menu-criteria-open', inResults && menuUiState.criteriaOpen);
+    const summaryBtn = document.getElementById('menu-criteria-summary-btn');
+    if (summaryBtn) summaryBtn.setAttribute('aria-expanded', inResults && menuUiState.criteriaOpen ? 'true' : 'false');
 }
 
-function openMenuFiltersDrawer() {
-    setMenuDrawerOpen(true);
+// "New search" button — takes the user from the results view back to the
+// full search panel.
+function showMenuSearchView() {
+    menuUiState.view = 'search';
+    menuUiState.criteriaOpen = false;
+    applyMenuViewState();
+    refreshMenuUI();
 }
 
-function closeMenuFiltersDrawer() {
-    setMenuDrawerOpen(false);
-}
-
-function renderMenuResults() {
-    const countEl = document.getElementById('results-count-compact');
-    const listEl = document.getElementById('results-list-compact');
-    const previewEl = document.getElementById('results-guidance-preview');
-    if (!countEl || !listEl) return;
-
-    renderActiveFilterChips();
-    const hasAllRequired = hasAllRequiredMenuFilters();
-    if (!hasAllRequired) {
-        const nextField = getNextRequiredMenuField();
-        const previewCount = getFilteredResources({ ...menuState, search: '' }, null).length;
-        countEl.textContent = t('filter_preview_results_label')(previewCount);
-        if (previewEl) previewEl.textContent = nextField ? `${t('filter_next_label')} ${getMenuFieldLabel(nextField)}` : '';
-        listEl.innerHTML = `
-            <div class="results-empty results-empty-required">
-                <strong>${escapeHtml(nextField ? `${t('filter_next_label')} ${getMenuFieldLabel(nextField)}` : t('filter_required_results_prompt'))}</strong>
-                <div class="results-empty-detail">${escapeHtml(t('filter_preview_results_label')(previewCount))}</div>
-            </div>
-        `;
+// "Search" button — hides the search panel and reveals the results with
+// their compact criteria bar above them.
+function submitMenuSearch() {
+    if (!hasAllRequiredMenuFilters()) {
+        updateMenuSearchHint();
         return;
     }
+    menuUiState.view = 'results';
+    menuUiState.criteriaOpen = false;
+    applyMenuViewState();
+    renderMenuResults();
+}
+
+// Clicking the criteria summary row re-opens the filter chips as a dropdown
+// above the results (which stay visible and keep refiltering live).
+function toggleMenuCriteriaPanel() {
+    if (menuUiState.view !== 'results') return;
+    menuUiState.criteriaOpen = !menuUiState.criteriaOpen;
+    applyMenuViewState();
+}
+
+// Renders the criteria summary + results list. No-ops when the results
+// view isn't showing, so every caller can invoke this unconditionally
+// (see refreshMenuUI()).
+function renderMenuResults() {
+    if (menuUiState.view !== 'results') return;
+    const countEl = document.getElementById('results-count-compact');
+    const listEl = document.getElementById('results-list-compact');
+    if (!countEl || !listEl) return;
+
+    renderMenuCriteriaSummary();
 
     const filtered = getFilteredResources(menuState, null).filter(matchesMenuSearch);
     countEl.textContent = t('filter_results_label')(filtered.length);
-    if (previewEl) previewEl.textContent = menuState.search ? `${getMenuFieldLabel('search')}: ${menuState.search}` : '';
     listEl.innerHTML = filtered.length
         ? filtered.map(buildResourceCardHtml).join('')
         : `<p class="results-empty">${escapeHtml(t('filter_results_none'))}</p>`;
@@ -7756,57 +7702,27 @@ function onMenuFilterChange(field, value) {
     if (field === 'program') {
         menuState.program = appState.selectedProgram || MENU_LANGUAGE_DEFAULT;
         setRememberedMenuFilters({ program: menuState.program });
-        renderMenuFilterOptions();
-        renderMenuResults();
+        refreshMenuUI();
         return;
     }
     menuState[field] = value;
     if (field !== 'search') setRememberedMenuFilters({ [field]: value || null });
-    renderMenuFilterOptions();
-    renderMenuResults();
+    refreshMenuUI();
 }
 
 function onMenuSearchInput(value) {
     menuState.search = value || '';
-    syncMenuFilterControls();
-    renderMenuResults();
+    refreshMenuUI();
 }
 
 function toggleMenuFilterChip(field, value) {
-    if (!MENU_VISUAL_FIELDS.includes(field)) return;
+    if (!MENU_CHIP_FIELDS.includes(field)) return;
     onMenuFilterChange(field, String(menuState[field] || '') === String(value) ? '' : value);
 }
 
 function getFirstMenuScreenerValue(state) {
     const options = getMenuAvailableScreeners(state);
     return options.length ? options[0] : '';
-}
-
-function applyMenuPreset(presetId) {
-    const preset = MENU_PRESETS.find(item => item.id === presetId);
-    if (!preset) return;
-    Object.assign(menuState, {
-        pillar: preset.values.pillar || '',
-        resourceType: preset.values.resourceType || '',
-        tier: preset.values.tier || '',
-        screener: '',
-        subtest: '',
-        grade: '',
-        evidence: '',
-        search: ''
-    });
-    menuState.program = appState.selectedProgram || getStoredMenuLanguage();
-    menuState.screener = getFirstMenuScreenerValue(menuState);
-    setRememberedMenuFilters({
-        pillar: menuState.pillar || null,
-        resourceType: menuState.resourceType || null,
-        tier: menuState.tier || null,
-        screener: menuState.screener || null
-    });
-    syncMenuFilterControls();
-    renderMenuFilterOptions();
-    renderMenuResults();
-    if (window.innerWidth <= 900) closeMenuFiltersDrawer();
 }
 
 function resetMenuFilters() {
@@ -7817,20 +7733,20 @@ function resetMenuFilters() {
     menuState.program = appState.selectedProgram || getStoredMenuLanguage();
 
     syncMenuFilterControls();
-
-    renderMenuFilterOptions();
-    renderMenuResults();
+    refreshMenuUI();
 }
 
-// "Clear Filters" button in the standalone Interventions Menu.
+// "Clear Filters" button in the standalone Interventions Menu — resets
+// every filter and returns to the full search panel.
 function restartMenu() {
     resetMenuFilters();
-    closeMenuFiltersDrawer();
+    showMenuSearchView();
 }
 
 // Pre-fill the standalone menu's filters from whatever the user last chose
 // — either here or during a flowchart drilldown — so context carries over
-// the moment they land on this page.
+// the moment they land on this page. If those remembered filters already
+// satisfy the required fields, jump straight to the results view.
 function applyRememberedFiltersToMenu() {
     const remembered = appState.rememberedMenuFilters || {};
     menuState.pillar = remembered.pillar || '';
@@ -7845,27 +7761,18 @@ function applyRememberedFiltersToMenu() {
 
     syncMenuFilterControls();
 
-    renderMenuFilterOptions();
-    renderMenuResults();
+    menuUiState.view = hasAllRequiredMenuFilters() ? 'results' : 'search';
+    menuUiState.criteriaOpen = false;
+    applyMenuViewState();
+    refreshMenuUI();
 }
 
 function initializeInterventionsFilterMenu() {
-    if (!document.querySelector('.filter-sidebar')) return;
+    if (!document.getElementById('menu-search-panel')) return;
     if (!menuUiState.initialized) {
         document.addEventListener('click', event => {
-            const presetBtn = event.target.closest('[data-menu-preset]');
-            if (presetBtn) {
-                applyMenuPreset(presetBtn.dataset.menuPreset);
-                return;
-            }
             const chipBtn = event.target.closest('[data-menu-filter-chip]');
             if (chipBtn) toggleMenuFilterChip(chipBtn.dataset.field, chipBtn.dataset.value);
-        });
-        window.addEventListener('resize', () => {
-            if (window.innerWidth > 900) closeMenuFiltersDrawer();
-        });
-        document.addEventListener('keydown', event => {
-            if (event.key === 'Escape' && menuUiState.mobileFiltersOpen) closeMenuFiltersDrawer();
         });
         menuUiState.initialized = true;
     }
@@ -7972,11 +7879,11 @@ window.switchVisualFlowchartToLayout = switchVisualFlowchartToLayout;
 // Interventions Menu filter system
 window.onMenuFilterChange = onMenuFilterChange;
 window.onMenuSearchInput = onMenuSearchInput;
-window.clearMenuFilter = clearMenuFilter;
 window.setMenuLanguage = setMenuLanguage;
 window.restartMenu = restartMenu;
-window.openMenuFiltersDrawer = openMenuFiltersDrawer;
-window.closeMenuFiltersDrawer = closeMenuFiltersDrawer;
+window.submitMenuSearch = submitMenuSearch;
+window.showMenuSearchView = showMenuSearchView;
+window.toggleMenuCriteriaPanel = toggleMenuCriteriaPanel;
 window.initializeInterventionsFilterMenu = initializeInterventionsFilterMenu;
 window.applyRememberedFiltersToMenu = applyRememberedFiltersToMenu;
 
