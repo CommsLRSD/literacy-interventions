@@ -7760,11 +7760,10 @@ function onMenuFilterChange(field, value) {
     if (field === 'program') {
         menuState.program = appState.selectedProgram || MENU_LANGUAGE_DEFAULT;
         setRememberedMenuFilters({ program: menuState.program });
-        refreshMenuUI();
-        return;
+    } else {
+        menuState[field] = value;
+        if (field !== 'search') setRememberedMenuFilters({ [field]: value || null });
     }
-    menuState[field] = value;
-    if (field !== 'search') setRememberedMenuFilters({ [field]: value || null });
     sanitizeMenuStateSelections();
     if (menuUiState.view === 'results' && !hasAllRequiredMenuFilters()) {
         menuUiState.view = 'search';
