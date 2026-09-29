@@ -307,32 +307,21 @@
                     <div class="interventions-page-layout menu-view-search" id="interventions-menu-layout">
 
                     <div id="menu-criteria-bar" class="menu-criteria-bar">
-                        <button type="button" id="menu-criteria-summary-btn" class="menu-criteria-summary-btn" onclick="toggleMenuCriteriaPanel()" aria-expanded="false" aria-controls="menu-search-panel">
-                            <span class="material-symbols-rounded" aria-hidden="true" translate="no">tune</span>
-                            <span id="menu-criteria-summary-text" class="menu-criteria-summary-text"></span>
-                            <span class="material-symbols-rounded menu-criteria-summary-caret" aria-hidden="true" translate="no">expand_more</span>
-                        </button>
+                        <div id="menu-criteria-summary-text" class="menu-criteria-summary-text" aria-label="Active search filters"></div>
                         <button type="button" class="menu-new-search-btn" onclick="showMenuSearchView()">
                             <span class="material-symbols-rounded" aria-hidden="true" translate="no">restart_alt</span>
                             <span data-i18n="filter_new_search">New search</span>
                         </button>
+                        <div id="menu-criteria-editor" class="menu-criteria-editor" hidden></div>
                     </div><!-- /.menu-criteria-bar -->
 
                     <div id="menu-search-panel" class="menu-search-panel" aria-label="Teaching resource search">
                         <div class="menu-search-panel-header">
                             <h3 class="wizard-title"><span class="material-symbols-rounded" aria-hidden="true" translate="no">tune</span><span data-i18n="wizard_choose_steps">Filter to find resources</span></h3>
-                            <p class="filter-required-hint" data-i18n="filter_required_hint">Select Literacy Pillar, Resource Type, Tier, and a Screener when available to view resources.</p>
+                            <p class="filter-required-hint" data-i18n="filter_required_hint">Select Tier, a Screener when available, Resource Type, and Literacy Pillar to view resources.</p>
                         </div>
 
                         <div class="menu-search-panel-body">
-                            <div class="filter-group filter-group-visual">
-                                <span class="filter-group-label" data-i18n="filter_pillar_label">Literacy Pillar</span>
-                                <div id="filter-pillar-chips" class="menu-chip-group" role="group" aria-label="Literacy Pillar"></div>
-                            </div>
-                            <div class="filter-group filter-group-visual">
-                                <span class="filter-group-label" data-i18n="filter_type_label">Resource Type</span>
-                                <div id="filter-type-chips" class="menu-chip-group" role="group" aria-label="Resource Type"></div>
-                            </div>
                             <div class="filter-group filter-group-visual">
                                 <span class="filter-group-label" data-i18n="filter_tier_label">Tier</span>
                                 <div id="filter-tier-chips" class="menu-chip-group menu-chip-group-tier" role="group" aria-label="Tier"></div>
@@ -340,6 +329,23 @@
                             <div class="filter-group filter-group-visual">
                                 <span class="filter-group-label" data-i18n="filter_screener_label">Screener</span>
                                 <div id="filter-screener-chips" class="menu-chip-group" role="group" aria-label="Screener"></div>
+                            </div>
+                            <div class="filter-group filter-group-visual">
+                                <span class="filter-group-label" data-i18n="filter_type_label">Resource Type</span>
+                                <div id="filter-type-chips" class="menu-chip-group" role="group" aria-label="Resource Type"></div>
+                            </div>
+                            <div id="filter-pillar-group" class="filter-group filter-group-visual">
+                                <span class="filter-group-label" data-i18n="filter_pillar_label">Literacy Pillar</span>
+                                <div id="filter-pillar-chips" class="menu-chip-group" role="group" aria-label="Literacy Pillar"></div>
+                            </div>
+
+                            <div class="menu-search-panel-footer">
+                                <button type="button" class="filter-clear-btn" onclick="restartMenu()" data-i18n="wizard_start_over">Clear Filters</button>
+                                <p id="menu-search-hint" class="menu-search-hint" aria-live="polite"></p>
+                                <button type="button" id="menu-search-submit-btn" class="menu-search-submit-btn" onclick="submitMenuSearch()" aria-describedby="menu-search-hint">
+                                    <span class="material-symbols-rounded" aria-hidden="true" translate="no">search</span>
+                                    <span data-i18n="filter_search_button">Search</span>
+                                </button>
                             </div>
 
                             <details class="filter-advanced" aria-describedby="filter-advanced-description">
@@ -364,15 +370,6 @@
                                 <input id="filter-search" class="filter-search-input" type="search" data-i18n-placeholder="filter_search_placeholder" placeholder="Search by resource name…" oninput="onMenuSearchInput(this.value)">
                             </div>
                         </div><!-- /.menu-search-panel-body -->
-
-                        <div class="menu-search-panel-footer">
-                            <button type="button" class="filter-clear-btn" onclick="restartMenu()" data-i18n="wizard_start_over">Clear Filters</button>
-                            <p id="menu-search-hint" class="menu-search-hint" aria-live="polite"></p>
-                            <button type="button" id="menu-search-submit-btn" class="menu-search-submit-btn" onclick="submitMenuSearch()" aria-describedby="menu-search-hint">
-                                <span class="material-symbols-rounded" aria-hidden="true" translate="no">search</span>
-                                <span data-i18n="filter_search_button">Search</span>
-                            </button>
-                        </div>
                     </div><!-- /.menu-search-panel -->
 
                     <div id="dropdown-results" class="dropdown-results interventions-results-panel">
