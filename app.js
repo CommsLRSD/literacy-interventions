@@ -1073,8 +1073,7 @@ const faqState = {
     items: [],
     activeCategory: 0,
     page: 0,
-    query: '',
-    tag: ''
+    query: ''
 };
 
 function normalizeFaqText(text) {
@@ -1129,19 +1128,9 @@ function initFAQ() {
                 .filter(rule => rule.question.test(question) || (rule.answer && rule.answer.test(answer)))
                 .map(rule => rule.id);
 
-            if (tags.length) {
-                const tagWrap = document.createElement('div');
-                tagWrap.className = 'faq-item-tags';
-                tags.forEach(tagId => {
-                    const pill = document.createElement('button');
-                    pill.type = 'button';
-                    pill.className = 'faq-item-tag';
-                    pill.dataset.faqTag = tagId;
-                    pill.addEventListener('click', () => setFaqTag(tagId));
-                    tagWrap.appendChild(pill);
-                });
-                if (questionEl) questionEl.insertAdjacentElement('afterend', tagWrap);
-            }
+            // Tags are kept as hidden metadata (not rendered) so questions remain
+            // searchable by topic without exposing filter chips or item pills.
+            if (tags.length) itemEl.dataset.faqTags = tags.join(',');
 
             faqState.items.push({
                 el: itemEl,
@@ -1184,7 +1173,6 @@ function initFAQ() {
 }
 
 function faqItemMatches(item, terms) {
-    if (faqState.tag && !item.tags.includes(faqState.tag)) return false;
     return terms.every(term => item.searchText.includes(term));
 }
 
@@ -1201,15 +1189,7 @@ function setFaqPage(page) {
     scrollFaqIntoView();
 }
 
-function setFaqTag(tagId) {
-    faqState.tag = faqState.tag === tagId ? '' : tagId;
-    faqState.page = 0;
-    renderFAQ();
-    scrollFaqIntoView();
-}
-
 function clearFaqFilters() {
-    faqState.tag = '';
     faqState.query = '';
     faqState.page = 0;
     const searchInput = document.getElementById('faq-search-input');
@@ -1238,7 +1218,7 @@ function renderFAQ() {
     if (!faqState.initialized) return;
 
     const terms = normalizeFaqText(faqState.query).split(' ').filter(Boolean);
-    const filtering = terms.length > 0 || !!faqState.tag;
+    const filtering = terms.length > 0;
     const matches = faqState.items.filter(item => faqItemMatches(item, terms));
     const countsByCategory = faqState.categories.map(cat =>
         matches.filter(item => item.categoryIndex === cat.index).length);
@@ -1250,42 +1230,7 @@ function renderFAQ() {
     }
     const active = faqState.activeCategory;
 
-    // Topic chips (counts reflect the current search text)
-    const tagList = document.getElementById('faq-tag-list');
-    if (tagList) {
-        tagList.innerHTML = '';
-        const searchMatches = faqState.items.filter(item => terms.every(term => item.searchText.includes(term)));
-        const allChip = createFaqButton('faq-tag-chip', t('faq_tag_all'), () => {
-            faqState.tag = '';
-            faqState.page = 0;
-            renderFAQ();
-        });
-        allChip.setAttribute('aria-pressed', String(!faqState.tag));
-        tagList.appendChild(allChip);
-        FAQ_TAG_RULES.forEach(rule => {
-            const count = searchMatches.filter(item => item.tags.includes(rule.id)).length;
-            const chip = createFaqButton('faq-tag-chip', '', () => setFaqTag(rule.id), count === 0 && faqState.tag !== rule.id);
-            chip.dataset.faqTag = rule.id;
-            chip.setAttribute('aria-pressed', String(faqState.tag === rule.id));
-            const label = document.createElement('span');
-            label.textContent = t(`faq_tag_${rule.id}`);
-            const countEl = document.createElement('span');
-            countEl.className = 'faq-tag-count';
-            countEl.textContent = count;
-            chip.append(label, countEl);
-            tagList.appendChild(chip);
-        });
-    }
-
-    // Tag pills on each item
-    document.querySelectorAll('#faq-section .faq-item-tag').forEach(pill => {
-        const tagLabel = t(`faq_tag_${pill.dataset.faqTag}`);
-        pill.textContent = tagLabel;
-        pill.setAttribute('aria-label', formatFaqString('faq_filter_by_tag', { tag: tagLabel }));
-        pill.classList.toggle('is-active', pill.dataset.faqTag === faqState.tag);
-    });
-
-    // Category tabs
+    // Category tabs (topics/tags remain hidden metadata used only for search)
     const tabList = document.getElementById('faq-category-tabs');
     if (tabList) {
         tabList.innerHTML = '';
@@ -1298,12 +1243,7 @@ function renderFAQ() {
             tab.setAttribute('aria-controls', cat.el.id);
             tab.setAttribute('aria-selected', String(cat.index === active));
             tab.tabIndex = cat.index === active ? 0 : -1;
-            const label = document.createElement('span');
-            label.textContent = getFaqCategoryLabel(cat.index);
-            const countEl = document.createElement('span');
-            countEl.className = 'faq-tab-count';
-            countEl.textContent = count;
-            tab.append(label, countEl);
+            tab.textContent = getFaqCategoryLabel(cat.index);
             tabList.appendChild(tab);
         });
     }

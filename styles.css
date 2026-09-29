@@ -1677,63 +1677,6 @@ details > p {
   box-shadow: 0 0 0 3px rgba(78, 163, 211, 0.16);
 }
 
-.faq-filter-row {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-sm);
-}
-
-.faq-filter-label {
-  flex-shrink: 0;
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-light);
-}
-
-.faq-tag-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.faq-tag-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  font-size: 0.74rem;
-  font-family: inherit;
-  color: var(--text-secondary);
-  background: var(--bg-muted);
-  border: 1px solid transparent;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background var(--duration) var(--ease), color var(--duration) var(--ease);
-}
-
-.faq-tag-chip:hover:not(:disabled) {
-  color: var(--primary);
-  background: var(--primary-faint);
-}
-
-.faq-tag-chip[aria-pressed="true"] {
-  color: #fff;
-  background: var(--primary);
-}
-
-.faq-tag-chip:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.faq-tag-count,
-.faq-tab-count {
-  font-size: 0.68rem;
-  opacity: 0.75;
-}
-
 .faq-category-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -1794,31 +1737,6 @@ details > p {
   border: none;
   text-decoration: underline;
   cursor: pointer;
-}
-
-.faq-item-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 0 var(--space-sm) var(--space-sm);
-  margin-top: -4px;
-}
-
-.faq-item-tag {
-  padding: 1px 8px;
-  font-size: 0.66rem;
-  font-family: inherit;
-  color: var(--primary-light);
-  background: rgba(10, 127, 138, 0.08);
-  border: none;
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.faq-item-tag:hover,
-.faq-item-tag.is-active {
-  color: #fff;
-  background: var(--primary-light);
 }
 
 /* The active tab labels each category panel, so the inline heading is redundant. */
@@ -1891,22 +1809,6 @@ details > p {
 }
 
 @media (max-width: 768px) {
-  .faq-filter-row {
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .faq-tag-list {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .faq-tag-chip {
-    flex-shrink: 0;
-  }
-
   .faq-category-tabs {
     flex-wrap: nowrap;
     overflow-x: auto;
