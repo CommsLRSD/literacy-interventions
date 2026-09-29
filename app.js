@@ -7589,14 +7589,14 @@ function buildResourceCardHtml(item) {
 // order. Clicking the summary row toggles the same chip panel back open
 // (as a dropdown) so any of these can be changed; results refilter live.
 const MENU_FILTER_CHIP_FIELDS = [
-    { field: 'pillar', labelKey: 'filter_pillar_label', format: (v) => translatePillar(v) },
-    { field: 'resourceType', labelKey: 'filter_type_label', format: (v) => translateResourceType(v) },
-    { field: 'tier', labelKey: 'filter_tier_label', format: (v) => t('filter_tier_option')(v) },
-    { field: 'screener', labelKey: 'filter_screener_label', format: (v) => translateScreener(v) },
-    { field: 'subtest', labelKey: 'filter_subtest_label' },
-    { field: 'grade', labelKey: 'filter_grade_label', format: (v) => translateGrade(v) },
-    { field: 'evidence', labelKey: 'filter_evidence_label', format: (v) => translateEvidence(v) },
-    { field: 'search', labelKey: 'filter_search_label', format: (v) => `"${v}"` }
+    { field: 'pillar', format: (v) => translatePillar(v) },
+    { field: 'resourceType', format: (v) => translateResourceType(v) },
+    { field: 'tier', format: (v) => t('filter_tier_option')(v) },
+    { field: 'screener', format: (v) => translateScreener(v) },
+    { field: 'subtest' },
+    { field: 'grade', format: (v) => translateGrade(v) },
+    { field: 'evidence', format: (v) => translateEvidence(v) },
+    { field: 'search', format: (v) => `"${v}"` }
 ];
 
 // The single-line, click-to-expand summary of the active search criteria
@@ -7645,8 +7645,8 @@ function showMenuSearchView() {
     applyMenuViewState();
 }
 
-// "Search" button — reveals the results and collapses the search panel
-// into the compact criteria bar above them.
+// "Search" button — hides the search panel and reveals the results with
+// their compact criteria bar above them.
 function submitMenuSearch() {
     if (!hasAllRequiredMenuFilters()) {
         updateMenuSearchHint();
@@ -7698,6 +7698,7 @@ function onMenuFilterChange(field, value) {
 
 function onMenuSearchInput(value) {
     menuState.search = value || '';
+    renderMenuFilterOptions();
     if (menuUiState.view === 'results') renderMenuResults();
 }
 
