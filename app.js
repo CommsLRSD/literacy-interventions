@@ -243,8 +243,7 @@ function rerenderForLanguage() {
 // interventions filter menu so it picks up the new language immediately.
 function refreshWizardSelectPlaceholders() {
     if (document.getElementById('menu-search-panel')) {
-        renderMenuFilterOptions();
-        if (menuUiState.view === 'results') renderMenuResults();
+        refreshMenuUI();
     }
 }
 
@@ -441,8 +440,7 @@ function applyProgramAcrossApp() {
         storeMenuLanguage(selected);
         if (document.getElementById('menu-search-panel')) {
             syncMenuFilterControls();
-            renderMenuFilterOptions();
-            if (menuUiState.view === 'results') renderMenuResults();
+            refreshMenuUI();
         }
     }
     activeScheduleProgramId = getScheduleProgramIdForSelection(selected);
@@ -7520,8 +7518,9 @@ function updateMenuSearchHint() {
 }
 
 // Repopulate every chip group in the standalone Interventions Menu so the
-// available choices always reflect the other filters currently applied,
-// then re-render the results.
+// available choices always reflect the other filters currently applied.
+// Does not touch the results list — call refreshMenuUI() (or
+// renderMenuResults() directly) for that.
 function renderMenuFilterOptions() {
     const pillarChips = document.getElementById('filter-pillar-chips');
     if (!pillarChips) return;
@@ -7537,10 +7536,19 @@ function renderMenuFilterOptions() {
     renderMenuChoiceButtons('filter-evidence-chips', 'evidence', distinctTagValues(menuState, 'evidence'), menuState.evidence, translateEvidence);
     updateMenuSearchHint();
 
+    // Only touch the input's value when it actually changed (e.g. a preset
+    // reset), so typing in it doesn't get its own cursor position reset.
     const searchInput = document.getElementById('filter-search');
-    if (searchInput) searchInput.value = menuState.search || '';
+    const searchValue = menuState.search || '';
+    if (searchInput && searchInput.value !== searchValue) searchInput.value = searchValue;
+}
 
-    if (menuUiState.view === 'results') renderMenuCriteriaSummary();
+// Refreshes the filter chip groups and, when the results view is showing,
+// the criteria summary + results list. Every filter-change handler funnels
+// through this single entry point instead of repeating the view check.
+function refreshMenuUI() {
+    renderMenuFilterOptions();
+    renderMenuResults();
 }
 
 function buildResourceLinksHtml(item) {
@@ -7655,7 +7663,6 @@ function submitMenuSearch() {
     menuUiState.view = 'results';
     menuUiState.criteriaOpen = false;
     applyMenuViewState();
-    renderMenuCriteriaSummary();
     renderMenuResults();
 }
 
@@ -7667,12 +7674,16 @@ function toggleMenuCriteriaPanel() {
     applyMenuViewState();
 }
 
+// Renders the criteria summary + results list. No-ops when the results
+// view isn't showing, so every caller can invoke this unconditionally
+// (see refreshMenuUI()).
 function renderMenuResults() {
+    if (menuUiState.view !== 'results') return;
     const countEl = document.getElementById('results-count-compact');
     const listEl = document.getElementById('results-list-compact');
     if (!countEl || !listEl) return;
 
-    if (menuUiState.view === 'results') renderMenuCriteriaSummary();
+    renderMenuCriteriaSummary();
 
     const filtered = getFilteredResources(menuState, null).filter(matchesMenuSearch);
     countEl.textContent = t('filter_results_label')(filtered.length);
@@ -7686,20 +7697,17 @@ function onMenuFilterChange(field, value) {
     if (field === 'program') {
         menuState.program = appState.selectedProgram || MENU_LANGUAGE_DEFAULT;
         setRememberedMenuFilters({ program: menuState.program });
-        renderMenuFilterOptions();
-        if (menuUiState.view === 'results') renderMenuResults();
+        refreshMenuUI();
         return;
     }
     menuState[field] = value;
     if (field !== 'search') setRememberedMenuFilters({ [field]: value || null });
-    renderMenuFilterOptions();
-    if (menuUiState.view === 'results') renderMenuResults();
+    refreshMenuUI();
 }
 
 function onMenuSearchInput(value) {
     menuState.search = value || '';
-    renderMenuFilterOptions();
-    if (menuUiState.view === 'results') renderMenuResults();
+    refreshMenuUI();
 }
 
 function toggleMenuFilterChip(field, value) {
@@ -7720,9 +7728,7 @@ function resetMenuFilters() {
     menuState.program = appState.selectedProgram || getStoredMenuLanguage();
 
     syncMenuFilterControls();
-
-    renderMenuFilterOptions();
-    if (menuUiState.view === 'results') renderMenuResults();
+    refreshMenuUI();
 }
 
 // "Clear Filters" button in the standalone Interventions Menu — resets
@@ -7750,11 +7756,10 @@ function applyRememberedFiltersToMenu() {
 
     syncMenuFilterControls();
 
-    renderMenuFilterOptions();
     menuUiState.view = hasAllRequiredMenuFilters() ? 'results' : 'search';
     menuUiState.criteriaOpen = false;
     applyMenuViewState();
-    if (menuUiState.view === 'results') renderMenuResults();
+    refreshMenuUI();
 }
 
 function initializeInterventionsFilterMenu() {
