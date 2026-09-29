@@ -7502,6 +7502,17 @@ function renderMenuChoiceButtons(containerId, field, selected, translate) {
     }).join('');
 }
 
+function updateMenuChipSeparators() {
+    document.querySelectorAll('.menu-chip-group').forEach(group => {
+        let previousTop = null;
+        group.querySelectorAll('.menu-chip-btn').forEach(button => {
+            const top = button.offsetTop;
+            button.classList.toggle('menu-chip-btn-row-start', previousTop === null || top !== previousTop);
+            previousTop = top;
+        });
+    });
+}
+
 function sanitizeMenuStateSelections() {
     MENU_CHIP_FIELDS.forEach(field => {
         const value = menuState[field];
@@ -7541,6 +7552,7 @@ function renderMenuFilterOptions() {
     renderMenuChoiceButtons('filter-subtest-chips', 'subtest', menuState.subtest);
     renderMenuChoiceButtons('filter-grade-chips', 'grade', menuState.grade, translateGrade);
     renderMenuChoiceButtons('filter-evidence-chips', 'evidence', menuState.evidence, translateEvidence);
+    updateMenuChipSeparators();
     updateMenuSearchHint();
 
     // Only touch the input's value when it actually changed (e.g. a preset
@@ -7663,6 +7675,7 @@ function renderMenuCriteriaEditor() {
         `;
     }
     editor.hidden = false;
+    updateMenuChipSeparators();
 }
 
 // Show active values without repeating their category labels.
@@ -7833,6 +7846,8 @@ function applyRememberedFiltersToMenu() {
 function initializeInterventionsFilterMenu() {
     if (!document.getElementById('menu-search-panel')) return;
     if (!menuUiState.initialized) {
+        window.addEventListener('resize', updateMenuChipSeparators);
+        document.querySelector('.filter-advanced')?.addEventListener('toggle', updateMenuChipSeparators);
         document.addEventListener('click', event => {
             const chipBtn = event.target.closest('[data-menu-filter-chip]');
             if (chipBtn) toggleMenuFilterChip(chipBtn.dataset.field, chipBtn.dataset.value);

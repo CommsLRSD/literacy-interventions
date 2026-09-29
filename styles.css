@@ -6972,7 +6972,7 @@ body.step-review-modal-open { overflow: hidden; }
               color var(--duration) var(--ease);
 }
 
-.menu-chip-btn + .menu-chip-btn::before {
+.menu-chip-btn:not(.menu-chip-btn-row-start)::before {
   content: '|';
   position: absolute;
   left: calc(0px - var(--space-sm));
