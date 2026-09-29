@@ -6817,14 +6817,6 @@ body.step-review-modal-open { overflow: hidden; }
   display: block;
 }
 
-.menu-view-results .menu-search-panel {
-  display: none;
-}
-
-.menu-view-results.menu-criteria-open .menu-search-panel {
-  display: block;
-}
-
 .menu-search-panel {
   background: linear-gradient(165deg, var(--primary-faint), var(--bg) 55%, var(--accent-light));
   border: none;
@@ -6838,10 +6830,15 @@ body.step-review-modal-open { overflow: hidden; }
 /* Once results are showing, re-opening the criteria turns the same panel
    into a floating dropdown that sits above the (still visible) results. */
 .menu-view-results .menu-search-panel {
+  display: none;
   position: relative;
   z-index: 5;
   margin-top: calc(-1 * var(--space-md));
   animation: menuCriteriaDropdownIn 0.18s var(--ease, ease) both;
+}
+
+.menu-view-results.menu-criteria-open .menu-search-panel {
+  display: block;
 }
 
 @keyframes menuCriteriaDropdownIn {
