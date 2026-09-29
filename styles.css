@@ -6818,32 +6818,16 @@ body.step-review-modal-open { overflow: hidden; }
 }
 
 .menu-search-panel {
-  background: linear-gradient(165deg, var(--primary-faint), var(--bg) 55%, var(--accent-light));
-  border: none;
-  border-top: 4px solid var(--secondary);
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg, var(--radius));
-  box-shadow: var(--shadow-md, var(--shadow-sm));
+  box-shadow: var(--shadow-sm);
   padding: var(--space-lg);
   color: var(--text);
 }
 
-/* Once results are showing, re-opening the criteria turns the same panel
-   into a floating dropdown that sits above the (still visible) results. */
 .menu-view-results .menu-search-panel {
   display: none;
-  position: relative;
-  z-index: 5;
-  margin-top: calc(-1 * var(--space-md));
-  animation: menuCriteriaDropdownIn 0.18s var(--ease, ease) both;
-}
-
-.menu-view-results.menu-criteria-open .menu-search-panel {
-  display: block;
-}
-
-@keyframes menuCriteriaDropdownIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 .menu-search-panel-header {
@@ -6956,51 +6940,48 @@ body.step-review-modal-open { overflow: hidden; }
 .menu-chip-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  column-gap: var(--space-md);
+  row-gap: var(--space-xs);
 }
 
 .menu-chip-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
-  padding: 0.5rem 1rem;
-  border: 1px solid rgba(107, 123, 141, 0.18);
-  border-radius: var(--radius-pill);
-  background: rgba(255,255,255,0.85);
+  min-height: 32px;
+  padding: 0.3rem 0.1rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
   color: var(--text-secondary);
   font-family: inherit;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: transform var(--duration) var(--ease),
-              box-shadow var(--duration) var(--ease),
-              border-color var(--duration) var(--ease),
-              background var(--duration) var(--ease),
+  transition: border-color var(--duration) var(--ease),
               color var(--duration) var(--ease);
 }
 
 .menu-chip-btn:hover,
 .menu-chip-btn:focus-visible {
   border-color: var(--primary-light);
-  background: var(--primary-faint);
+  background: transparent;
   color: var(--primary);
   outline: none;
-  transform: translateY(-1px);
 }
 
 .menu-chip-btn-selected {
   border-color: var(--primary);
-  background: var(--primary);
-  color: var(--text-on-primary);
-  box-shadow: 0 0 0 2px rgba(30, 94, 170, 0.14);
+  background: transparent;
+  color: var(--primary);
+  font-weight: 700;
 }
 
 .menu-chip-btn-selected:hover,
 .menu-chip-btn-selected:focus-visible {
-  color: var(--text-on-primary);
-  background: var(--primary);
-  transform: translateY(-1px);
+  color: var(--primary);
+  background: transparent;
 }
 
 .filter-search-input {
@@ -7009,7 +6990,7 @@ body.step-review-modal-open { overflow: hidden; }
   padding: 0.6rem 0.9rem;
   border: 1px solid rgba(107, 123, 141, 0.18);
   border-radius: var(--radius);
-  background-color: rgba(255,255,255,0.85);
+  background-color: var(--bg);
   font-size: 0.9rem;
   font-family: inherit;
   color: var(--text);
@@ -7054,12 +7035,12 @@ body.step-review-modal-open { overflow: hidden; }
   transform: rotate(90deg);
 }
 
-/* ── Criteria bar + results (the "clickable text with dropdown" row) ──── */
+/* ── Individually editable criteria + results ────────────────────────── */
 .menu-criteria-bar {
   display: none;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-md);
+  gap: var(--space-sm) var(--space-md);
   flex-wrap: wrap;
 }
 
@@ -7067,50 +7048,63 @@ body.step-review-modal-open { overflow: hidden; }
   display: flex;
 }
 
-.menu-criteria-summary-btn {
-  display: inline-flex;
+.menu-criteria-summary-text {
+  display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.6rem;
   flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
-  padding: 0.7rem 1.1rem;
-  border: 1px solid rgba(107, 123, 141, 0.18);
-  border-radius: var(--radius-pill);
-  background: rgba(255,255,255,0.85);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 0.88rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: left;
-  transition: border-color var(--duration) var(--ease),
-              box-shadow var(--duration) var(--ease);
 }
 
-.menu-criteria-summary-btn:hover,
-.menu-criteria-summary-btn:focus-visible {
-  border-color: var(--primary-light);
-  box-shadow: var(--shadow-xs);
+.menu-criteria-value-btn {
+  padding: 0.2rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--primary-light);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: border-color var(--duration) var(--ease),
+              color var(--duration) var(--ease);
+}
+
+.menu-criteria-value-btn:hover,
+.menu-criteria-value-btn:focus-visible,
+.menu-criteria-value-btn[aria-expanded="true"] {
+  border-color: var(--primary);
+  color: var(--primary);
   outline: none;
 }
 
-.menu-criteria-summary-text {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.menu-criteria-summary-caret {
-  flex-shrink: 0;
+.menu-criteria-separator {
   color: var(--text-light);
-  transition: transform var(--duration) var(--ease);
 }
 
-.menu-criteria-open .menu-criteria-summary-caret {
-  transform: rotate(180deg);
+.menu-criteria-editor {
+  flex: 1 0 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  box-shadow: var(--shadow-sm);
+}
+
+.menu-criteria-editor[hidden] {
+  display: none;
+}
+
+.menu-criteria-editor-label {
+  margin: 0 0 var(--space-xs);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .menu-new-search-btn {
@@ -7118,11 +7112,12 @@ body.step-review-modal-open { overflow: hidden; }
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
-  min-height: 42px;
-  padding: 0.55rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: var(--bg);
+  min-height: 32px;
+  padding: 0.3rem 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
   color: var(--text);
   font-family: inherit;
   font-size: 0.85rem;
@@ -7134,7 +7129,7 @@ body.step-review-modal-open { overflow: hidden; }
 
 .menu-new-search-btn:hover,
 .menu-new-search-btn:focus-visible {
-  border-color: var(--primary-light);
+  border-color: var(--primary);
   color: var(--primary);
   outline: none;
 }
@@ -7175,7 +7170,6 @@ body.step-review-modal-open { overflow: hidden; }
     align-items: stretch;
   }
 
-  .menu-criteria-summary-btn,
   .menu-new-search-btn {
     width: 100%;
   }

@@ -7214,12 +7214,11 @@ const REQUIRED_MENU_FIELDS = ['pillar', 'resourceType', 'screener', 'tier'];
 // again clears that filter.
 const MENU_CHIP_FIELDS = ['pillar', 'resourceType', 'tier', 'screener', 'subtest', 'grade', 'evidence'];
 // 'search' = the full-panel filter form; 'results' = the results list with
-// a compact criteria bar. Editing filters from the criteria bar's dropdown
-// re-renders the results live without leaving the 'results' view.
+// independently editable criteria above it.
 const menuUiState = {
     initialized: false,
     view: 'search',
-    criteriaOpen: false
+    editingField: ''
 };
 
 // Language (program) is a toggle that always has a value; the last choice is
@@ -7594,8 +7593,7 @@ function buildResourceCardHtml(item) {
 }
 
 // Fields shown in the criteria summary row above the results, in display
-// order. Clicking the summary row toggles the same chip panel back open
-// (as a dropdown) so any of these can be changed; results refilter live.
+// order. Their values are buttons so each filter can be changed on its own.
 const MENU_FILTER_CHIP_FIELDS = [
     { field: 'pillar', labelKey: 'filter_pillar_label', format: (v) => translatePillar(v) },
     { field: 'resourceType', labelKey: 'filter_type_label', format: (v) => translateResourceType(v) },
@@ -7607,8 +7605,57 @@ const MENU_FILTER_CHIP_FIELDS = [
     { field: 'search', labelKey: 'filter_search_label', format: (v) => `"${v}"` }
 ];
 
-// The single-line, click-to-expand summary of the active search criteria
-// shown above the results.
+function getMenuFieldChoices(field) {
+    const choiceConfig = {
+        pillar: { values: () => distinctTagValues(menuState, 'pillar'), format: translatePillar },
+        resourceType: { values: () => distinctTagValues(menuState, 'resourceType'), format: translateResourceType },
+        tier: { values: () => distinctTagValues(menuState, 'tier').map(String), format: value => t('filter_tier_option')(value) },
+        screener: { values: () => distinctTagValues(menuState, 'screener'), format: translateScreener },
+        subtest: { values: () => distinctTagValues(menuState, 'subtest') },
+        grade: { values: () => distinctGradeValues(menuState), format: translateGrade },
+        evidence: { values: () => distinctTagValues(menuState, 'evidence'), format: translateEvidence }
+    };
+    const config = choiceConfig[field];
+    return config ? config.values().map(value => ({
+        value,
+        label: config.format ? config.format(value) : value
+    })) : [];
+}
+
+function renderMenuCriteriaEditor() {
+    const editor = document.getElementById('menu-criteria-editor');
+    if (!editor) return;
+    const field = menuUiState.editingField;
+    const fieldDef = MENU_FILTER_CHIP_FIELDS.find(def => def.field === field);
+
+    if (!fieldDef) {
+        editor.hidden = true;
+        editor.innerHTML = '';
+        return;
+    }
+
+    const label = getMenuFieldLabel(field);
+    if (field === 'search') {
+        editor.innerHTML = `
+            <label class="menu-criteria-editor-label" for="menu-criteria-search-input">${escapeHtml(label)}</label>
+            <input id="menu-criteria-search-input" class="filter-search-input" type="search" value="${escapeAttr(menuState.search)}" data-menu-criteria-search="true">
+        `;
+    } else {
+        const choices = getMenuFieldChoices(field);
+        editor.innerHTML = `
+            <p class="menu-criteria-editor-label">${escapeHtml(label)}</p>
+            <div class="menu-chip-group" role="group" aria-label="${escapeAttr(label)}">
+                ${choices.map(choice => {
+                    const selected = String(choice.value) === String(menuState[field]);
+                    return `<button type="button" class="menu-chip-btn${selected ? ' menu-chip-btn-selected' : ''}" data-menu-criteria-option="${escapeAttr(field)}" data-value="${escapeAttr(choice.value)}" aria-pressed="${selected ? 'true' : 'false'}">${escapeHtml(choice.label)}</button>`;
+                }).join('')}
+            </div>
+        `;
+    }
+    editor.hidden = false;
+}
+
+// Show active values without repeating their category labels.
 function renderMenuCriteriaSummary() {
     const el = document.getElementById('menu-criteria-summary-text');
     if (!el) return;
@@ -7616,10 +7663,14 @@ function renderMenuCriteriaSummary() {
         .filter(def => String(menuState[def.field] || '').trim() !== '')
         .map(def => {
             const value = def.format ? def.format(menuState[def.field]) : menuState[def.field];
-            const label = def.labelKey ? t(def.labelKey) : '';
-            return label ? `${label}: ${value}` : value;
+            const label = def.labelKey ? t(def.labelKey) : def.field;
+            const expanded = menuUiState.editingField === def.field;
+            return `<button type="button" class="menu-criteria-value-btn" data-menu-criteria-field="${escapeAttr(def.field)}" aria-label="${escapeAttr(`${label}: ${value}`)}" aria-expanded="${expanded ? 'true' : 'false'}" aria-controls="menu-criteria-editor">${escapeHtml(value)}</button>`;
         });
-    el.textContent = parts.length ? parts.join(' · ') : t('filter_active_none');
+    el.innerHTML = parts.length
+        ? parts.join('<span class="menu-criteria-separator" aria-hidden="true">·</span>')
+        : escapeHtml(t('filter_active_none'));
+    renderMenuCriteriaEditor();
 }
 
 // Push menuState back into the panel controls (used after a reset, where
@@ -7637,23 +7688,21 @@ function matchesMenuSearch(item) {
 }
 
 // Toggles the two top-level page states: the full-width search panel, and
-// the results list with its compact, click-to-expand criteria bar.
+// the results list with its compact criteria bar.
 function applyMenuViewState() {
     const layout = document.getElementById('interventions-menu-layout');
     if (!layout) return;
     const inResults = menuUiState.view === 'results';
     layout.classList.toggle('menu-view-search', !inResults);
     layout.classList.toggle('menu-view-results', inResults);
-    layout.classList.toggle('menu-criteria-open', inResults && menuUiState.criteriaOpen);
-    const summaryBtn = document.getElementById('menu-criteria-summary-btn');
-    if (summaryBtn) summaryBtn.setAttribute('aria-expanded', inResults && menuUiState.criteriaOpen ? 'true' : 'false');
+    if (!inResults) menuUiState.editingField = '';
 }
 
 // "New search" button — takes the user from the results view back to the
 // full search panel.
 function showMenuSearchView() {
     menuUiState.view = 'search';
-    menuUiState.criteriaOpen = false;
+    menuUiState.editingField = '';
     applyMenuViewState();
     refreshMenuUI();
 }
@@ -7666,17 +7715,16 @@ function submitMenuSearch() {
         return;
     }
     menuUiState.view = 'results';
-    menuUiState.criteriaOpen = false;
+    menuUiState.editingField = '';
     applyMenuViewState();
     renderMenuResults();
 }
 
-// Clicking the criteria summary row re-opens the filter chips as a dropdown
-// above the results (which stay visible and keep refiltering live).
-function toggleMenuCriteriaPanel() {
+function toggleMenuCriteriaField(field) {
     if (menuUiState.view !== 'results') return;
-    menuUiState.criteriaOpen = !menuUiState.criteriaOpen;
-    applyMenuViewState();
+    if (!MENU_FILTER_CHIP_FIELDS.some(def => def.field === field)) return;
+    menuUiState.editingField = menuUiState.editingField === field ? '' : field;
+    renderMenuCriteriaSummary();
 }
 
 // Renders the criteria summary + results list. No-ops when the results
@@ -7762,7 +7810,7 @@ function applyRememberedFiltersToMenu() {
     syncMenuFilterControls();
 
     menuUiState.view = hasAllRequiredMenuFilters() ? 'results' : 'search';
-    menuUiState.criteriaOpen = false;
+    menuUiState.editingField = '';
     applyMenuViewState();
     refreshMenuUI();
 }
@@ -7773,6 +7821,23 @@ function initializeInterventionsFilterMenu() {
         document.addEventListener('click', event => {
             const chipBtn = event.target.closest('[data-menu-filter-chip]');
             if (chipBtn) toggleMenuFilterChip(chipBtn.dataset.field, chipBtn.dataset.value);
+
+            const criterionBtn = event.target.closest('[data-menu-criteria-field]');
+            if (criterionBtn) toggleMenuCriteriaField(criterionBtn.dataset.menuCriteriaField);
+
+            const optionBtn = event.target.closest('[data-menu-criteria-option]');
+            if (optionBtn) {
+                menuUiState.editingField = '';
+                onMenuFilterChange(optionBtn.dataset.menuCriteriaOption, optionBtn.dataset.value);
+            }
+
+            if (!event.target.closest('#menu-criteria-bar') && menuUiState.editingField) {
+                menuUiState.editingField = '';
+                renderMenuCriteriaSummary();
+            }
+        });
+        document.addEventListener('change', event => {
+            if (event.target.matches('[data-menu-criteria-search]')) onMenuSearchInput(event.target.value);
         });
         menuUiState.initialized = true;
     }
@@ -7883,7 +7948,6 @@ window.setMenuLanguage = setMenuLanguage;
 window.restartMenu = restartMenu;
 window.submitMenuSearch = submitMenuSearch;
 window.showMenuSearchView = showMenuSearchView;
-window.toggleMenuCriteriaPanel = toggleMenuCriteriaPanel;
 window.initializeInterventionsFilterMenu = initializeInterventionsFilterMenu;
 window.applyRememberedFiltersToMenu = applyRememberedFiltersToMenu;
 

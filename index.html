@@ -307,15 +307,12 @@
                     <div class="interventions-page-layout menu-view-search" id="interventions-menu-layout">
 
                     <div id="menu-criteria-bar" class="menu-criteria-bar">
-                        <button type="button" id="menu-criteria-summary-btn" class="menu-criteria-summary-btn" onclick="toggleMenuCriteriaPanel()" aria-expanded="false" aria-controls="menu-search-panel">
-                            <span class="material-symbols-rounded" aria-hidden="true" translate="no">tune</span>
-                            <span id="menu-criteria-summary-text" class="menu-criteria-summary-text"></span>
-                            <span class="material-symbols-rounded menu-criteria-summary-caret" aria-hidden="true" translate="no">expand_more</span>
-                        </button>
+                        <div id="menu-criteria-summary-text" class="menu-criteria-summary-text" aria-label="Active search filters"></div>
                         <button type="button" class="menu-new-search-btn" onclick="showMenuSearchView()">
                             <span class="material-symbols-rounded" aria-hidden="true" translate="no">restart_alt</span>
                             <span data-i18n="filter_new_search">New search</span>
                         </button>
+                        <div id="menu-criteria-editor" class="menu-criteria-editor" hidden></div>
                     </div><!-- /.menu-criteria-bar -->
 
                     <div id="menu-search-panel" class="menu-search-panel" aria-label="Teaching resource search">
