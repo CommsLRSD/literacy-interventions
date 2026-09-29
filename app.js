@@ -7823,12 +7823,16 @@ function initializeInterventionsFilterMenu() {
             if (chipBtn) toggleMenuFilterChip(chipBtn.dataset.field, chipBtn.dataset.value);
 
             const criterionBtn = event.target.closest('[data-menu-criteria-field]');
-            if (criterionBtn) toggleMenuCriteriaField(criterionBtn.dataset.menuCriteriaField);
+            if (criterionBtn) {
+                toggleMenuCriteriaField(criterionBtn.dataset.menuCriteriaField);
+                return;
+            }
 
             const optionBtn = event.target.closest('[data-menu-criteria-option]');
             if (optionBtn) {
                 menuUiState.editingField = '';
                 onMenuFilterChange(optionBtn.dataset.menuCriteriaOption, optionBtn.dataset.value);
+                return;
             }
 
             if (!event.target.closest('#menu-criteria-bar') && menuUiState.editingField) {
