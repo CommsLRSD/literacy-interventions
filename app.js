@@ -7208,11 +7208,8 @@ const menuState = {
 };
 
 const NO_SPECIFIC_SCREENER_VALUE = '__no_specific_screener__';
-const REQUIRED_MENU_FIELDS = ['pillar', 'resourceType', 'screener', 'tier'];
-// Every one of these fields is presented as a group of clickable chip
-// buttons (no dropdowns) in the search panel; clicking a selected chip
-// again clears that filter.
-const MENU_CHIP_FIELDS = ['pillar', 'resourceType', 'tier', 'screener', 'subtest', 'grade', 'evidence'];
+const REQUIRED_MENU_FIELDS = ['tier', 'screener', 'resourceType', 'pillar'];
+const MENU_CHIP_FIELDS = ['resourceType', 'tier', 'screener', 'subtest', 'grade', 'evidence'];
 // 'search' = the full-panel filter form; 'results' = the results list with
 // independently editable criteria above it.
 const menuUiState = {
@@ -7460,22 +7457,8 @@ function getResourceUrlLang(item, url) {
     return idx === 0 ? 'EN' : (idx === 1 ? 'FR' : '');
 }
 
-function renderMenuChoiceButtons(containerId, field, values, selected, translate) {
-    const el = document.getElementById(containerId);
-    if (!el) return;
-    el.innerHTML = values.map(value => {
-        const isSelected = String(value) === String(selected);
-        const label = translate ? translate(value) : value;
-        return `
-            <button type="button" class="menu-chip-btn${isSelected ? ' menu-chip-btn-selected' : ''}" data-menu-filter-chip="true" data-field="${escapeAttr(field)}" data-value="${escapeAttr(value)}" aria-pressed="${isSelected ? 'true' : 'false'}">
-                ${escapeHtml(label)}
-            </button>
-        `;
-    }).join('');
-}
-
-function sanitizeMenuStateSelections() {
-    const baselineState = {
+function getMenuBaselineState() {
+    return {
         program: menuState.program,
         pillar: '',
         resourceType: '',
@@ -7486,6 +7469,39 @@ function sanitizeMenuStateSelections() {
         evidence: '',
         search: ''
     };
+}
+
+function getAllMenuFieldValues(field) {
+    const baselineState = getMenuBaselineState();
+    if (field === 'grade') return distinctGradeValues(baselineState);
+    const values = distinctTagValues(baselineState, field);
+    return field === 'tier' ? values.map(String) : values;
+}
+
+function getAvailableMenuFieldValues(field) {
+    if (field === 'grade') return distinctGradeValues(menuState);
+    const values = distinctTagValues(menuState, field);
+    return field === 'tier' ? values.map(String) : values;
+}
+
+function renderMenuChoiceButtons(containerId, field, selected, translate) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const availableValues = new Set(getAvailableMenuFieldValues(field).map(String));
+    el.innerHTML = getAllMenuFieldValues(field).map(value => {
+        const isSelected = String(value) === String(selected);
+        const isAvailable = availableValues.has(String(value));
+        const label = translate ? translate(value) : value;
+        return `
+            <button type="button" class="menu-chip-btn${isSelected ? ' menu-chip-btn-selected' : ''}" data-menu-filter-chip="true" data-field="${escapeAttr(field)}" data-value="${escapeAttr(value)}" aria-pressed="${isSelected ? 'true' : 'false'}"${isAvailable ? '' : ' disabled'}>
+                ${escapeHtml(label)}
+            </button>
+        `;
+    }).join('');
+}
+
+function sanitizeMenuStateSelections() {
+    const baselineState = getMenuBaselineState();
     const availableValues = {
         pillar: distinctTagValues(baselineState, 'pillar'),
         resourceType: distinctTagValues(baselineState, 'resourceType'),
@@ -7521,18 +7537,24 @@ function updateMenuSearchHint() {
 // Does not touch the results list — call refreshMenuUI() (or
 // renderMenuResults() directly) for that.
 function renderMenuFilterOptions() {
-    const pillarChips = document.getElementById('filter-pillar-chips');
-    if (!pillarChips) return;
+    const pillarSelect = document.getElementById('filter-pillar-select');
+    if (!pillarSelect) return;
 
     sanitizeMenuStateSelections();
 
-    renderMenuChoiceButtons('filter-pillar-chips', 'pillar', distinctTagValues(menuState, 'pillar'), menuState.pillar, translatePillar);
-    renderMenuChoiceButtons('filter-type-chips', 'resourceType', distinctTagValues(menuState, 'resourceType'), menuState.resourceType, translateResourceType);
-    renderMenuChoiceButtons('filter-tier-chips', 'tier', distinctTagValues(menuState, 'tier').map(String), String(menuState.tier || ''), value => t('filter_tier_option')(value));
-    renderMenuChoiceButtons('filter-screener-chips', 'screener', distinctTagValues(menuState, 'screener'), menuState.screener, translateScreener);
-    renderMenuChoiceButtons('filter-subtest-chips', 'subtest', distinctTagValues(menuState, 'subtest'), menuState.subtest);
-    renderMenuChoiceButtons('filter-grade-chips', 'grade', distinctGradeValues(menuState), menuState.grade, translateGrade);
-    renderMenuChoiceButtons('filter-evidence-chips', 'evidence', distinctTagValues(menuState, 'evidence'), menuState.evidence, translateEvidence);
+    const availablePillars = new Set(getAvailableMenuFieldValues('pillar').map(String));
+    pillarSelect.innerHTML = `<option value="">${escapeHtml(t('wizard_select_placeholder'))}</option>` +
+        getAllMenuFieldValues('pillar').map(value => {
+            const selected = String(value) === String(menuState.pillar);
+            return `<option value="${escapeAttr(value)}"${selected ? ' selected' : ''}${availablePillars.has(String(value)) ? '' : ' disabled'}>${escapeHtml(translatePillar(value))}</option>`;
+        }).join('');
+
+    renderMenuChoiceButtons('filter-tier-chips', 'tier', String(menuState.tier || ''), value => t('filter_tier_option')(value));
+    renderMenuChoiceButtons('filter-screener-chips', 'screener', menuState.screener, translateScreener);
+    renderMenuChoiceButtons('filter-type-chips', 'resourceType', menuState.resourceType, translateResourceType);
+    renderMenuChoiceButtons('filter-subtest-chips', 'subtest', menuState.subtest);
+    renderMenuChoiceButtons('filter-grade-chips', 'grade', menuState.grade, translateGrade);
+    renderMenuChoiceButtons('filter-evidence-chips', 'evidence', menuState.evidence, translateEvidence);
     updateMenuSearchHint();
 
     // Only touch the input's value when it actually changed (e.g. a preset
@@ -7595,10 +7617,10 @@ function buildResourceCardHtml(item) {
 // Fields shown in the criteria summary row above the results, in display
 // order. Their values are buttons so each filter can be changed on its own.
 const MENU_FILTER_CHIP_FIELDS = [
-    { field: 'pillar', labelKey: 'filter_pillar_label', format: (v) => translatePillar(v) },
-    { field: 'resourceType', labelKey: 'filter_type_label', format: (v) => translateResourceType(v) },
     { field: 'tier', labelKey: 'filter_tier_label', format: (v) => t('filter_tier_option')(v) },
     { field: 'screener', labelKey: 'filter_screener_label', format: (v) => translateScreener(v) },
+    { field: 'resourceType', labelKey: 'filter_type_label', format: (v) => translateResourceType(v) },
+    { field: 'pillar', labelKey: 'filter_pillar_label', format: (v) => translatePillar(v) },
     { field: 'subtest', labelKey: 'filter_subtest_label' },
     { field: 'grade', labelKey: 'filter_grade_label', format: (v) => translateGrade(v) },
     { field: 'evidence', labelKey: 'filter_evidence_label', format: (v) => translateEvidence(v) },
@@ -7607,18 +7629,20 @@ const MENU_FILTER_CHIP_FIELDS = [
 
 function getMenuFieldChoices(field) {
     const choiceConfig = {
-        pillar: { values: () => distinctTagValues(menuState, 'pillar'), format: translatePillar },
-        resourceType: { values: () => distinctTagValues(menuState, 'resourceType'), format: translateResourceType },
-        tier: { values: () => distinctTagValues(menuState, 'tier').map(String), format: value => t('filter_tier_option')(value) },
-        screener: { values: () => distinctTagValues(menuState, 'screener'), format: translateScreener },
-        subtest: { values: () => distinctTagValues(menuState, 'subtest') },
-        grade: { values: () => distinctGradeValues(menuState), format: translateGrade },
-        evidence: { values: () => distinctTagValues(menuState, 'evidence'), format: translateEvidence }
+        pillar: { format: translatePillar },
+        resourceType: { format: translateResourceType },
+        tier: { format: value => t('filter_tier_option')(value) },
+        screener: { format: translateScreener },
+        subtest: {},
+        grade: { format: translateGrade },
+        evidence: { format: translateEvidence }
     };
     const config = choiceConfig[field];
-    return config ? config.values().map(value => ({
+    const availableValues = new Set(getAvailableMenuFieldValues(field).map(String));
+    return config ? getAllMenuFieldValues(field).map(value => ({
         value,
-        label: config.format ? config.format(value) : value
+        label: config.format ? config.format(value) : value,
+        available: availableValues.has(String(value))
     })) : [];
 }
 
@@ -7640,6 +7664,17 @@ function renderMenuCriteriaEditor() {
             <label class="menu-criteria-editor-label" for="menu-criteria-search-input">${escapeHtml(label)}</label>
             <input id="menu-criteria-search-input" class="filter-search-input" type="search" value="${escapeAttr(menuState.search)}" data-menu-criteria-search="true">
         `;
+    } else if (field === 'pillar') {
+        const choices = getMenuFieldChoices(field);
+        editor.innerHTML = `
+            <label class="menu-criteria-editor-label" for="menu-criteria-pillar-select">${escapeHtml(label)}</label>
+            <select id="menu-criteria-pillar-select" class="filter-select-input" data-menu-criteria-select="pillar">
+                ${choices.map(choice => {
+                    const selected = String(choice.value) === String(menuState[field]);
+                    return `<option value="${escapeAttr(choice.value)}"${selected ? ' selected' : ''}${choice.available ? '' : ' disabled'}>${escapeHtml(choice.label)}</option>`;
+                }).join('')}
+            </select>
+        `;
     } else {
         const choices = getMenuFieldChoices(field);
         editor.innerHTML = `
@@ -7647,7 +7682,7 @@ function renderMenuCriteriaEditor() {
             <div class="menu-chip-group" role="group" aria-label="${escapeAttr(label)}">
                 ${choices.map(choice => {
                     const selected = String(choice.value) === String(menuState[field]);
-                    return `<button type="button" class="menu-chip-btn${selected ? ' menu-chip-btn-selected' : ''}" data-menu-criteria-option="${escapeAttr(field)}" data-value="${escapeAttr(choice.value)}" aria-pressed="${selected ? 'true' : 'false'}">${escapeHtml(choice.label)}</button>`;
+                    return `<button type="button" class="menu-chip-btn${selected ? ' menu-chip-btn-selected' : ''}" data-menu-criteria-option="${escapeAttr(field)}" data-value="${escapeAttr(choice.value)}" aria-pressed="${selected ? 'true' : 'false'}"${choice.available ? '' : ' disabled'}>${escapeHtml(choice.label)}</button>`;
                 }).join('')}
             </div>
         `;
@@ -7842,6 +7877,10 @@ function initializeInterventionsFilterMenu() {
         });
         document.addEventListener('change', event => {
             if (event.target.matches('[data-menu-criteria-search]')) onMenuSearchInput(event.target.value);
+            if (event.target.matches('[data-menu-criteria-select]')) {
+                menuUiState.editingField = '';
+                onMenuFilterChange(event.target.dataset.menuCriteriaSelect, event.target.value);
+            }
         });
         menuUiState.initialized = true;
     }

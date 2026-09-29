@@ -323,20 +323,20 @@
 
                         <div class="menu-search-panel-body">
                             <div class="filter-group filter-group-visual">
-                                <span class="filter-group-label" data-i18n="filter_pillar_label">Literacy Pillar</span>
-                                <div id="filter-pillar-chips" class="menu-chip-group" role="group" aria-label="Literacy Pillar"></div>
-                            </div>
-                            <div class="filter-group filter-group-visual">
-                                <span class="filter-group-label" data-i18n="filter_type_label">Resource Type</span>
-                                <div id="filter-type-chips" class="menu-chip-group" role="group" aria-label="Resource Type"></div>
-                            </div>
-                            <div class="filter-group filter-group-visual">
                                 <span class="filter-group-label" data-i18n="filter_tier_label">Tier</span>
                                 <div id="filter-tier-chips" class="menu-chip-group menu-chip-group-tier" role="group" aria-label="Tier"></div>
                             </div>
                             <div class="filter-group filter-group-visual">
                                 <span class="filter-group-label" data-i18n="filter_screener_label">Screener</span>
                                 <div id="filter-screener-chips" class="menu-chip-group" role="group" aria-label="Screener"></div>
+                            </div>
+                            <div class="filter-group filter-group-visual">
+                                <span class="filter-group-label" data-i18n="filter_type_label">Resource Type</span>
+                                <div id="filter-type-chips" class="menu-chip-group" role="group" aria-label="Resource Type"></div>
+                            </div>
+                            <div class="filter-group filter-group-visual">
+                                <label class="filter-group-label" for="filter-pillar-select" data-i18n="filter_pillar_label">Literacy Pillar</label>
+                                <select id="filter-pillar-select" class="filter-select-input" onchange="onMenuFilterChange('pillar', this.value)"></select>
                             </div>
 
                             <details class="filter-advanced" aria-describedby="filter-advanced-description">
