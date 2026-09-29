@@ -7597,14 +7597,14 @@ function buildResourceCardHtml(item) {
 // order. Clicking the summary row toggles the same chip panel back open
 // (as a dropdown) so any of these can be changed; results refilter live.
 const MENU_FILTER_CHIP_FIELDS = [
-    { field: 'pillar', format: (v) => translatePillar(v) },
-    { field: 'resourceType', format: (v) => translateResourceType(v) },
-    { field: 'tier', format: (v) => t('filter_tier_option')(v) },
-    { field: 'screener', format: (v) => translateScreener(v) },
-    { field: 'subtest' },
-    { field: 'grade', format: (v) => translateGrade(v) },
-    { field: 'evidence', format: (v) => translateEvidence(v) },
-    { field: 'search', format: (v) => `"${v}"` }
+    { field: 'pillar', labelKey: 'filter_pillar_label', format: (v) => translatePillar(v) },
+    { field: 'resourceType', labelKey: 'filter_type_label', format: (v) => translateResourceType(v) },
+    { field: 'tier', labelKey: 'filter_tier_label', format: (v) => t('filter_tier_option')(v) },
+    { field: 'screener', labelKey: 'filter_screener_label', format: (v) => translateScreener(v) },
+    { field: 'subtest', labelKey: 'filter_subtest_label' },
+    { field: 'grade', labelKey: 'filter_grade_label', format: (v) => translateGrade(v) },
+    { field: 'evidence', labelKey: 'filter_evidence_label', format: (v) => translateEvidence(v) },
+    { field: 'search', labelKey: 'filter_search_label', format: (v) => `"${v}"` }
 ];
 
 // The single-line, click-to-expand summary of the active search criteria
@@ -7614,7 +7614,11 @@ function renderMenuCriteriaSummary() {
     if (!el) return;
     const parts = MENU_FILTER_CHIP_FIELDS
         .filter(def => String(menuState[def.field] || '').trim() !== '')
-        .map(def => def.format ? def.format(menuState[def.field]) : menuState[def.field]);
+        .map(def => {
+            const value = def.format ? def.format(menuState[def.field]) : menuState[def.field];
+            const label = def.labelKey ? t(def.labelKey) : '';
+            return label ? `${label}: ${value}` : value;
+        });
     el.textContent = parts.length ? parts.join(' · ') : t('filter_active_none');
 }
 
@@ -7651,6 +7655,7 @@ function showMenuSearchView() {
     menuUiState.view = 'search';
     menuUiState.criteriaOpen = false;
     applyMenuViewState();
+    refreshMenuUI();
 }
 
 // "Search" button — hides the search panel and reveals the results with
