@@ -7537,8 +7537,7 @@ function updateMenuSearchHint() {
 // Does not touch the results list — call refreshMenuUI() (or
 // renderMenuResults() directly) for that.
 function renderMenuFilterOptions() {
-    const pillarGroup = document.getElementById('filter-pillar-group');
-    if (!pillarGroup) return;
+    if (!document.getElementById('filter-pillar-chips')) return;
 
     sanitizeMenuStateSelections();
 
@@ -7549,7 +7548,6 @@ function renderMenuFilterOptions() {
     renderMenuChoiceButtons('filter-subtest-chips', 'subtest', menuState.subtest);
     renderMenuChoiceButtons('filter-grade-chips', 'grade', menuState.grade, translateGrade);
     renderMenuChoiceButtons('filter-evidence-chips', 'evidence', menuState.evidence, translateEvidence);
-    pillarGroup.hidden = !['tier', 'screener', 'resourceType'].every(field => isMenuFieldComplete(field));
     updateMenuSearchHint();
 
     // Only touch the input's value when it actually changed (e.g. a preset
