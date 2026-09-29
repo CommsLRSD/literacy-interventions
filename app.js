@@ -7847,6 +7847,11 @@ function initializeInterventionsFilterMenu() {
     if (!document.getElementById('menu-search-panel')) return;
     if (!menuUiState.initialized) {
         window.addEventListener('resize', updateMenuChipSeparators);
+        if (typeof ResizeObserver !== 'undefined') {
+            const observer = new ResizeObserver(updateMenuChipSeparators);
+            observer.observe(document.getElementById('menu-search-panel'));
+            observer.observe(document.getElementById('menu-criteria-bar'));
+        }
         document.querySelector('.filter-advanced')?.addEventListener('toggle', updateMenuChipSeparators);
         document.addEventListener('click', event => {
             const chipBtn = event.target.closest('[data-menu-filter-chip]');
