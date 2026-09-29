@@ -1612,6 +1612,17 @@ details > p {
   padding-top: 0;
 }
 
+.faq-answer a {
+  color: var(--primary-light);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.faq-answer a:hover {
+  color: var(--primary);
+}
+
 .faq-footnote {
   margin-top: var(--space-md);
   font-size: 0.72rem;
