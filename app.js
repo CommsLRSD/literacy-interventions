@@ -7209,7 +7209,7 @@ const menuState = {
 
 const NO_SPECIFIC_SCREENER_VALUE = '__no_specific_screener__';
 const REQUIRED_MENU_FIELDS = ['tier', 'screener', 'resourceType', 'pillar'];
-const MENU_CHIP_FIELDS = ['resourceType', 'tier', 'screener', 'subtest', 'grade', 'evidence'];
+const MENU_CHIP_FIELDS = ['resourceType', 'tier', 'screener', 'pillar', 'subtest', 'grade', 'evidence'];
 // 'search' = the full-panel filter form; 'results' = the results list with
 // independently editable criteria above it.
 const menuUiState = {
@@ -7537,24 +7537,19 @@ function updateMenuSearchHint() {
 // Does not touch the results list — call refreshMenuUI() (or
 // renderMenuResults() directly) for that.
 function renderMenuFilterOptions() {
-    const pillarSelect = document.getElementById('filter-pillar-select');
-    if (!pillarSelect) return;
+    const pillarGroup = document.getElementById('filter-pillar-group');
+    if (!pillarGroup) return;
 
     sanitizeMenuStateSelections();
-
-    const availablePillars = new Set(getAvailableMenuFieldValues('pillar').map(String));
-    pillarSelect.innerHTML = `<option value="">${escapeHtml(t('wizard_select_placeholder'))}</option>` +
-        getAllMenuFieldValues('pillar').map(value => {
-            const selected = String(value) === String(menuState.pillar);
-            return `<option value="${escapeAttr(value)}"${selected ? ' selected' : ''}${availablePillars.has(String(value)) ? '' : ' disabled'}>${escapeHtml(translatePillar(value))}</option>`;
-        }).join('');
 
     renderMenuChoiceButtons('filter-tier-chips', 'tier', String(menuState.tier || ''), value => t('filter_tier_option')(value));
     renderMenuChoiceButtons('filter-screener-chips', 'screener', menuState.screener, translateScreener);
     renderMenuChoiceButtons('filter-type-chips', 'resourceType', menuState.resourceType, translateResourceType);
+    renderMenuChoiceButtons('filter-pillar-chips', 'pillar', menuState.pillar, translatePillar);
     renderMenuChoiceButtons('filter-subtest-chips', 'subtest', menuState.subtest);
     renderMenuChoiceButtons('filter-grade-chips', 'grade', menuState.grade, translateGrade);
     renderMenuChoiceButtons('filter-evidence-chips', 'evidence', menuState.evidence, translateEvidence);
+    pillarGroup.hidden = !['tier', 'screener', 'resourceType'].every(field => isMenuFieldComplete(field));
     updateMenuSearchHint();
 
     // Only touch the input's value when it actually changed (e.g. a preset
@@ -7663,17 +7658,6 @@ function renderMenuCriteriaEditor() {
         editor.innerHTML = `
             <label class="menu-criteria-editor-label" for="menu-criteria-search-input">${escapeHtml(label)}</label>
             <input id="menu-criteria-search-input" class="filter-search-input" type="search" value="${escapeAttr(menuState.search)}" data-menu-criteria-search="true">
-        `;
-    } else if (field === 'pillar') {
-        const choices = getMenuFieldChoices(field);
-        editor.innerHTML = `
-            <label class="menu-criteria-editor-label" for="menu-criteria-pillar-select">${escapeHtml(label)}</label>
-            <select id="menu-criteria-pillar-select" class="filter-select-input" data-menu-criteria-select="pillar">
-                ${choices.map(choice => {
-                    const selected = String(choice.value) === String(menuState[field]);
-                    return `<option value="${escapeAttr(choice.value)}"${selected ? ' selected' : ''}${choice.available ? '' : ' disabled'}>${escapeHtml(choice.label)}</option>`;
-                }).join('')}
-            </select>
         `;
     } else {
         const choices = getMenuFieldChoices(field);
@@ -7877,10 +7861,6 @@ function initializeInterventionsFilterMenu() {
         });
         document.addEventListener('change', event => {
             if (event.target.matches('[data-menu-criteria-search]')) onMenuSearchInput(event.target.value);
-            if (event.target.matches('[data-menu-criteria-select]')) {
-                menuUiState.editingField = '';
-                onMenuFilterChange(event.target.dataset.menuCriteriaSelect, event.target.value);
-            }
         });
         menuUiState.initialized = true;
     }

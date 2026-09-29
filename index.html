@@ -318,7 +318,7 @@
                     <div id="menu-search-panel" class="menu-search-panel" aria-label="Teaching resource search">
                         <div class="menu-search-panel-header">
                             <h3 class="wizard-title"><span class="material-symbols-rounded" aria-hidden="true" translate="no">tune</span><span data-i18n="wizard_choose_steps">Filter to find resources</span></h3>
-                            <p class="filter-required-hint" data-i18n="filter_required_hint">Select Literacy Pillar, Resource Type, Tier, and a Screener when available to view resources.</p>
+                            <p class="filter-required-hint" data-i18n="filter_required_hint">Select Tier, a Screener when available, Resource Type, and Literacy Pillar to view resources.</p>
                         </div>
 
                         <div class="menu-search-panel-body">
@@ -334,9 +334,23 @@
                                 <span class="filter-group-label" data-i18n="filter_type_label">Resource Type</span>
                                 <div id="filter-type-chips" class="menu-chip-group" role="group" aria-label="Resource Type"></div>
                             </div>
-                            <div class="filter-group filter-group-visual">
-                                <label class="filter-group-label" for="filter-pillar-select" data-i18n="filter_pillar_label">Literacy Pillar</label>
-                                <select id="filter-pillar-select" class="filter-select-input" onchange="onMenuFilterChange('pillar', this.value)"></select>
+                            <div id="filter-pillar-group" class="filter-group filter-group-visual" hidden>
+                                <span class="filter-group-label" data-i18n="filter_pillar_label">Literacy Pillar</span>
+                                <div id="filter-pillar-chips" class="menu-chip-group" role="group" aria-label="Literacy Pillar"></div>
+                            </div>
+
+                            <div class="filter-group">
+                                <label class="filter-group-label" for="filter-search" data-i18n="filter_search_label">Keyword search</label>
+                                <input id="filter-search" class="filter-search-input" type="search" data-i18n-placeholder="filter_search_placeholder" placeholder="Search by resource name…" oninput="onMenuSearchInput(this.value)">
+                            </div>
+
+                            <div class="menu-search-panel-footer">
+                                <button type="button" class="filter-clear-btn" onclick="restartMenu()" data-i18n="wizard_start_over">Clear Filters</button>
+                                <p id="menu-search-hint" class="menu-search-hint" aria-live="polite"></p>
+                                <button type="button" id="menu-search-submit-btn" class="menu-search-submit-btn" onclick="submitMenuSearch()" aria-describedby="menu-search-hint">
+                                    <span class="material-symbols-rounded" aria-hidden="true" translate="no">search</span>
+                                    <span data-i18n="filter_search_button">Search</span>
+                                </button>
                             </div>
 
                             <details class="filter-advanced" aria-describedby="filter-advanced-description">
@@ -355,21 +369,7 @@
                                     <div id="filter-evidence-chips" class="menu-chip-group" role="group" aria-label="Evidence Classification"></div>
                                 </div>
                             </details>
-
-                            <div class="filter-group">
-                                <label class="filter-group-label" for="filter-search" data-i18n="filter_search_label">Keyword search</label>
-                                <input id="filter-search" class="filter-search-input" type="search" data-i18n-placeholder="filter_search_placeholder" placeholder="Search by resource name…" oninput="onMenuSearchInput(this.value)">
-                            </div>
                         </div><!-- /.menu-search-panel-body -->
-
-                        <div class="menu-search-panel-footer">
-                            <button type="button" class="filter-clear-btn" onclick="restartMenu()" data-i18n="wizard_start_over">Clear Filters</button>
-                            <p id="menu-search-hint" class="menu-search-hint" aria-live="polite"></p>
-                            <button type="button" id="menu-search-submit-btn" class="menu-search-submit-btn" onclick="submitMenuSearch()" aria-describedby="menu-search-hint">
-                                <span class="material-symbols-rounded" aria-hidden="true" translate="no">search</span>
-                                <span data-i18n="filter_search_button">Search</span>
-                            </button>
-                        </div>
                     </div><!-- /.menu-search-panel -->
 
                     <div id="dropdown-results" class="dropdown-results interventions-results-panel">
