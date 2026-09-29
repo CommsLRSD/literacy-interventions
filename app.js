@@ -237,6 +237,7 @@ function rerenderForLanguage() {
     if (schedulesData) {
         renderScheduleCalendar(schedulesData);
     }
+    renderFAQ();
 }
 
 // Refresh the programmatically-set option/placeholder text in the
@@ -283,6 +284,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Setup navigation
     setupNavigation();
+
+    // FAQ search, topic tags, and category tabs
+    initFAQ();
     
     // Setup mobile menu
     setupMobileMenu();
@@ -1042,6 +1046,344 @@ function toggleFAQ(element) {
     if (!wasActive) {
         faqItem.classList.add('active');
         element.setAttribute('aria-expanded', 'true');
+    }
+}
+
+// Topic tags are derived from each FAQ's question (and, where noted, answer)
+// text so new FAQs added to index.html are tagged automatically.
+const FAQ_PAGE_SIZE = 8;
+const FAQ_CATEGORY_ORDER = ['ctopp', 'dibels', 'thafol', 'data', 'portal'];
+const FAQ_TAG_RULES = [
+    { id: 'administration', question: /administ|where do i start|when do i stop|discontinu|one session|point to|praise|correct the student|repeat|read the title|testing conditions|practice before|protocols|pre-recorded|skips?\b|don.t know|doesn.t respond|quit|ruler|observations/i },
+    { id: 'scoring', question: /scor|marked wrong|wrong|get 2 wrong|align/i },
+    { id: 'timing', question: /how long|how much time|time recorded|how often|window|quickly|slow|finishes before|one session|full minute/i },
+    { id: 'overview', question: /what is the (ctopp|dibels)|proper use|skills are measured|should i teach/i },
+    { id: 'progress_monitoring', question: /progress monitoring|responding to interventions/i },
+    { id: 'benchmark', question: /benchmark|screening/i, answer: /benchmark screening|universal screening/i },
+    { id: 'student_needs', question: /nonverbal|\beal\b|non-native|special education|eyeglasses|ruler|tracking|dyslexia|quit|doesn.t want|needs that/i },
+    { id: 'rapid_naming', question: /rapid naming|\bran\b/i },
+    { id: 'orf', question: /oral reading fluency|\borf\b/i },
+    { id: 'resources', question: /training|materials|audio files|video|where can i find|where do i find|information on/i },
+    { id: 'data', question: /report|power bi|parents|families|scores can be generated|composite|what scores/i }
+];
+
+const faqState = {
+    initialized: false,
+    categories: [],
+    items: [],
+    activeCategory: 0,
+    page: 0,
+    query: '',
+    tag: ''
+};
+
+function normalizeFaqText(text) {
+    return (text || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201c\u201d]/g, '"')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function formatFaqString(key, values) {
+    return Object.keys(values).reduce(
+        (str, name) => str.split(`{${name}}`).join(values[name]),
+        t(key)
+    );
+}
+
+function getFaqCategoryLabel(index) {
+    const cat = faqState.categories[index];
+    return cat ? t(`faq_cat_${cat.key}`) : '';
+}
+
+function initFAQ() {
+    const section = document.getElementById('faq-section');
+    if (!section || faqState.initialized) return;
+    faqState.initialized = true;
+
+    const categoryEls = Array.from(section.querySelectorAll('.faq-category'));
+    const orderOf = el => {
+        const pos = FAQ_CATEGORY_ORDER.indexOf(el.dataset.faqCategory);
+        return pos === -1 ? FAQ_CATEGORY_ORDER.length + categoryEls.indexOf(el) : pos;
+    };
+    faqState.categories = categoryEls.sort((a, b) => orderOf(a) - orderOf(b)).map((el, index) => {
+        const key = el.dataset.faqCategory || `category-${index}`;
+        el.id = `faq-panel-${key}`;
+        el.setAttribute('role', 'tabpanel');
+        el.setAttribute('aria-labelledby', `faq-tab-${key}`);
+        return { el, key, index };
+    });
+
+    faqState.categories.forEach(cat => {
+        const titleText = (cat.el.querySelector('.faq-category-title') || {}).textContent || '';
+        cat.el.querySelectorAll('.faq-item').forEach(itemEl => {
+            const questionEl = itemEl.querySelector('.faq-question');
+            const answerEl = itemEl.querySelector('.faq-answer');
+            const question = questionEl ? questionEl.textContent : '';
+            const answer = answerEl ? answerEl.textContent : '';
+            const tags = FAQ_TAG_RULES
+                .filter(rule => rule.question.test(question) || (rule.answer && rule.answer.test(answer)))
+                .map(rule => rule.id);
+
+            if (tags.length) {
+                const tagWrap = document.createElement('div');
+                tagWrap.className = 'faq-item-tags';
+                tags.forEach(tagId => {
+                    const pill = document.createElement('button');
+                    pill.type = 'button';
+                    pill.className = 'faq-item-tag';
+                    pill.dataset.faqTag = tagId;
+                    pill.addEventListener('click', () => setFaqTag(tagId));
+                    tagWrap.appendChild(pill);
+                });
+                if (questionEl) questionEl.insertAdjacentElement('afterend', tagWrap);
+            }
+
+            faqState.items.push({
+                el: itemEl,
+                categoryIndex: cat.index,
+                tags,
+                searchText: normalizeFaqText(`${question} ${answer} ${titleText}`)
+            });
+        });
+    });
+
+    const searchInput = document.getElementById('faq-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            faqState.query = searchInput.value;
+            faqState.page = 0;
+            renderFAQ();
+        });
+    }
+
+    const tabList = document.getElementById('faq-category-tabs');
+    if (tabList) {
+        tabList.addEventListener('keydown', event => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            const tabs = Array.from(tabList.querySelectorAll('[role="tab"]:not([disabled])'));
+            const current = tabs.indexOf(document.activeElement);
+            if (current === -1 || !tabs.length) return;
+            event.preventDefault();
+            let next = current;
+            if (event.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
+            if (event.key === 'ArrowRight') next = (current + 1) % tabs.length;
+            if (event.key === 'Home') next = 0;
+            if (event.key === 'End') next = tabs.length - 1;
+            tabs[next].click();
+            const refocus = tabList.querySelector(`[data-faq-index="${tabs[next].dataset.faqIndex}"]`);
+            if (refocus) refocus.focus();
+        });
+    }
+
+    renderFAQ();
+}
+
+function faqItemMatches(item, terms) {
+    if (faqState.tag && !item.tags.includes(faqState.tag)) return false;
+    return terms.every(term => item.searchText.includes(term));
+}
+
+function setFaqCategory(index, focusTop) {
+    faqState.activeCategory = index;
+    faqState.page = 0;
+    renderFAQ();
+    if (focusTop) scrollFaqIntoView();
+}
+
+function setFaqPage(page) {
+    faqState.page = page;
+    renderFAQ();
+    scrollFaqIntoView();
+}
+
+function setFaqTag(tagId) {
+    faqState.tag = faqState.tag === tagId ? '' : tagId;
+    faqState.page = 0;
+    renderFAQ();
+    scrollFaqIntoView();
+}
+
+function clearFaqFilters() {
+    faqState.tag = '';
+    faqState.query = '';
+    faqState.page = 0;
+    const searchInput = document.getElementById('faq-search-input');
+    if (searchInput) searchInput.value = '';
+    renderFAQ();
+}
+
+function scrollFaqIntoView() {
+    const toolbar = document.querySelector('#faq-section .faq-category-tabs');
+    if (toolbar && toolbar.getBoundingClientRect().top < 0) {
+        toolbar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function createFaqButton(className, label, onClick, disabled) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = className;
+    btn.textContent = label;
+    btn.disabled = !!disabled;
+    btn.addEventListener('click', onClick);
+    return btn;
+}
+
+function renderFAQ() {
+    if (!faqState.initialized) return;
+
+    const terms = normalizeFaqText(faqState.query).split(' ').filter(Boolean);
+    const filtering = terms.length > 0 || !!faqState.tag;
+    const matches = faqState.items.filter(item => faqItemMatches(item, terms));
+    const countsByCategory = faqState.categories.map(cat =>
+        matches.filter(item => item.categoryIndex === cat.index).length);
+
+    // Keep the view on a category that has results.
+    if (filtering && countsByCategory[faqState.activeCategory] === 0) {
+        const firstWithResults = countsByCategory.findIndex(count => count > 0);
+        if (firstWithResults !== -1) faqState.activeCategory = firstWithResults;
+    }
+    const active = faqState.activeCategory;
+
+    // Topic chips (counts reflect the current search text)
+    const tagList = document.getElementById('faq-tag-list');
+    if (tagList) {
+        tagList.innerHTML = '';
+        const searchMatches = faqState.items.filter(item => terms.every(term => item.searchText.includes(term)));
+        const allChip = createFaqButton('faq-tag-chip', t('faq_tag_all'), () => {
+            faqState.tag = '';
+            faqState.page = 0;
+            renderFAQ();
+        });
+        allChip.setAttribute('aria-pressed', String(!faqState.tag));
+        tagList.appendChild(allChip);
+        FAQ_TAG_RULES.forEach(rule => {
+            const count = searchMatches.filter(item => item.tags.includes(rule.id)).length;
+            const chip = createFaqButton('faq-tag-chip', '', () => setFaqTag(rule.id), count === 0 && faqState.tag !== rule.id);
+            chip.dataset.faqTag = rule.id;
+            chip.setAttribute('aria-pressed', String(faqState.tag === rule.id));
+            const label = document.createElement('span');
+            label.textContent = t(`faq_tag_${rule.id}`);
+            const countEl = document.createElement('span');
+            countEl.className = 'faq-tag-count';
+            countEl.textContent = count;
+            chip.append(label, countEl);
+            tagList.appendChild(chip);
+        });
+    }
+
+    // Tag pills on each item
+    document.querySelectorAll('#faq-section .faq-item-tag').forEach(pill => {
+        const tagLabel = t(`faq_tag_${pill.dataset.faqTag}`);
+        pill.textContent = tagLabel;
+        pill.setAttribute('aria-label', formatFaqString('faq_filter_by_tag', { tag: tagLabel }));
+        pill.classList.toggle('is-active', pill.dataset.faqTag === faqState.tag);
+    });
+
+    // Category tabs
+    const tabList = document.getElementById('faq-category-tabs');
+    if (tabList) {
+        tabList.innerHTML = '';
+        faqState.categories.forEach(cat => {
+            const count = filtering ? countsByCategory[cat.index] : faqState.items.filter(item => item.categoryIndex === cat.index).length;
+            const tab = createFaqButton('faq-category-tab', '', () => setFaqCategory(cat.index, false), filtering && count === 0);
+            tab.id = `faq-tab-${cat.key}`;
+            tab.dataset.faqIndex = cat.index;
+            tab.setAttribute('role', 'tab');
+            tab.setAttribute('aria-controls', cat.el.id);
+            tab.setAttribute('aria-selected', String(cat.index === active));
+            tab.tabIndex = cat.index === active ? 0 : -1;
+            const label = document.createElement('span');
+            label.textContent = getFaqCategoryLabel(cat.index);
+            const countEl = document.createElement('span');
+            countEl.className = 'faq-tab-count';
+            countEl.textContent = count;
+            tab.append(label, countEl);
+            tabList.appendChild(tab);
+        });
+    }
+
+    // Visible items: active category only, paginated
+    const activeMatches = matches.filter(item => item.categoryIndex === active);
+    const totalPages = Math.max(1, Math.ceil(activeMatches.length / FAQ_PAGE_SIZE));
+    faqState.page = Math.min(Math.max(faqState.page, 0), totalPages - 1);
+    const start = faqState.page * FAQ_PAGE_SIZE;
+    const visible = new Set(activeMatches.slice(start, start + FAQ_PAGE_SIZE));
+
+    faqState.categories.forEach(cat => {
+        cat.el.hidden = cat.index !== active || activeMatches.length === 0;
+    });
+    faqState.items.forEach(item => {
+        const show = visible.has(item);
+        item.el.hidden = !show;
+        if (!show && item.el.classList.contains('active')) {
+            item.el.classList.remove('active');
+            const question = item.el.querySelector('.faq-question');
+            if (question) question.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    // Status line
+    const status = document.getElementById('faq-results-status');
+    if (status) {
+        status.innerHTML = '';
+        const text = document.createElement('span');
+        text.textContent = filtering
+            ? formatFaqString('faq_status_filtered', { count: matches.length })
+            : formatFaqString('faq_status_category', {
+                category: getFaqCategoryLabel(active),
+                count: activeMatches.length
+            });
+        status.appendChild(text);
+        if (filtering) {
+            status.appendChild(createFaqButton('faq-clear-btn', t('faq_clear_filters'), clearFaqFilters));
+        }
+    }
+
+    const empty = document.getElementById('faq-empty');
+    if (empty) empty.hidden = matches.length > 0;
+
+    // Pager: page controls within the category + cycle to neighbouring categories
+    const pager = document.getElementById('faq-pager');
+    if (pager) {
+        pager.innerHTML = '';
+        if (matches.length > 0) {
+            const available = faqState.categories
+                .map(cat => cat.index)
+                .filter(index => !filtering || countsByCategory[index] > 0);
+            const position = available.indexOf(active);
+            const prevCategory = position > 0 ? available[position - 1] : null;
+            const nextCategory = position !== -1 && position < available.length - 1 ? available[position + 1] : null;
+
+            const prevWrap = document.createElement('div');
+            prevWrap.className = 'faq-pager-side';
+            if (faqState.page > 0) {
+                prevWrap.appendChild(createFaqButton('faq-pager-btn', `← ${t('faq_prev_page')}`, () => setFaqPage(faqState.page - 1)));
+            } else if (prevCategory !== null) {
+                prevWrap.appendChild(createFaqButton('faq-pager-btn', `← ${formatFaqString('faq_prev_category', { category: getFaqCategoryLabel(prevCategory) })}`, () => setFaqCategory(prevCategory, true)));
+            }
+
+            const middle = document.createElement('span');
+            middle.className = 'faq-pager-info';
+            middle.textContent = totalPages > 1
+                ? formatFaqString('faq_page_of', { page: faqState.page + 1, total: totalPages })
+                : '';
+
+            const nextWrap = document.createElement('div');
+            nextWrap.className = 'faq-pager-side faq-pager-side--next';
+            if (faqState.page < totalPages - 1) {
+                nextWrap.appendChild(createFaqButton('faq-pager-btn faq-pager-btn--primary', `${t('faq_next_page')} →`, () => setFaqPage(faqState.page + 1)));
+            } else if (nextCategory !== null) {
+                nextWrap.appendChild(createFaqButton('faq-pager-btn faq-pager-btn--primary', `${formatFaqString('faq_next_category', { category: getFaqCategoryLabel(nextCategory) })} →`, () => setFaqCategory(nextCategory, true)));
+            }
+
+            pager.append(prevWrap, middle, nextWrap);
+        }
     }
 }
 
