@@ -7192,8 +7192,8 @@ document.addEventListener('scroll', () => hideEvidenceLegendTooltip(), true);
 // array of every (tier, pillar, resourceType, screeners, subtests, notes)
 // combination it applies to. This avoids duplicating a resource that shows
 // up under several tiers/pillars while still letting every filter narrow
-// correctly. Each filter narrows the resource pool; the remaining filter
-// controls only ever offer choices that still match at least one resource.
+// correctly. The standalone menu offers choices based on higher-priority
+// filters, clearing incompatible lower-priority choices when one changes.
 
 const menuState = {
     program: '',
@@ -7209,7 +7209,7 @@ const menuState = {
 
 const NO_SPECIFIC_SCREENER_VALUE = '__no_specific_screener__';
 const REQUIRED_MENU_FIELDS = ['tier', 'screener', 'resourceType', 'pillar'];
-const MENU_CHIP_FIELDS = ['resourceType', 'tier', 'screener', 'pillar', 'subtest', 'grade', 'evidence'];
+const MENU_CHIP_FIELDS = [...REQUIRED_MENU_FIELDS, 'subtest', 'grade', 'evidence'];
 // 'search' = the full-panel filter form; 'results' = the results list with
 // independently editable criteria above it.
 const menuUiState = {
@@ -7371,15 +7371,7 @@ function translateScreener(screenerName) {
 }
 
 function getMenuAvailableScreeners(state) {
-    const screenerRequirementState = {
-        ...state,
-        screener: '',
-        subtest: '',
-        grade: '',
-        evidence: '',
-        search: ''
-    };
-    return distinctTagValues(screenerRequirementState, 'screener');
+    return distinctTagValues(getMenuHigherPriorityState('screener', state), 'screener');
 }
 
 function isMenuFieldComplete(field, state = menuState) {
@@ -7478,9 +7470,19 @@ function getAllMenuFieldValues(field) {
     return field === 'tier' ? values.map(String) : values;
 }
 
+function getMenuHigherPriorityState(field, state = menuState) {
+    const higherPriorityState = { ...state };
+    MENU_CHIP_FIELDS.slice(MENU_CHIP_FIELDS.indexOf(field)).forEach(key => {
+        higherPriorityState[key] = '';
+    });
+    higherPriorityState.search = '';
+    return higherPriorityState;
+}
+
 function getAvailableMenuFieldValues(field) {
-    if (field === 'grade') return distinctGradeValues(menuState);
-    const values = distinctTagValues(menuState, field);
+    const state = getMenuHigherPriorityState(field);
+    if (field === 'grade') return distinctGradeValues(state);
+    const values = distinctTagValues(state, field);
     return field === 'tier' ? values.map(String) : values;
 }
 
@@ -7500,21 +7502,23 @@ function renderMenuChoiceButtons(containerId, field, selected, translate) {
     }).join('');
 }
 
+function updateMenuChipSeparators() {
+    document.querySelectorAll('.menu-chip-group').forEach(group => {
+        let previousTop = null;
+        group.querySelectorAll('.menu-chip-btn').forEach(button => {
+            const top = button.offsetTop;
+            button.classList.toggle('menu-chip-btn-row-start', previousTop === null || top !== previousTop);
+            previousTop = top;
+        });
+    });
+}
+
 function sanitizeMenuStateSelections() {
-    const baselineState = getMenuBaselineState();
-    const availableValues = {
-        pillar: distinctTagValues(baselineState, 'pillar'),
-        resourceType: distinctTagValues(baselineState, 'resourceType'),
-        tier: distinctTagValues(baselineState, 'tier').map(String),
-        screener: distinctTagValues(menuState, 'screener'),
-        subtest: distinctTagValues(menuState, 'subtest'),
-        grade: distinctGradeValues(menuState),
-        evidence: distinctTagValues(menuState, 'evidence')
-    };
-    ['pillar', 'resourceType', 'tier', 'screener', 'subtest', 'grade', 'evidence'].forEach(field => {
+    MENU_CHIP_FIELDS.forEach(field => {
         const value = menuState[field];
-        if (value && !availableValues[field].includes(String(value))) {
+        if (value && !getAvailableMenuFieldValues(field).includes(String(value))) {
             menuState[field] = '';
+            setRememberedMenuFilters({ [field]: null });
         }
     });
 }
@@ -7533,7 +7537,7 @@ function updateMenuSearchHint() {
 }
 
 // Repopulate every chip group in the standalone Interventions Menu so the
-// available choices always reflect the other filters currently applied.
+// available choices reflect only the higher-priority filters currently applied.
 // Does not touch the results list — call refreshMenuUI() (or
 // renderMenuResults() directly) for that.
 function renderMenuFilterOptions() {
@@ -7548,6 +7552,7 @@ function renderMenuFilterOptions() {
     renderMenuChoiceButtons('filter-subtest-chips', 'subtest', menuState.subtest);
     renderMenuChoiceButtons('filter-grade-chips', 'grade', menuState.grade, translateGrade);
     renderMenuChoiceButtons('filter-evidence-chips', 'evidence', menuState.evidence, translateEvidence);
+    updateMenuChipSeparators();
     updateMenuSearchHint();
 
     // Only touch the input's value when it actually changed (e.g. a preset
@@ -7670,6 +7675,7 @@ function renderMenuCriteriaEditor() {
         `;
     }
     editor.hidden = false;
+    updateMenuChipSeparators();
 }
 
 // Show active values without repeating their category labels.
@@ -7767,11 +7773,15 @@ function onMenuFilterChange(field, value) {
     if (field === 'program') {
         menuState.program = appState.selectedProgram || MENU_LANGUAGE_DEFAULT;
         setRememberedMenuFilters({ program: menuState.program });
-        refreshMenuUI();
-        return;
+    } else {
+        menuState[field] = value;
+        if (field !== 'search') setRememberedMenuFilters({ [field]: value || null });
     }
-    menuState[field] = value;
-    if (field !== 'search') setRememberedMenuFilters({ [field]: value || null });
+    sanitizeMenuStateSelections();
+    if (menuUiState.view === 'results' && !hasAllRequiredMenuFilters()) {
+        menuUiState.view = 'search';
+        applyMenuViewState();
+    }
     refreshMenuUI();
 }
 
@@ -7826,6 +7836,7 @@ function applyRememberedFiltersToMenu() {
 
     syncMenuFilterControls();
 
+    sanitizeMenuStateSelections();
     menuUiState.view = hasAllRequiredMenuFilters() ? 'results' : 'search';
     menuUiState.editingField = '';
     applyMenuViewState();
@@ -7835,6 +7846,13 @@ function applyRememberedFiltersToMenu() {
 function initializeInterventionsFilterMenu() {
     if (!document.getElementById('menu-search-panel')) return;
     if (!menuUiState.initialized) {
+        window.addEventListener('resize', updateMenuChipSeparators);
+        if (typeof ResizeObserver !== 'undefined') {
+            const observer = new ResizeObserver(updateMenuChipSeparators);
+            observer.observe(document.getElementById('menu-search-panel'));
+            observer.observe(document.getElementById('menu-criteria-bar'));
+        }
+        document.querySelector('.filter-advanced')?.addEventListener('toggle', updateMenuChipSeparators);
         document.addEventListener('click', event => {
             const chipBtn = event.target.closest('[data-menu-filter-chip]');
             if (chipBtn) toggleMenuFilterChip(chipBtn.dataset.field, chipBtn.dataset.value);

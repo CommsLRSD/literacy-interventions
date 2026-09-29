@@ -6954,6 +6954,7 @@ body.step-review-modal-open { overflow: hidden; }
 
 .menu-chip-btn {
   display: inline-flex;
+  position: relative;
   align-items: center;
   justify-content: center;
   min-height: 32px;
@@ -6969,6 +6970,16 @@ body.step-review-modal-open { overflow: hidden; }
   cursor: pointer;
   transition: border-color var(--duration) var(--ease),
               color var(--duration) var(--ease);
+}
+
+.menu-chip-btn:not(.menu-chip-btn-row-start)::before {
+  content: '|';
+  position: absolute;
+  left: calc(0px - var(--space-sm));
+  transform: translateX(-50%);
+  color: var(--text-light);
+  font-weight: 400;
+  pointer-events: none;
 }
 
 .menu-chip-btn:hover,

@@ -350,7 +350,7 @@
 
                             <details class="filter-advanced" aria-describedby="filter-advanced-description">
                                 <summary class="filter-advanced-summary" data-i18n="filter_advanced_label">Advanced filters</summary>
-                                <p id="filter-advanced-description" class="sr-only" data-i18n="filter_advanced_description">Contains optional Subtest, Grade Level, and Evidence Classification filters.</p>
+                                <p id="filter-advanced-description" class="sr-only" data-i18n="filter_advanced_description">Contains optional Subtest, Grade Level, Evidence Classification, and Keyword search filters.</p>
                                 <div class="filter-group filter-group-visual">
                                     <span class="filter-group-label" data-i18n="filter_subtest_label">Subtest</span>
                                     <div id="filter-subtest-chips" class="menu-chip-group" role="group" aria-label="Subtest"></div>
@@ -363,12 +363,11 @@
                                     <span class="filter-group-label" data-i18n="filter_evidence_label">Evidence Classification</span>
                                     <div id="filter-evidence-chips" class="menu-chip-group" role="group" aria-label="Evidence Classification"></div>
                                 </div>
+                                <div class="filter-group">
+                                    <label class="filter-group-label" for="filter-search" data-i18n="filter_search_label">Keyword search</label>
+                                    <input id="filter-search" class="filter-search-input" type="search" data-i18n-placeholder="filter_search_placeholder" placeholder="Search by resource name…" oninput="onMenuSearchInput(this.value)">
+                                </div>
                             </details>
-
-                            <div class="filter-group">
-                                <label class="filter-group-label" for="filter-search" data-i18n="filter_search_label">Keyword search</label>
-                                <input id="filter-search" class="filter-search-input" type="search" data-i18n-placeholder="filter_search_placeholder" placeholder="Search by resource name…" oninput="onMenuSearchInput(this.value)">
-                            </div>
                         </div><!-- /.menu-search-panel-body -->
                     </div><!-- /.menu-search-panel -->
 
