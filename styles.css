@@ -7933,29 +7933,11 @@ body.step-review-modal-open { overflow: hidden; }
     min-height: 210px;
   }
 
-  /* Tier 2 / Tier 3 step 1 (long entry information) flows into two columns
-     on an extra-wide card so it is short enough to fit at 100% zoom. */
-  .visual-flowchart-card-columns .visual-flowchart-active-host .flowchart-step {
+  /* Tier 2 / Tier 3 step 1 (long entry information) stays a single column;
+     the card is widened in JS just enough for it to fit the viewport height
+     at 100% zoom, so the step content must be allowed to fill that width. */
+  .visual-flowchart-card-fit-height .visual-flowchart-active-host .flowchart-step {
     max-width: none;
-  }
-
-  .visual-flowchart-card-columns .visual-flowchart-active-host .step-content {
-    display: block;
-    padding: 0 12px 4px;
-    columns: 2;
-    column-gap: 32px;
-  }
-
-  .visual-flowchart-card-columns .visual-flowchart-active-host .step-content > * {
-    break-inside: avoid;
-  }
-
-  .visual-flowchart-card-columns .visual-flowchart-active-host .checklist-full > * + * {
-    margin-top: 0.7rem;
-  }
-
-  .visual-flowchart-card-columns .visual-flowchart-active-host .step-content > :first-child {
-    margin-top: 0;
   }
 
   .visual-flowchart-card-collapsed {
