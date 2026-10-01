@@ -7563,7 +7563,7 @@ body.step-review-modal-open { overflow: hidden; }
      browser refuses the Fullscreen API request. */
   .visual-flowchart-dialog {
     display: grid;
-    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
     width: 100vw;
     height: 100vh;
     overflow: hidden;
@@ -7588,34 +7588,40 @@ body.step-review-modal-open { overflow: hidden; }
 
   .visual-flowchart-header {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-lg);
-    padding: 18px 22px 14px;
+    gap: var(--space-md);
+    padding: 8px 22px;
     border-bottom: 1px solid var(--border);
     background: linear-gradient(135deg, var(--step-bg), var(--bg) 64%);
   }
 
+  /* Title and short description share a single row to keep the header short. */
+  .visual-flowchart-header-text {
+    display: flex;
+    flex: 0 1 auto;
+    align-items: baseline;
+    gap: 14px;
+    min-width: 0;
+  }
+
   .visual-flowchart-header h2 {
-    margin: 1px 0 3px;
+    flex: 0 0 auto;
+    margin: 0;
     color: var(--text);
-    font-size: clamp(1.25rem, 2vw, 1.65rem);
+    font-size: 1.2rem;
+    white-space: nowrap;
   }
 
   .visual-flowchart-header p {
-    max-width: 720px;
+    min-width: 0;
     margin: 0;
+    overflow: hidden;
     color: var(--text-secondary);
-    font-size: 0.85rem;
-  }
-
-  .visual-flowchart-header .visual-flowchart-eyebrow {
-    color: var(--step-text);
-    font-size: 0.68rem;
-    font-weight: 900;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .visual-flowchart-header-actions {
@@ -7668,17 +7674,26 @@ body.step-review-modal-open { overflow: hidden; }
     height: 17px;
   }
 
-  /* Tier context bar directly under the header, e.g. "Tier ONE · Universal Classroom". */
+  /* Tier context bar directly under the header, e.g. "Tier ONE · Universal Classroom",
+     with the tier toggle and the zoom controls on the right. */
   .visual-flowchart-tier-bar {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 22px;
+    gap: 14px;
+    padding: 6px 22px;
     border-bottom: 1px solid var(--border);
     background: var(--step-bg);
   }
 
-  .visual-flowchart-tier-bar[hidden] {
+  .visual-flowchart-tier-bar-info {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .visual-flowchart-tier-bar-info[hidden] {
     display: none;
   }
 
@@ -7708,40 +7723,13 @@ body.step-review-modal-open { overflow: hidden; }
 
   .visual-flowchart-toolbar {
     display: flex;
+    flex: 0 0 auto;
     align-items: center;
     gap: 7px;
-    min-height: 48px;
-    padding: 7px 18px;
-    border-bottom: 1px solid var(--border);
-    background: var(--bg);
+    margin-left: auto;
+    padding-left: 14px;
+    border-left: 1px solid var(--border);
   }
-
-  .visual-flowchart-toolbar-spacer {
-    flex: 1;
-  }
-
-  .visual-flowchart-legend {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 9px;
-    border: 1px solid currentColor;
-    border-radius: var(--radius-pill);
-    font-size: 0.68rem;
-    font-weight: 800;
-  }
-
-  .visual-flowchart-legend::before {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: currentColor;
-    content: "";
-  }
-
-  .visual-flowchart-legend-step { color: var(--step-text); background: var(--step-bg); }
-  .visual-flowchart-legend-effective { color: var(--effective-text); background: var(--effective-bg); }
-  .visual-flowchart-legend-ineffective { color: var(--ineffective-text); background: var(--ineffective-bg); }
 
   .visual-flowchart-toolbar button {
     display: inline-flex;
@@ -7943,6 +7931,31 @@ body.step-review-modal-open { overflow: hidden; }
   .visual-flowchart-card-wide {
     width: 340px;
     min-height: 210px;
+  }
+
+  /* Tier 2 / Tier 3 step 1 (long entry information) flows into two columns
+     on an extra-wide card so it is short enough to fit at 100% zoom. */
+  .visual-flowchart-card-columns .visual-flowchart-active-host .flowchart-step {
+    max-width: none;
+  }
+
+  .visual-flowchart-card-columns .visual-flowchart-active-host .step-content {
+    display: block;
+    padding: 0 12px 4px;
+    columns: 2;
+    column-gap: 32px;
+  }
+
+  .visual-flowchart-card-columns .visual-flowchart-active-host .step-content > * {
+    break-inside: avoid;
+  }
+
+  .visual-flowchart-card-columns .visual-flowchart-active-host .checklist-full > * + * {
+    margin-top: 0.7rem;
+  }
+
+  .visual-flowchart-card-columns .visual-flowchart-active-host .step-content > :first-child {
+    margin-top: 0;
   }
 
   .visual-flowchart-card-collapsed {
