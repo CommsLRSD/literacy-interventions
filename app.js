@@ -2561,8 +2561,7 @@ function openVisualFlowchartModal() {
     modal.innerHTML = `
         <div class="visual-flowchart-dialog">
             <header class="visual-flowchart-header">
-                <div>
-                    <p class="visual-flowchart-eyebrow">${escapeHtml(t('fc_visual_eyebrow'))}</p>
+                <div class="visual-flowchart-header-text">
                     <h2 id="visual-flowchart-modal-title">${escapeHtml(t('fc_visual_title'))}</h2>
                     <p>${escapeHtml(t('fc_visual_desc'))}</p>
                 </div>
@@ -2576,18 +2575,16 @@ function openVisualFlowchartModal() {
                     </button>
                 </div>
             </header>
-            <div class="visual-flowchart-tier-bar" id="visual-flowchart-tier-bar"></div>
-            <div class="visual-flowchart-toolbar" aria-label="${escapeHtml(t('fc_visual_zoom_controls'))}">
-                <span class="visual-flowchart-legend visual-flowchart-legend-step">${escapeHtml(t('step_type_step'))}</span>
-                <span class="visual-flowchart-legend visual-flowchart-legend-effective">${escapeHtml(t('fc_visual_effective'))}</span>
-                <span class="visual-flowchart-legend visual-flowchart-legend-ineffective">${escapeHtml(t('fc_visual_ineffective'))}</span>
-                <span class="visual-flowchart-toolbar-spacer"></span>
-                <button type="button" onclick="zoomVisualFlowchart(-0.15)" aria-label="${escapeHtml(t('fc_visual_zoom_out'))}">−</button>
-                <output id="visual-flowchart-zoom-value">100%</output>
-                <button type="button" onclick="zoomVisualFlowchart(0.15)" aria-label="${escapeHtml(t('fc_visual_zoom_in'))}">+</button>
-                <button type="button" class="visual-flowchart-fit-btn" onclick="fitVisualFlowchart()" aria-label="${escapeHtml(t('fc_visual_fit'))}">
-                    <span class="material-symbols-rounded" aria-hidden="true" translate="no">fit_screen</span>
-                </button>
+            <div class="visual-flowchart-tier-bar">
+                <div class="visual-flowchart-tier-bar-info" id="visual-flowchart-tier-bar"></div>
+                <div class="visual-flowchart-toolbar" role="group" aria-label="${escapeHtml(t('fc_visual_zoom_controls'))}">
+                    <button type="button" onclick="zoomVisualFlowchart(-0.15)" aria-label="${escapeHtml(t('fc_visual_zoom_out'))}">−</button>
+                    <output id="visual-flowchart-zoom-value">100%</output>
+                    <button type="button" onclick="zoomVisualFlowchart(0.15)" aria-label="${escapeHtml(t('fc_visual_zoom_in'))}">+</button>
+                    <button type="button" class="visual-flowchart-fit-btn" onclick="fitVisualFlowchart()" aria-label="${escapeHtml(t('fc_visual_fit'))}">
+                        <span class="material-symbols-rounded" aria-hidden="true" translate="no">fit_screen</span>
+                    </button>
+                </div>
             </div>
             <div class="visual-flowchart-viewport" id="visual-flowchart-viewport" tabindex="0" aria-label="${escapeHtml(t('fc_visual_canvas'))}">
                 <div class="visual-flowchart-stage" id="visual-flowchart-stage"></div>
@@ -2824,6 +2821,10 @@ function isLongContentStep(node) {
     return node.type === 'checklist' && (node.items || []).length >= 6;
 }
 
+function isVisualFlowchartMultiColumnEntry(entry) {
+    return !!entry && entry.isTierFirstStep && entry.tierId !== 'tier1';
+}
+
 function getVisualFlowchartRouteDirection(item) {
     if (!item) return 'straight';
     if (item.type === 'collapsed') return 'straight';
@@ -2873,10 +2874,15 @@ function refreshVisualFlowchartModal() {
     // canvas rarely has to zoom out; once completed it shrinks back down.
     const activeFirstStepWidth = Math.round(cardWidth * 1.5);
     const activeLongStepWidth = Math.round(cardWidth * 1.9);
+    // Tier 2 and Tier 3 open with long, multi-section entry steps; while live
+    // they are laid out in two columns on an extra-wide card so the card is
+    // short enough to fit on screen at 100% zoom.
+    const activeMultiColumnStepWidth = 880;
     const getItemCardWidth = item => {
         if (item.type === 'tier-review') return wideCardWidth;
         if (item.type === 'entry') {
             if (item.entry.isCurrent && item.entry.node.type !== 'endpoint') {
+                if (isVisualFlowchartMultiColumnEntry(item.entry)) return activeMultiColumnStepWidth;
                 if (item.entry.isTierFirstStep) return activeFirstStepWidth;
                 if (isLongContentStep(item.entry.node)) return activeLongStepWidth;
                 return interactiveCardWidth;
@@ -2984,7 +2990,7 @@ function refreshVisualFlowchartModal() {
         const endpointAction = entry.node.id === 'tier1-reteach'
             ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="restartTier1VisualIntegrated()">${escapeHtml(entry.node.actionButton.text)}</button>`
             : '';
-        return `${collapseBtn}<${tag} class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
+        return `${collapseBtn}<${tag} class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartMultiColumnEntry(entry) ? ' visual-flowchart-card-columns' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
                     style="left:${position.x}px;top:${position.y}px;width:${position.width}px" ${revisit}>
                 <span class="visual-flowchart-tier-chip">${escapeHtml(entry.tierLabel)}</span>
                 <span class="visual-flowchart-card-icon">${cardIcon}</span>
