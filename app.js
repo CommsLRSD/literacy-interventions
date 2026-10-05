@@ -20,9 +20,7 @@ const appState = {
     // are never forced to re-choose it). Stored as the intervention-menu
     // screener_id, e.g. "DIBELS".
     selectedScreener: null,
-    // Program chosen for the current app visit: 'English' or
-    // 'French Immersion'. A landing prompt collects this choice before normal
-    // browsing.
+    // Program chosen inline on the homepage and remembered for return visits.
     selectedProgram: null,
     // Visual flowchart state
     visualFlowchart: {
@@ -49,6 +47,10 @@ const PROGRAM_ENGLISH = 'English';
 const PROGRAM_FRENCH_IMMERSION = 'French Immersion';
 const PROGRAM_PREFERENCE_KEY = `${STORAGE_KEY_PREFIX}-program-preference`;
 const LEGACY_PROGRAM_PREFERENCE_KEY = `${LEGACY_STORAGE_KEY_PREFIX}-program-preference`;
+const PATHWAY_PREFERENCE_KEY = `${STORAGE_KEY_PREFIX}-pathway`;
+let savedPathway = null;
+let restoringPathway = false;
+let appReady = false;
 const SCHEDULE_GRADE_PREFERENCE_KEY = `${STORAGE_KEY_PREFIX}-schedule-grade-preference`;
 const LEGACY_SCHEDULE_GRADE_PREFERENCE_KEY = `${LEGACY_STORAGE_KEY_PREFIX}-schedule-grade-preference`;
 
@@ -81,12 +83,220 @@ function normalizeProgramLanguage(program, language) {
     return language === 'fr' ? 'fr' : 'en';
 }
 
-function clearStoredProgramPreference() {
+function restoreProgramPreference() {
     try {
-        localStorage.removeItem(PROGRAM_PREFERENCE_KEY);
-        localStorage.removeItem(LEGACY_PROGRAM_PREFERENCE_KEY);
+        const preference = JSON.parse(getStoredValue(localStorage, PROGRAM_PREFERENCE_KEY, LEGACY_PROGRAM_PREFERENCE_KEY));
+        if (![PROGRAM_ENGLISH, PROGRAM_FRENCH_IMMERSION].includes(preference?.program)) return;
+        appState.selectedProgram = preference.program;
+        appState.language = normalizeProgramLanguage(preference.program, preference.language);
     } catch (e) {
         // Ignore storage failures so the UI still works for the current visit.
+    }
+}
+
+function storeProgramPreference() {
+    try {
+        setStoredValue(localStorage, PROGRAM_PREFERENCE_KEY, JSON.stringify({
+            program: appState.selectedProgram, language: appState.language
+        }));
+    } catch (e) {
+        // Browsing remains available when storage is disabled.
+    }
+}
+
+// Save only catalog identifiers and checklist flags, never student details or free text.
+function serializeTierPathway(vf) {
+    return {
+        tierId: vf.tierId,
+        selectedPath: vf.selectedPath.map(step => ({ nodeId: step.nodeId })),
+        choices: Object.fromEntries(Object.entries(vf.choices || {}).map(([id, choice]) => [id, { id: choice.id }])),
+        checklistChecked: vf.checklistChecked || {},
+        layoutMode: vf.layoutMode === 'horizontal' ? 'horizontal' : 'standard'
+    };
+}
+
+function resolveSavedChoice(node, id, tierId) {
+    if (node.type === 'checklist' && id === 'completed') {
+        return { id, name: t('all_reviewed')(node.items.length) };
+    }
+    if (node.type === 'info' && id === 'acknowledged') return { id, name: node.subtitle || node.title };
+    if (node.type === 'decision') {
+        const choice = node.choices.find(item => item.id === id);
+        return choice ? { id, name: choice.label } : null;
+    }
+    if (node.type === 'selection') {
+        const options = node.options === 'screeners'
+            ? (appState.tierFlowchartData?.[tierId]?.screeners || []).filter(item => isScreenerIdForCurrentProgram(item.id))
+            : appState.interventionMenuData?.resources || [];
+        const item = options.find(option => option.id === id);
+        return item ? { id, name: item.name } : null;
+    }
+    return null;
+}
+
+function validateTierPathway(raw) {
+    if (!raw || !['tier1', 'tier2', 'tier3'].includes(raw.tierId)) return null;
+    const def = getFlowchartDefs()[raw.tierId];
+    if (!Array.isArray(raw.selectedPath) || !raw.selectedPath.length || raw.selectedPath.length > Object.keys(def.nodes).length) return null;
+    const choices = {};
+    const checked = {};
+    const seen = new Set();
+    const selectedPath = [];
+    for (const step of raw.selectedPath) {
+        if (!step || !Object.hasOwn(def.nodes, step.nodeId) || seen.has(step.nodeId)) return null;
+        seen.add(step.nodeId);
+        const node = def.nodes[step.nodeId];
+        const id = raw.choices?.[step.nodeId]?.id;
+        if (id !== undefined) {
+            const choice = resolveSavedChoice(node, id, raw.tierId);
+            if (!choice) return null;
+            choices[step.nodeId] = choice;
+        }
+        if (node.type === 'checklist') {
+            const flags = raw.checklistChecked?.[step.nodeId];
+            checked[step.nodeId] = node.items.map((_, index) => flags?.[index] === true);
+        }
+        const previous = selectedPath[selectedPath.length - 1];
+        if (!previous && step.nodeId !== def.startNode) return null;
+        if (previous) {
+            const prevNode = def.nodes[previous.nodeId];
+            const prevChoice = choices[previous.nodeId];
+            const next = prevNode.type === 'decision'
+                ? prevNode.choices.find(choice => choice.id === prevChoice?.id)?.nextNode
+                : prevNode.nextNode;
+            if (!prevChoice || next !== step.nodeId) return null;
+        }
+        selectedPath.push({ nodeId: step.nodeId, fromNodeId: previous?.nodeId || null, choiceId: previous ? choices[previous.nodeId]?.id : null });
+    }
+    return { tierId: raw.tierId, selectedPath, choices, checklistChecked: checked,
+        layoutMode: raw.layoutMode === 'horizontal' ? 'horizontal' : 'standard' };
+}
+
+function readSavedPathway() {
+    try {
+        if (![PROGRAM_ENGLISH, PROGRAM_FRENCH_IMMERSION].includes(appState.selectedProgram)) return null;
+        const raw = getStoredValue(localStorage, PATHWAY_PREFERENCE_KEY);
+        if (!raw || raw.length > 50000) return null;
+        const saved = JSON.parse(raw);
+        if (saved.version !== 1 || saved.program !== appState.selectedProgram) return null;
+        const current = validateTierPathway(saved.current);
+        if (!current) return null;
+        const fullJourney = (Array.isArray(saved.fullJourney) ? saved.fullJourney.slice(0, 3) : []).map(validateTierPathway);
+        if (fullJourney.some(tier => !tier)) return null;
+        return { version: 1, program: saved.program, current, fullJourney, filters: validatePathwayFilters(saved.filters) };
+    } catch (e) {
+        return null;
+    }
+}
+
+function validatePathwayFilters(filters) {
+    const context = { program: appState.selectedProgram };
+    return Object.fromEntries(['pillar', 'screener'].map(field => [
+        field, distinctTagValues(context, field).includes(filters?.[field]) ? filters[field] : ''
+    ]));
+}
+
+function savePathwayProgress() {
+    const vf = appState.visualFlowchart;
+    if (restoringPathway || !appState.selectedProgram || !vf?.tierId || !vf.selectedPath.length) return;
+    savedPathway = {
+        version: 1, program: appState.selectedProgram, current: serializeTierPathway(vf),
+        fullJourney: (appState.fullJourney || []).map(serializeTierPathway),
+        filters: validatePathwayFilters(appState.rememberedMenuFilters)
+    };
+    try {
+        setStoredValue(localStorage, PATHWAY_PREFERENCE_KEY, JSON.stringify(savedPathway));
+    } catch (e) {
+        // The in-memory pathway still works without browser storage.
+    }
+    updateGuidedHome();
+}
+
+function updateGuidedHome() {
+    const hasPath = !!savedPathway && savedPathway.program === appState.selectedProgram;
+    for (const id of ['home-resume-btn', 'home-restart-btn']) {
+        const button = document.getElementById(id);
+        if (button) {
+            button.hidden = !hasPath;
+            button.disabled = !appReady;
+        }
+    }
+    const start = document.getElementById('home-start-btn');
+    if (start) {
+        start.hidden = hasPath;
+        start.disabled = !appReady;
+    }
+    const status = document.getElementById('home-program-status');
+    if (status) status.textContent = appState.selectedProgram ? '' : t('guided_choose_program_hint');
+    const banner = document.getElementById('pathway-return-banner');
+    if (banner) banner.hidden = appState.currentPage === 'home' || appState.currentPage === 'flowchart' || !hasPath;
+}
+
+function startGuidedPathway(tierId = 'tier1') {
+    if (!appReady || !['tier1', 'tier2', 'tier3'].includes(tierId) || !ensureProgramSelectionBeforeInteraction()) return;
+    if (savedPathway && !window.confirm(t('guided_restart_confirm'))) return;
+    closeVisualFlowchartModal({ immediate: true });
+    appState.selectedScreener = null;
+    appState.currentTierFlow = null;
+    setRememberedMenuFilters({ pillar: '', screener: '' });
+    initIntegratedFlowchart(tierId);
+    document.getElementById('flowchart-container').dataset.initialized = 'true';
+    navigateToPage('flowchart');
+    requestAnimationFrame(focusActivePathwayStep);
+}
+
+function restorePathway(saved) {
+    const current = validateTierPathway(saved.current);
+    if (!current) return false;
+    restoringPathway = true;
+    try {
+        initIntegratedFlowchart(current.tierId);
+        setRememberedMenuFilters(validatePathwayFilters(saved.filters));
+        appState.visualFlowchart = { ...appState.visualFlowchart, ...current,
+            currentNodeId: current.selectedPath[current.selectedPath.length - 1].nodeId,
+            lastRenderedActiveNodeId: null };
+        appState.fullJourney = (saved.fullJourney || []).map(validateTierPathway).filter(Boolean);
+        const screener = current.choices['tier1-screener'] ||
+            appState.fullJourney.find(tier => tier.tierId === 'tier1')?.choices['tier1-screener'];
+        if (screener) setRememberedScreener(screener.name);
+        else if (appState.rememberedMenuFilters.screener) setRememberedScreener(appState.rememberedMenuFilters.screener);
+        const node = getFlowchartDefs()[current.tierId].nodes[appState.visualFlowchart.currentNodeId];
+        renderJourney();
+        updateCarouselNav();
+        if (node.type === 'endpoint') {
+            saveCurrentTierToFullJourney();
+            const transitions = { startTier2Visual: 'tier2', startTier3Visual: 'tier3', restartTier2Visual: 'tier2' };
+            const nextTier = transitions[node.actionButton?.action];
+            if (nextTier && !transitions[node.secondaryAction?.action]) showGoToTierStep(nextTier);
+            else if (nextTier || transitions[node.secondaryAction?.action]) showTierTransitionChoice(node);
+            else showTerminalEndpoint(node);
+        }
+        document.getElementById('flowchart-container').dataset.initialized = 'true';
+    } finally {
+        restoringPathway = false;
+    }
+    savePathwayProgress();
+    return true;
+}
+
+function resumeGuidedPathway() {
+    if (!appReady || !savedPathway || !ensureProgramSelectionBeforeInteraction()) return;
+    const container = document.getElementById('flowchart-container');
+    if (!container.dataset.initialized && !restorePathway(savedPathway)) return;
+    navigateToPage('flowchart');
+    requestAnimationFrame(focusActivePathwayStep);
+}
+
+function returnToPathway() {
+    resumeGuidedPathway();
+    requestAnimationFrame(scrollToActiveStep);
+}
+
+function focusActivePathwayStep() {
+    const target = getActiveStepTarget()?.querySelector('.step-guidance-now, .go-to-tier-heading, h3');
+    if (target) {
+        target.tabIndex = -1;
+        target.focus({ preventScroll: true });
     }
 }
 
@@ -204,14 +414,15 @@ function updateTopProgramLangControls() {
     const selectedLanguage = appState.language === 'fr' ? 'fr' : 'en';
     const showLanguage = selectedProgram === PROGRAM_FRENCH_IMMERSION;
 
-    document.querySelectorAll('#top-program-select, #mobile-program-select').forEach(select => {
-        select.value = selectedProgram;
+    document.querySelectorAll('#top-program-select, #mobile-program-select, #home-program-select').forEach(select => {
+        select.value = appState.selectedProgram || '';
     });
-    document.querySelectorAll('#top-language-select, #mobile-language-select').forEach(select => {
+    document.querySelectorAll('#top-language-select, #mobile-language-select, #home-language-select').forEach(select => {
         select.value = selectedLanguage;
         const languageField = select.closest('.top-program-lang-field');
         if (languageField) languageField.hidden = !showLanguage;
     });
+    updateGuidedHome();
 }
 
 // Re-render any dynamic sections that are currently visible so they pick up
@@ -222,11 +433,8 @@ function rerenderForLanguage() {
     // Flowchart: re-initialise at the same tier if one is open
     const fc = document.getElementById('flowchart-container');
     if (fc && fc.dataset.initialized) {
-        const tierId = appState.visualFlowchart && appState.visualFlowchart.tierId;
-        if (tierId) {
-            initIntegratedFlowchart(tierId);
-        } else {
-            openInteractiveFlowchart();
+        if (!savedPathway || savedPathway.program !== appState.selectedProgram || !restorePathway(savedPathway)) {
+            initIntegratedFlowchart('tier1');
         }
     }
     // Intervention wizard dropdowns: refresh placeholder/select text that was
@@ -260,16 +468,13 @@ window.cancelProgramPromptLanguage = cancelProgramPromptLanguage;
 // ============================================
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Literacy Interventions - Initializing...');
-    clearStoredProgramPreference();
+    restoreProgramPreference();
 
     // Apply initial translations (English by default) and sync controls
     applyTranslations();
     updateTopProgramLangControls();
 
-    // Program-first onboarding prompt
-    if (!appState.selectedProgram) {
-        openProgramPrompt();
-    } else {
+    if (appState.selectedProgram) {
         applyProgramAcrossApp();
     }
 
@@ -297,6 +502,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initialize assessment schedules
     await initializeAssessmentSchedules();
+    savedPathway = readSavedPathway();
+    appReady = true;
+    updateGuidedHome();
     
     // Add resize listener to update connection line positions and tier titles
     let resizeTimeout;
@@ -382,7 +590,7 @@ function ensureProgramSelectionBeforeInteraction() {
 }
 
 function navigateToPage(pageName) {
-    if (!ensureProgramSelectionBeforeInteraction()) return;
+    if (pageName === 'flowchart' && (!appReady || !ensureProgramSelectionBeforeInteraction())) return;
 
     // Update state
     appState.currentPage = pageName;
@@ -409,8 +617,8 @@ function navigateToPage(pageName) {
     if (pageName === 'flowchart') {
         const fc = document.getElementById('flowchart-container');
         if (fc && !fc.dataset.initialized) {
+            if (!savedPathway || !restorePathway(savedPathway)) openInteractiveFlowchart();
             fc.dataset.initialized = 'true';
-            openInteractiveFlowchart();
         }
     } else if (pageName === 'interventions') {
         // Every visit re-syncs the filters to whatever was chosen last —
@@ -420,6 +628,7 @@ function navigateToPage(pageName) {
         // Visiting the History page counts as "checking" any new entries.
         clearHistoryUnseen();
     }
+    updateGuidedHome();
     
     // Smooth scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -488,20 +697,9 @@ function focusProgramPromptTarget(selector) {
 }
 
 function openProgramPrompt() {
-    const modal = document.getElementById('program-prompt-modal');
-    const languageBlock = document.getElementById('program-prompt-language');
-    const actions = document.getElementById('program-prompt-actions');
-    if (!modal) return;
-    appState.programPrompt.pendingProgram = null;
-    appState.programPrompt.onComplete = null;
-    appState.programPrompt.returnToProgramStep = false;
-    appState.programPrompt.previousSelection = null;
-    setProgramPromptStep('program');
-    if (languageBlock) languageBlock.hidden = true;
-    if (actions) actions.hidden = false;
-    modal.hidden = false;
-    document.body.classList.add('program-prompt-open');
-    focusProgramPromptTarget('#program-prompt-actions .program-prompt-btn');
+    navigateToPage('home');
+    updateGuidedHome();
+    document.getElementById('home-program-select')?.focus();
 }
 
 function openProgramLanguagePrompt(program, onComplete, options = {}) {
@@ -528,6 +726,7 @@ function finalizeProgramSelection(program, language) {
     appState.selectedProgram = program;
     appState.selectedScreener = null;
     appState.language = normalizeProgramLanguage(program, language || (program === PROGRAM_FRENCH_IMMERSION ? 'fr' : 'en'));
+    storeProgramPreference();
     applyTranslations();
     updateTopProgramLangControls();
     rerenderForLanguage();
@@ -1791,7 +1990,7 @@ function initIntegratedFlowchart(tierId) {
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
-                    <span>${escapeHtml(t('fc_back'))}</span>
+                    <span>${escapeHtml(t('guided_home'))}</span>
                 </button>
                 
                 ${renderTierTabsHtml(tierId)}
@@ -1993,6 +2192,7 @@ function showIntegratedNode(nodeId, fromNodeId, choiceId = null, direction = 'fo
     // Add to path
     appState.visualFlowchart.selectedPath.push({ nodeId, fromNodeId, choiceId });
     appState.visualFlowchart.currentNodeId = nodeId;
+    savePathwayProgress();
     
     // Update carousel navigation (prev button, step indicator)
     updateCarouselNav();
@@ -2022,12 +2222,16 @@ function showIntegratedNode(nodeId, fromNodeId, choiceId = null, direction = 'fo
             // the outcome as the final step with the journey summary action.
             showTerminalEndpoint(nodeData, direction);
         }
+        savePathwayProgress();
         return;
     }
     
     // Journey mode: keep every previous step on screen and render the whole
     // trail, with this node as the active, spotlighted step at the end.
     renderJourney(direction);
+    if (appState.currentPage === 'flowchart' && !appState.visualFlowchartModal) {
+        requestAnimationFrame(focusActivePathwayStep);
+    }
 }
 
 /* ============================================================
@@ -2446,6 +2650,7 @@ function setJourneyLayoutMode(mode) {
     vf.layoutMode = mode;
     updateLayoutToggleBtn();
     renderJourney();
+    savePathwayProgress();
 }
 
 // Sync the layout toggle buttons to the current layout mode
@@ -3456,7 +3661,7 @@ function createIntegratedNodeElement(nodeData, container, direction = 'forward')
             // Every point is visible at once, but each one has to be ticked
             // off before the step can be completed.
             appState.visualFlowchart.checklistChecked = appState.visualFlowchart.checklistChecked || {};
-            appState.visualFlowchart.checklistChecked[nodeData.id] = [];
+            appState.visualFlowchart.checklistChecked[nodeData.id] ||= [];
             content = createIntegratedChecklistNode(nodeData);
             break;
         case 'selection':
@@ -3476,6 +3681,8 @@ function createIntegratedNodeElement(nodeData, container, direction = 'forward')
     }
     
     nodeElement.innerHTML = content;
+    const stepContent = nodeElement.querySelector('.step-content');
+    if (stepContent) stepContent.insertAdjacentHTML('afterbegin', renderStepGuidance(nodeData));
     container.appendChild(nodeElement);
     
     // Animate in based on direction
@@ -3498,6 +3705,37 @@ function createIntegratedNodeElement(nodeData, container, direction = 'forward')
             fwLoadResults();
         }
     }
+}
+
+function renderStepGuidance(node) {
+    const type = ['checklist', 'selection', 'decision', 'info', 'endpoint'].includes(node.type) ? node.type : 'info';
+    const links = new Set();
+    if (node.options === 'screeners' || /assessment|progress|screener/.test(node.id)) links.add('schedule');
+    if (type === 'decision') links.add('scores');
+    if (node.options === 'interventions' || node.options === 'drillDownAssessments' || type === 'endpoint') links.add('interventions');
+    const nextKey = type === 'endpoint' ? 'guided_next_endpoint'
+        : type === 'selection' || type === 'decision' ? 'guided_next_choice' : 'guided_next_continue';
+    return `<div class="step-guidance">
+        <p class="step-guidance-now"><strong>${escapeHtml(t('guided_now'))}</strong> ${escapeHtml(node.subtitle || node.description || node.title)}</p>
+        <details><summary>${escapeHtml(t('guided_help'))}</summary>
+            <dl>
+                <dt>${escapeHtml(t('guided_why'))}</dt><dd>${escapeHtml(t(`guided_why_${type}`))}</dd>
+                <dt>${escapeHtml(t('guided_need'))}</dt><dd>${escapeHtml(t(`guided_need_${type}`))}</dd>
+                <dt>${escapeHtml(t('guided_next'))}</dt><dd>${escapeHtml(t(nextKey))}</dd>
+            </dl>
+        </details>
+        ${links.size ? `<div class="step-guidance-resources"><span>${escapeHtml(t('guided_related'))}</span>
+            ${Array.from(links, page => `<button type="button" onclick="openPathwayReference('${page}')">${escapeHtml(t(`nav_${page}`))}</button>`).join('')}
+        </div>` : ''}
+    </div>`;
+}
+
+function openPathwayReference(page) {
+    if (!['schedule', 'scores', 'interventions'].includes(page)) return;
+    savePathwayProgress();
+    closeVisualFlowchartModal({ immediate: true });
+    navigateToPage(page);
+    document.getElementById('pathway-return-banner')?.querySelector('button')?.focus();
 }
 
 // Reference links surfaced inside checklist points: the phrase is matched in the
@@ -3535,7 +3773,7 @@ function createIntegratedChecklistNode(nodeData) {
     const itemsHTML = items.map((item, index) => `
         <li class="checklist-line-item">
             <label class="checklist-line">
-                <input type="checkbox" data-index="${index}">
+                <input type="checkbox" data-index="${index}" ${appState.visualFlowchart.checklistChecked?.[nodeData.id]?.[index] ? 'checked' : ''}>
                 <span class="checklist-line-box">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                 </span>
@@ -3559,13 +3797,11 @@ function createIntegratedChecklistNode(nodeData) {
         `).join('')
         : '';
 
-    const continueBtnHTML = nodeData.useButton
-        ? `<button class="continue-btn checklist-continue-btn" disabled
+    const continueBtnHTML = `<button class="continue-btn checklist-continue-btn" disabled
                onclick="proceedFromIntegratedChecklist('${escapeAttr(nodeData.id)}', '${escapeAttr(nodeData.nextNode)}')">
-               ${escapeHtml(nodeData.buttonText || 'Continue')}
+               ${escapeHtml(nodeData.buttonText || t('guided_continue'))}
                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-           </button>`
-        : '';
+           </button>`;
 
     return `
         <div class="step-header">
@@ -3592,9 +3828,7 @@ function createIntegratedChecklistNode(nodeData) {
     `;
 }
 
-// Wire every checklist item so progress updates live and the step auto-advances
-// once all points have been checked off (no Continue button required).
-// If nodeData.useButton is true, a Continue button is enabled instead.
+// Reviewing a checklist enables an explicit Continue action.
 function wireIntegratedChecklist(nodeElement, nodeData) {
     const checkboxes = Array.from(nodeElement.querySelectorAll('.checklist-line input[type="checkbox"]'));
     const fill = nodeElement.querySelector('.checklist-meter-fill');
@@ -3603,12 +3837,11 @@ function wireIntegratedChecklist(nodeElement, nodeData) {
     const total = checkboxes.length;
     if (!total) return;
 
-    let autoAdvanceTimer = null;
-
     const sync = () => {
         const vf = appState.visualFlowchart;
         vf.checklistChecked = vf.checklistChecked || {};
         vf.checklistChecked[nodeData.id] = checkboxes.map(cb => cb.checked);
+        savePathwayProgress();
 
         const checked = checkboxes.filter(cb => cb.checked).length;
         checkboxes.forEach(cb => {
@@ -3618,21 +3851,7 @@ function wireIntegratedChecklist(nodeElement, nodeData) {
         if (fill) fill.style.width = `${Math.round((checked / total) * 100)}%`;
         if (count) count.textContent = `${checked} of ${total} checked`;
 
-        if (nodeData.useButton) {
-            // Enable the Continue button only when all items are checked
-            if (continueBtn) continueBtn.disabled = checked < total;
-        } else {
-            // Auto-advance once all items are checked
-            if (checked === total && nodeData.nextNode) {
-                if (autoAdvanceTimer) clearTimeout(autoAdvanceTimer);
-                autoAdvanceTimer = setTimeout(() => {
-                    // Guard: only advance if this step is still the active one
-                    if (appState.visualFlowchart.currentNodeId === nodeData.id) {
-                        proceedFromIntegratedChecklist(nodeData.id, nodeData.nextNode);
-                    }
-                }, 600);
-            }
-        }
+        if (continueBtn) continueBtn.disabled = checked < total;
     };
 
     checkboxes.forEach(cb => cb.addEventListener('change', sync));
@@ -3801,6 +4020,7 @@ function fwOnScreenerChange(value) {
     setRememberedMenuFilters({ screener: value || null });
     if (value) setRememberedScreener(value);
     fwLoadResults();
+    savePathwayProgress();
 }
 
 // Flowchart embedded intervention wizard: pillar change handler
@@ -3822,6 +4042,7 @@ function fwOnPillarChange(value) {
     }
 
     fwLoadResults();
+    savePathwayProgress();
 }
 
 // Flowchart embedded intervention wizard: load and display filtered results
@@ -5126,8 +5347,10 @@ function restartCurrentTier() {
 
 // Close integrated flowchart
 function closeIntegratedFlowchart() {
-    // Restart the flowchart from Tier 1
-    initIntegratedFlowchart('tier1');
+    savePathwayProgress();
+    closeVisualFlowchartModal({ immediate: true });
+    navigateToPage('home');
+    document.getElementById('home-resume-btn')?.focus();
 }
 
 // Integrated tier transition handlers
@@ -7207,44 +7430,42 @@ function hasFlowchartProgress() {
 // they have already made choices in the flowchart, confirm first since
 // switching programs resets everything back to the beginning.
 function requestFlowchartProgramChange(program, options = {}) {
-    const promptLanguageChoice = options.promptLanguageChoice !== false;
+    if (![PROGRAM_ENGLISH, PROGRAM_FRENCH_IMMERSION].includes(program)) {
+        updateTopProgramLangControls();
+        return;
+    }
     if (program === appState.selectedProgram) return;
-    if (shouldConfirmProgramSwitch()) {
+    if (savedPathway || shouldConfirmProgramSwitch()) {
         const ok = window.confirm(t('fc_program_change_confirm'));
         if (!ok) {
             updateTopProgramLangControls();
             return;
         }
     }
-    if (program === PROGRAM_FRENCH_IMMERSION && promptLanguageChoice) {
-        openProgramLanguagePrompt(program, () => {
-            initIntegratedFlowchart('tier1');
-            refreshVisualFlowchartHeaderControls();
-        }, { returnToProgramStep: false });
-        return;
+    savedPathway = null;
+    setRememberedMenuFilters({ pillar: '', screener: '' });
+    try {
+        localStorage.removeItem(PATHWAY_PREFERENCE_KEY);
+    } catch (e) {
+        // Program changes also work when storage is disabled.
     }
+    closeVisualFlowchartModal({ immediate: true });
     const lang = program === PROGRAM_FRENCH_IMMERSION ? (appState.language === 'fr' ? 'fr' : 'en') : 'en';
     finalizeProgramSelection(program, lang);
-    initIntegratedFlowchart('tier1');
     refreshVisualFlowchartHeaderControls();
 }
 
-// Called when the user picks a different display language (French Immersion
-// only). Same reset-confirmation behaviour as the program switch.
+// Translate the current pathway without discarding decisions (French Immersion only).
 function requestFlowchartLanguageChange(lang) {
     if (lang !== 'en' && lang !== 'fr') return;
+    if (appState.selectedProgram !== PROGRAM_FRENCH_IMMERSION) return;
     if (lang === appState.language) return;
-    if (shouldConfirmProgramSwitch()) {
-        const ok = window.confirm(t('fc_program_change_confirm'));
-        if (!ok) {
-            updateTopProgramLangControls();
-            return;
-        }
-    }
+    closeVisualFlowchartModal({ immediate: true });
     appState.language = lang;
+    storeProgramPreference();
     applyTranslations();
     updateTopProgramLangControls();
-    initIntegratedFlowchart('tier1');
+    rerenderForLanguage();
     applyProgramAcrossApp();
     refreshVisualFlowchartHeaderControls();
 }

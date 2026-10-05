@@ -482,6 +482,8 @@ body.side-nav-collapsed .site-footer { margin-left: var(--side-nav-collapsed-wid
   gap: 2px;
 }
 
+.top-program-lang-field[hidden] { display: none; }
+
 .top-program-lang-label {
   font-size: 0.65rem;
   font-weight: 700;
@@ -10936,4 +10938,160 @@ body.program-prompt-open { overflow: hidden; }
   .program-prompt-continue:focus-visible {
     transform: none;
   }
+}
+
+/* Guided journey: one primary action, with references kept secondary. */
+.nav-group-label {
+  padding: 1rem 0.85rem 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+}
+.side-nav.collapsed .nav-group-label { display: none; }
+.guided-home-hero .hero-inner { grid-template-columns: minmax(0, 1fr) minmax(180px, 300px); }
+.guided-home-hero .hero-title { font-size: clamp(1.7rem, 3vw, 2.5rem); }
+.guided-home-hero .hero-subtitle { max-width: 650px; }
+.guided-home-hero .hero-photo { width: 300px; height: 270px; }
+.home-program-controls { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.25rem; }
+.home-program-controls label { gap: 0.35rem; font-size: 0.9rem; font-weight: 600; }
+.home-program-controls select {
+  width: 100%;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background-color: var(--bg);
+}
+.home-program-status { margin: 0.65rem 0 1rem; font-size: 0.85rem; color: #e0eaf5; }
+.home-guided-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+.guided-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 48px;
+  padding: 0.85rem 1.25rem;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--primary);
+  font-weight: 700;
+  line-height: 1.4;
+}
+.guided-primary-btn:hover:not(:disabled) { background: var(--accent-light); }
+.home-guided-actions button:disabled { opacity: 0.65; cursor: not-allowed; }
+.guided-secondary-btn,
+.home-resource-shortcut {
+  min-height: 44px;
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  font-size: 0.9rem;
+}
+.home-resource-shortcut { margin-top: 0.65rem; }
+.home-progress-privacy { margin-top: 0.75rem; max-width: 650px; color: #e0eaf5; font-size: 0.8rem; }
+.guided-home-hero button:focus-visible,
+.guided-home-hero select:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.home-guided-actions [hidden],
+.pathway-return-banner[hidden] { display: none; }
+.guided-home-content { max-width: 1100px; }
+.journey-overview > p,
+.home-reference > p { margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.92rem; }
+.journey-stages {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+.journey-stages li { border-top: 3px solid var(--secondary); padding-top: 0.8rem; }
+.journey-stage-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 0.6rem;
+  border-radius: 50%;
+  background: var(--step-header);
+  color: var(--primary);
+  font-weight: 700;
+}
+.journey-stages h4 { margin-bottom: 0.4rem; }
+.journey-stages p { font-size: 0.87rem; color: var(--text-secondary); }
+.journey-alternate-starts {
+  margin: 2rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-alt);
+}
+.journey-alternate-starts summary,
+.flowchart-step .step-guidance summary { cursor: pointer; font-weight: 600; }
+.journey-alternate-starts summary:focus-visible,
+.flowchart-step .step-guidance summary:focus-visible { outline: 2px solid var(--primary-light); outline-offset: 4px; }
+.journey-alternate-starts > p { margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary); }
+.journey-tier-starts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; margin-top: 1rem; }
+.journey-tier-starts p { margin: 0.5rem 0 0.75rem; font-size: 0.88rem; }
+.guided-outline-btn {
+  min-height: 44px;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.guided-outline-btn:hover { background: var(--primary-faint); }
+.home-reference { padding-top: 1.25rem; border-top: 1px solid var(--border); }
+.home-reference-links { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; margin-top: 0.5rem; }
+.home-reference-links button { min-height: 44px; color: var(--primary); font-size: 0.87rem; text-decoration: underline; text-underline-offset: 0.2em; }
+.home-reference-links button:hover { color: var(--primary-light); }
+.pathway-return-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--step-header);
+  border-bottom: 1px solid var(--step-soft);
+  color: var(--primary);
+  font-size: 0.88rem;
+}
+.pathway-return-banner button { min-height: 44px; font-weight: 700; color: var(--primary); text-decoration: underline; text-underline-offset: 0.2em; }
+.flowchart-step .step-guidance {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+  border-left: 3px solid var(--secondary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-alt);
+  color: var(--text);
+}
+.flowchart-step .step-guidance-now { font-weight: 600; color: var(--primary); }
+.flowchart-step .step-guidance details { margin-top: 0.5rem; }
+.flowchart-step .step-guidance details[open] summary { margin-bottom: 0.75rem; }
+.flowchart-step .step-guidance h4,
+.flowchart-step .step-guidance dt { margin-top: 0.75rem; font-size: 0.9rem; font-weight: 700; }
+.flowchart-step .step-guidance p,
+.flowchart-step .step-guidance dd { margin-top: 0.25rem; font-size: 0.88rem; line-height: 1.65; }
+.flowchart-step .step-guidance a,
+.flowchart-step .step-guidance button { min-height: 44px; color: var(--primary); text-decoration: underline; }
+.flowchart-step .step-guidance-resources { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1rem; margin-top: 0.75rem; font-size: 0.85rem; }
+.flowchart-step .step-guidance-resources > span { font-weight: 600; }
+@media (max-width: 1100px) {
+  .guided-home-hero .hero-inner { grid-template-columns: minmax(0, 1fr); }
+  .guided-home-hero .hero-photo-wrap { display: none; }
+}
+@media (max-width: 700px) {
+  .journey-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .journey-tier-starts { grid-template-columns: minmax(0, 1fr); }
+  .pathway-return-banner { padding: 0.75rem 1rem; }
+}
+@media (max-width: 420px) {
+  .journey-stages { grid-template-columns: minmax(0, 1fr); }
+  .home-program-controls { flex-direction: column; }
+  .guided-primary-btn { width: 100%; }
+  .flowchart-step .step-guidance { padding: 0.85rem; }
 }

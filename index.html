@@ -84,6 +84,7 @@
     <!-- Collapsible side navigation (desktop) -->
     <nav class="side-nav" id="side-nav" role="navigation" aria-label="Site sections">
         <div class="side-nav-links" role="menubar" aria-label="Site sections">
+            <div class="nav-group-label" role="presentation" data-i18n="nav_guided_process">Guided process</div>
             <button class="nav-link active" data-page="home" role="menuitem" aria-selected="true">
                 <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">home</span>
                 <span class="nav-link-label" data-i18n="nav_home">Home</span>
@@ -92,6 +93,7 @@
                 <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">account_tree</span>
                 <span class="nav-link-label" data-i18n="nav_flowchart">Flowchart</span>
             </button>
+            <div class="nav-group-label" role="presentation" data-i18n="nav_reference_resources">Reference resources</div>
             <button class="nav-link" data-page="interventions" role="menuitem" aria-selected="false">
                 <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">checklist</span>
                 <span class="nav-link-label" data-i18n="nav_interventions">Teaching Resources</span>
@@ -127,6 +129,7 @@
     <!-- Mobile nav overlay -->
     <div class="mobile-nav-overlay" role="dialog" aria-label="Navigation menu" aria-hidden="true">
         <div class="mobile-nav-content">
+            <div class="nav-group-label" data-i18n="nav_guided_process">Guided process</div>
             <button class="mobile-nav-item active" data-page="home">
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">home</span>
                 <span data-i18n="nav_home">Home</span>
@@ -135,6 +138,7 @@
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">account_tree</span>
                 <span data-i18n="nav_flowchart">Flowchart</span>
             </button>
+            <div class="nav-group-label" data-i18n="nav_reference_resources">Reference resources</div>
             <button class="mobile-nav-item" data-page="interventions">
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">checklist</span>
                 <span data-i18n="nav_interventions_mobile">Teaching Resources</span>
@@ -185,15 +189,47 @@
 
     <!-- Main Content -->
     <main class="main-content" id="main-content">
+        <div class="pathway-return-banner" id="pathway-return-banner" hidden>
+            <span data-i18n="guided_return_hint">Your guided process is still available.</span>
+            <button type="button" onclick="returnToPathway()" data-i18n="guided_return">Return to my next step</button>
+        </div>
 
         <!-- ── HOME ─────────────────────────────────────────── -->
         <section id="home-section" class="content-section active" data-page="home">
-            <div class="home-hero">
+            <div class="home-hero guided-home-hero">
                 <div class="hero-inner">
                     <div class="hero-content">
                         <span class="hero-eyebrow" data-i18n="hero_eyebrow">LRSD Literacy Resource</span>
-                        <h2 class="hero-title" data-i18n-html="hero_title_html">Building <span class="accent-word">Lifelong</span><br>Literacy Together</h2>
-                        <p class="hero-subtitle" data-i18n="hero_subtitle">Supporting educators in identifying and implementing effective literacy interventions for every learner.</p>
+                        <h2 class="hero-title" data-i18n-html="hero_title_html">What’s the next step in supporting your learners’ literacy?</h2>
+                        <p class="hero-subtitle" data-i18n="hero_subtitle">Start with classroom instruction, then use screening information to plan support and monitor progress. We’ll guide you one step at a time, with resources when you need them.</p>
+                        <div class="home-program-controls">
+                            <label class="top-program-lang-field" for="home-program-select">
+                                <span data-i18n="fc_program_mini_label">Program</span>
+                                <select id="home-program-select" onchange="requestTopProgramChange(this.value)" aria-describedby="home-program-status">
+                                    <option value="" data-i18n-opt="guided_choose_program">Choose your program</option>
+                                    <option value="English" data-i18n-opt="fc_program_english">English</option>
+                                    <option value="French Immersion" data-i18n-opt="fc_program_french_immersion">French Immersion</option>
+                                </select>
+                            </label>
+                            <label class="top-program-lang-field" for="home-language-select" hidden>
+                                <span data-i18n="fc_language_mini_label">Language</span>
+                                <select id="home-language-select" onchange="requestTopLanguageChange(this.value)">
+                                    <option value="en" data-i18n-opt="fc_language_english">English</option>
+                                    <option value="fr" data-i18n-opt="fc_language_french">French</option>
+                                </select>
+                            </label>
+                        </div>
+                        <p class="home-program-status" id="home-program-status" aria-live="polite" data-i18n="guided_choose_program_hint">Choose a program to tailor your guided process. You can browse reference resources at any time.</p>
+                        <div class="home-guided-actions">
+                            <button type="button" class="guided-primary-btn" id="home-start-btn" onclick="startGuidedPathway('tier1')">
+                                <span data-i18n="guided_start">Guide me through the process</span>
+                                <span class="material-symbols-rounded" aria-hidden="true" translate="no">arrow_forward</span>
+                            </button>
+                            <button type="button" class="guided-primary-btn" id="home-resume-btn" onclick="resumeGuidedPathway()" hidden data-i18n="guided_resume">Continue my guided process</button>
+                            <button type="button" class="guided-secondary-btn" id="home-restart-btn" onclick="startGuidedPathway('tier1')" hidden data-i18n="guided_restart">Start again</button>
+                        </div>
+                        <p class="home-progress-privacy" data-i18n="guided_progress_privacy">Your catalog choices and checklist progress are saved on this device. No student details are saved.</p>
+                        <button type="button" class="home-resource-shortcut" onclick="navigateToPage('interventions')" data-i18n="guided_resource_shortcut">I’m looking for a specific teaching resource</button>
                     </div>
                     <div class="hero-photo-wrap" aria-hidden="true">
                         <img class="hero-photo" src="images/COD_0667.jpg" alt="Three students reading together in a library" loading="eager">
@@ -203,79 +239,38 @@
                 </div>
             </div>
 
-            <div class="home-content">
-                <div class="cta-grid">
-                    <button class="cta-card cta-card-featured" onclick="navigateToPage('flowchart')" aria-label="Open Intervention Flowchart">
-                        <div class="cta-icon" aria-hidden="true">
-                            <span class="material-symbols-rounded" translate="no">account_tree</span>
-                        </div>
-                        <h3 class="cta-title" data-i18n="cta_flowchart_title">Intervention Flowchart</h3>
-                        <p class="cta-desc" data-i18n="cta_flowchart_desc">Step-by-step decision guide to navigate tiers of support based on student screening results.</p>
-                        <span class="cta-btn"><span data-i18n="cta_flowchart_btn">Start Flowchart</span>
-                            <span class="material-symbols-rounded cta-btn-arrow" aria-hidden="true" translate="no">arrow_forward</span>
-                        </span>
-                    </button>
-
-                    <button class="cta-card" onclick="navigateToPage('interventions')" aria-label="Open Teaching Resources">
-                        <div class="cta-icon" aria-hidden="true">
-                            <span class="material-symbols-rounded" translate="no">checklist</span>
-                        </div>
-                        <h3 class="cta-title" data-i18n="cta_interventions_title">Teaching Resources</h3>
-                        <p class="cta-desc" data-i18n="cta_interventions_desc">Browse interventions and assessments filtered by screener, subtest, and literacy pillar.</p>
-                        <span class="cta-btn"><span data-i18n="cta_interventions_btn">Browse Resources</span>
-                            <span class="material-symbols-rounded cta-btn-arrow" aria-hidden="true" translate="no">arrow_forward</span>
-                        </span>
-                    </button>
-
-                    <button class="cta-card" onclick="navigateToPage('schedule')" aria-label="Open Assessment Schedule">
-                        <div class="cta-icon" aria-hidden="true">
-                            <span class="material-symbols-rounded" translate="no">calendar_month</span>
-                        </div>
-                        <h3 class="cta-title" data-i18n="cta_schedule_title">Assessment Schedule</h3>
-                        <p class="cta-desc" data-i18n="cta_schedule_desc">See when universal screening and progress monitoring happen across the school year.</p>
-                        <span class="cta-btn"><span data-i18n="cta_schedule_btn">View Schedule</span>
-                            <span class="material-symbols-rounded cta-btn-arrow" aria-hidden="true" translate="no">arrow_forward</span>
-                        </span>
-                    </button>
-                </div>
+            <div class="home-content guided-home-content">
+                <section class="journey-overview" aria-labelledby="journey-overview-title">
+                    <h3 id="journey-overview-title" data-i18n="guided_overview_title">How the process works</h3>
+                    <p data-i18n="guided_overview_desc">This is an overview, not a fixed checklist. Your answers and your learners’ needs determine the next branch; you may revisit instruction or adjust support along the way.</p>
+                    <ol class="journey-stages">
+                        <li><span class="journey-stage-number" aria-hidden="true">1</span><h4 data-i18n="guided_stage_instruction">Review classroom instruction</h4><p data-i18n="guided_stage_instruction_desc">Begin with strong classroom literacy instruction for all learners.</p></li>
+                        <li><span class="journey-stage-number" aria-hidden="true">2</span><h4 data-i18n="guided_stage_screen">Screen &amp; interpret</h4><p data-i18n="guided_stage_screen_desc">Gather screening information and consider it alongside classroom evidence.</p></li>
+                        <li><span class="journey-stage-number" aria-hidden="true">3</span><h4 data-i18n="guided_stage_plan">Plan support</h4><p data-i18n="guided_stage_plan_desc">Match instruction and targeted support to identified literacy needs.</p></li>
+                        <li><span class="journey-stage-number" aria-hidden="true">4</span><h4 data-i18n="guided_stage_monitor">Monitor &amp; adjust</h4><p data-i18n="guided_stage_monitor_desc">Review progress and decide whether to continue, adapt, or intensify support.</p></li>
+                    </ol>
+                </section>
+                <details class="journey-alternate-starts">
+                    <summary data-i18n="guided_alternate_title">Already providing Tier 2 or Tier 3 support?</summary>
+                    <p data-i18n="guided_alternate_desc">Start further along only if you have already reviewed classroom instruction and screening information. Otherwise, begin with the guided process above.</p>
+                    <div class="journey-tier-starts">
+                        <div><h4 data-i18n="guided_tier2_title">Tier 2 — targeted support</h4><p data-i18n="guided_tier2_desc">Use this starting point when screening and classroom evidence indicate a need for targeted support in addition to classroom instruction.</p><button type="button" class="guided-outline-btn" onclick="startGuidedPathway('tier2')" data-i18n="guided_tier2_start">Begin with Tier 2</button></div>
+                        <div><h4 data-i18n="guided_tier3_title">Tier 3 — intensive support</h4><p data-i18n="guided_tier3_desc">Use this starting point when you have reviewed the learner’s response to targeted support and are considering more intensive, individualized support.</p><button type="button" class="guided-outline-btn" onclick="startGuidedPathway('tier3')" data-i18n="guided_tier3_start">Begin with Tier 3</button></div>
+                    </div>
+                </details>
+                <section class="home-reference" aria-labelledby="home-reference-title">
+                    <h3 id="home-reference-title" data-i18n="nav_reference_resources">Reference resources</h3>
+                    <p data-i18n="guided_reference_desc">Open a reference when you need it, without starting the guided process.</p>
+                    <div class="home-reference-links">
+                        <button type="button" onclick="navigateToPage('interventions')" data-i18n="nav_interventions">Teaching Resources</button>
+                        <button type="button" onclick="navigateToPage('schedule')" data-i18n="nav_schedule">Assessment Schedule</button>
+                        <button type="button" onclick="navigateToPage('scores')" data-i18n="nav_scores">Understanding Scores &amp; Percentiles</button>
+                        <button type="button" onclick="navigateToPage('resources')" data-i18n="nav_resources">Resources</button>
+                        <button type="button" onclick="navigateToPage('faq')" data-i18n="nav_faq">FAQs</button>
+                        <button type="button" onclick="navigateToPage('about')" data-i18n="nav_about">About</button>
+                    </div>
+                </section>
             </div>
-
-            <section class="explore-more" aria-labelledby="explore-more-title">
-                <div class="explore-more-decor" aria-hidden="true">
-                    <span class="explore-more-blob explore-more-blob-1"></span>
-                    <span class="explore-more-blob explore-more-blob-2"></span>
-                    <span class="explore-more-blob explore-more-blob-3"></span>
-                </div>
-                <div class="explore-more-inner">
-                    <div class="explore-more-head">
-                        <span class="explore-more-eyebrow" data-i18n="explore_eyebrow">Go deeper</span>
-                        <h3 class="explore-more-title" id="explore-more-title" data-i18n="explore_title">Reference &amp; Resources</h3>
-                        <p class="explore-more-sub" data-i18n="explore_subtitle">Background reading and division documents to support your literacy work.</p>
-                    </div>
-                    <div class="explore-more-list">
-                        <button class="explore-card" onclick="navigateToPage('scores')" aria-label="Open Understanding Scores &amp; Percentiles">
-                            <span class="explore-card-icon" aria-hidden="true"><span class="material-symbols-rounded" translate="no">bar_chart</span></span>
-                            <span class="explore-card-title" data-i18n="cta_scores_title">Understanding Scores &amp; Percentiles</span>
-                            <span class="explore-card-desc" data-i18n="cta_scores_desc">Learn how standard scores, percentile ranks, and DIBELS risk categories are used to understand student performance.</span>
-                            <span class="explore-card-arrow" aria-hidden="true"><span class="material-symbols-rounded" translate="no">arrow_forward</span></span>
-                        </button>
-
-                        <button class="explore-card" onclick="navigateToPage('resources')" aria-label="Open Resources">
-                            <span class="explore-card-icon" aria-hidden="true"><span class="material-symbols-rounded" translate="no">folder_open</span></span>
-                            <span class="explore-card-title" data-i18n="cta_resources_title">Resources</span>
-                            <span class="explore-card-desc" data-i18n="cta_resources_desc">Scope and sequence documents, learning progressions, and the division literacy screening summary.</span>
-                            <span class="explore-card-arrow" aria-hidden="true"><span class="material-symbols-rounded" translate="no">arrow_forward</span></span>
-                        </button>
-
-                        <button class="explore-card" onclick="navigateToPage('about')" aria-label="Open About">
-                            <span class="explore-card-icon" aria-hidden="true"><span class="material-symbols-rounded" translate="no">info</span></span>
-                            <span class="explore-card-title" data-i18n="cta_about_title">About This Guide</span>
-                            <span class="explore-card-desc" data-i18n="cta_about_desc">Learn about the purpose of this guide, the screening schedule, and the RTI/MTSS framework behind it.</span>
-                            <span class="explore-card-arrow" aria-hidden="true"><span class="material-symbols-rounded" translate="no">arrow_forward</span></span>
-                        </button>
-                    </div>
-                </div>
-            </section>
         </section>
 
         <!-- ── FLOWCHART ─────────────────────────────────────── -->
