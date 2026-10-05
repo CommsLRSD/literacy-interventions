@@ -2821,7 +2821,7 @@ function isLongContentStep(node) {
     return node.type === 'checklist' && (node.items || []).length >= 6;
 }
 
-function isVisualFlowchartMultiColumnEntry(entry) {
+function isVisualFlowchartFitHeightEntry(entry) {
     return !!entry && entry.isTierFirstStep && entry.tierId !== 'tier1';
 }
 
@@ -2874,15 +2874,12 @@ function refreshVisualFlowchartModal() {
     // canvas rarely has to zoom out; once completed it shrinks back down.
     const activeFirstStepWidth = Math.round(cardWidth * 1.5);
     const activeLongStepWidth = Math.round(cardWidth * 1.9);
-    // Tier 2 and Tier 3 open with long, multi-section entry steps; while live
-    // they are laid out in two columns on an extra-wide card so the card is
-    // short enough to fit on screen at 100% zoom.
-    const activeMultiColumnStepWidth = 880;
     const getItemCardWidth = item => {
         if (item.type === 'tier-review') return wideCardWidth;
         if (item.type === 'entry') {
             if (item.entry.isCurrent && item.entry.node.type !== 'endpoint') {
-                if (isVisualFlowchartMultiColumnEntry(item.entry)) return activeMultiColumnStepWidth;
+                // Tier 2 / Tier 3 step 1 starts here and is then widened by
+                // fitVisualFlowchartCardToViewportHeight() once rendered.
                 if (item.entry.isTierFirstStep) return activeFirstStepWidth;
                 if (isLongContentStep(item.entry.node)) return activeLongStepWidth;
                 return interactiveCardWidth;
@@ -2990,7 +2987,7 @@ function refreshVisualFlowchartModal() {
         const endpointAction = entry.node.id === 'tier1-reteach'
             ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="restartTier1VisualIntegrated()">${escapeHtml(entry.node.actionButton.text)}</button>`
             : '';
-        return `${collapseBtn}<${tag} class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartMultiColumnEntry(entry) ? ' visual-flowchart-card-columns' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
+        return `${collapseBtn}<${tag} class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
                     style="left:${position.x}px;top:${position.y}px;width:${position.width}px" ${revisit}>
                 <span class="visual-flowchart-tier-chip">${escapeHtml(entry.tierLabel)}</span>
                 <span class="visual-flowchart-card-icon">${cardIcon}</span>
@@ -3060,6 +3057,7 @@ function refreshVisualFlowchartModal() {
     wireVisualFlowchartPanZoom(viewport);
     updateVisualFlowchartTierBar();
     const state = appState.visualFlowchartModal;
+    fitVisualFlowchartCardToViewportHeight(stage, viewport);
     autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId);
     // Card heights are not final until the browser has laid the fresh markup
     // out (and until the --visual-card-max-height cap above has been applied),
@@ -3069,8 +3067,53 @@ function refreshVisualFlowchartModal() {
     requestAnimationFrame(() => {
         if (appState.visualFlowchartModal !== state) return;
         if (!document.getElementById('visual-flowchart-stage')) return;
+        fitVisualFlowchartCardToViewportHeight(stage, viewport);
         autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId);
     });
+}
+
+// Tier 2 / Tier 3 step 1 is a single column of long entry information. Make
+// the live card as tall as the pathway viewport allows at 100% zoom (minus a
+// small top/bottom margin) and only as wide as needed for all of its content to
+// fit in that height, so lines of text run longer instead of wrapping into many
+// rows. If the content cannot fit that height at any width (very short
+// screens), it is widened only until extra width stops making it meaningfully
+// shorter, and the canvas zooms out the small remaining amount.
+function fitVisualFlowchartCardToViewportHeight(stage, viewport) {
+    const card = stage?.querySelector('.visual-flowchart-card-fit-height');
+    if (!card || !viewport) return;
+    const availableHeight = viewport.clientHeight - VISUAL_FLOWCHART_FIT_HEIGHT_PADDING * 2;
+    if (!card.dataset.baseWidth) card.dataset.baseWidth = String(Math.round(parseFloat(card.style.width) || card.offsetWidth));
+    const minWidth = Number(card.dataset.baseWidth);
+    const maxWidth = Math.max(minWidth, viewport.clientWidth - VISUAL_FLOWCHART_EDGE_PADDING * 2);
+    if (availableHeight <= 0 || !minWidth) return;
+    const heightAt = width => {
+        card.style.width = `${width}px`;
+        return card.offsetHeight;
+    };
+    let width = minWidth;
+    if (heightAt(minWidth) > availableHeight) {
+        const shortestHeight = heightAt(maxWidth);
+        const targetHeight = shortestHeight <= availableHeight
+            ? availableHeight
+            : shortestHeight * 1.03;
+        // Narrowest width (to within a few pixels) whose height fits the target.
+        let low = minWidth;
+        let high = maxWidth;
+        while (high - low > 4) {
+            const mid = Math.round((low + high) / 2);
+            if (heightAt(mid) <= targetHeight) high = mid;
+            else low = mid;
+        }
+        width = high;
+    }
+    card.style.width = `${width}px`;
+    const neededStageWidth = card.offsetLeft + width + 90;
+    if (neededStageWidth > stage.offsetWidth) {
+        stage.style.width = `${neededStageWidth}px`;
+        const lines = stage.querySelector('.visual-flowchart-lines');
+        if (lines) lines.setAttribute('width', String(neededStageWidth));
+    }
 }
 
 // Scale and position the canvas so the active (live) step card sits fully
@@ -3095,9 +3138,11 @@ function autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId) 
     if (activeCard && activeCard.offsetWidth && activeCard.offsetHeight) {
         // The live step card (checklists, option grids) is by far the tallest piece
         // of the pathway, so scale the canvas down until it fits entirely on screen.
+        const fillsHeight = activeCard.classList.contains('visual-flowchart-card-fit-height');
+        const padY = fillsHeight ? VISUAL_FLOWCHART_FIT_HEIGHT_PADDING : pad;
         const fitScale = Math.max(0.35, Math.min(1,
             (viewport.clientWidth - pad * 2) / activeCard.offsetWidth,
-            (viewport.clientHeight - pad * 2) / activeCard.offsetHeight));
+            (viewport.clientHeight - padY * 2) / activeCard.offsetHeight));
         // Auto-fit unless the user has taken manual control of the zoom, in which
         // case only shrink further when their zoom would cut the active card off.
         state.scale = state.userZoom ? Math.min(state.scale, fitScale) : fitScale;
@@ -3111,14 +3156,21 @@ function autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId) 
         // Vertically, the card prefers to sit in the upper part of the viewport
         // rather than dead centre: true centring (0.5) reads as too low once the
         // header/tier-bar/toolbar above the viewport are accounted for.
-        state.y = activeHeight + pad * 2 <= viewport.clientHeight
-            ? (viewport.clientHeight - activeHeight) * VISUAL_FLOWCHART_VERTICAL_BIAS - activeCard.offsetTop * state.scale
-            : pad - activeCard.offsetTop * state.scale;
+        // The height-fitted card fills the viewport, so it simply sits centred
+        // between its top and bottom margins.
+        state.y = fillsHeight
+            ? Math.max(padY, (viewport.clientHeight - activeHeight) / 2) - activeCard.offsetTop * state.scale
+            : activeHeight + pad * 2 <= viewport.clientHeight
+                ? (viewport.clientHeight - activeHeight) * VISUAL_FLOWCHART_VERTICAL_BIAS - activeCard.offsetTop * state.scale
+                : pad - activeCard.offsetTop * state.scale;
     }
     applyVisualFlowchartTransform();
 }
 
 const VISUAL_FLOWCHART_EDGE_PADDING = 40;
+// Top/bottom margin kept around the height-fitted Tier 2 / Tier 3 step 1 card,
+// which is sized to fill the viewport height at 100% zoom.
+const VISUAL_FLOWCHART_FIT_HEIGHT_PADDING = 20;
 // How far down the viewport the active card's vertical anchor sits when it
 // fits without scaling: 0 = flush with the top, 0.5 = true centre. A low
 // fraction keeps it feeling anchored near the top, since true centring
