@@ -45,6 +45,11 @@
               "type": "intervention",
               "start": "Feb",
               "end": "Mar"
+            },
+            {
+              "type": "intervention",
+              "start": "May",
+              "end": "Jun"
             }
           ]
         },
@@ -56,7 +61,7 @@
               "type": "assessment",
               "label": "DIBELS",
               "period": "Fall (Sep-Oct)",
-              "note": "Mid-September to end of October"
+              "note": "September to end of October"
             },
             {
               "type": "assessment",
@@ -82,6 +87,11 @@
               "type": "intervention",
               "start": "Feb",
               "end": "Mar"
+            },
+            {
+              "type": "intervention",
+              "start": "May",
+              "end": "Jun"
             }
           ]
         },
@@ -93,7 +103,7 @@
               "type": "assessment",
               "label": "DIBELS",
               "period": "Fall (Sep-Oct)",
-              "note": "Mid-September to end of October"
+              "note": "September to end of October"
             },
             {
               "type": "assessment",
@@ -119,6 +129,11 @@
               "type": "intervention",
               "start": "Feb",
               "end": "Mar"
+            },
+            {
+              "type": "intervention",
+              "start": "May",
+              "end": "Jun"
             }
           ]
         }
@@ -141,7 +156,7 @@
               "type": "assessment",
               "label": "CTOPP-2",
               "period": "Fall (Sep-Oct)",
-              "note": "Mid-September to end of October"
+              "note": "September to end of October"
             },
             {
               "type": "assessment",
@@ -166,6 +181,11 @@
               "type": "intervention",
               "start": "Feb",
               "end": "Mar"
+            },
+            {
+              "type": "intervention",
+              "start": "May",
+              "end": "Jun"
             }
           ]
         },
@@ -177,7 +197,7 @@
               "type": "assessment",
               "label": "THAFoL",
               "period": "Fall (Sep-Oct)",
-              "note": "Mid-September to end of October"
+              "note": "September to end of October"
             },
             {
               "type": "assessment",
@@ -202,6 +222,11 @@
               "type": "intervention",
               "start": "Feb",
               "end": "Mar"
+            },
+            {
+              "type": "intervention",
+              "start": "May",
+              "end": "Jun"
             }
           ]
         },
@@ -213,7 +238,7 @@
               "type": "assessment",
               "label": "THAFoL",
               "period": "Fall (Sep-Oct)",
-              "note": "Mid-September to end of October"
+              "note": "September to end of October"
             },
             {
               "type": "assessment",
@@ -244,6 +269,11 @@
               "type": "intervention",
               "start": "Feb",
               "end": "Mar"
+            },
+            {
+              "type": "intervention",
+              "start": "May",
+              "end": "Jun"
             }
           ]
         },
@@ -255,13 +285,13 @@
               "type": "assessment",
               "label": "DIBELS",
               "period": "Fall (Sep-Oct)",
-              "note": "Mid-September to end of October"
+              "note": "September to end of October"
             },
             {
               "type": "assessment",
               "label": "IDAPEL",
               "period": "Fall (Sep-Oct)",
-              "note": "Mid-September to end of October"
+              "note": "September to end of October"
             },
             {
               "type": "assessment",
@@ -298,6 +328,11 @@
               "type": "intervention",
               "start": "Feb",
               "end": "Mar"
+            },
+            {
+              "type": "intervention",
+              "start": "May",
+              "end": "Jun"
             }
           ]
         },
@@ -309,7 +344,7 @@
               "type": "assessment",
               "label": "DIBELS",
               "period": "Fall (Sep-Oct)",
-              "note": "Mid-September to end of October"
+              "note": "September to end of October"
             },
             {
               "type": "assessment",
@@ -335,6 +370,11 @@
               "type": "intervention",
               "start": "Feb",
               "end": "Mar"
+            },
+            {
+              "type": "intervention",
+              "start": "May",
+              "end": "Jun"
             }
           ]
         }
@@ -362,9 +402,9 @@
   },
   "notes": [
     "* Asterisk indicates all subtests required for students below Winter benchmark",
-    "Fall assessment period: Mid-September to end of October (except K English Program: all of Sept-Oct)",
+    "Fall assessment period: September to end of October",
     "Winter assessments: January",
     "Spring assessments: April",
-    "Intervention periods run between assessment windows (Nov-Dec and Feb-Mar) and pause during Winter and Spring assessments"
+    "Intervention periods run between assessment windows (Nov-Dec, Feb-Mar, and May-Jun) and pause during Winter and Spring assessments"
   ]
 }
