@@ -293,7 +293,7 @@ function returnToPathway() {
 }
 
 function focusActivePathwayStep() {
-    const target = getActiveStepTarget()?.querySelector('.step-guidance-now, .go-to-tier-heading, h3');
+    const target = getActiveStepTarget()?.querySelector('.step-badge, .go-to-tier-heading, h3');
     if (target) {
         target.tabIndex = -1;
         target.focus({ preventScroll: true });
@@ -3681,8 +3681,6 @@ function createIntegratedNodeElement(nodeData, container, direction = 'forward')
     }
     
     nodeElement.innerHTML = content;
-    const stepContent = nodeElement.querySelector('.step-content');
-    if (stepContent) stepContent.insertAdjacentHTML('afterbegin', renderStepGuidance(nodeData));
     container.appendChild(nodeElement);
     
     // Animate in based on direction
@@ -3705,37 +3703,6 @@ function createIntegratedNodeElement(nodeData, container, direction = 'forward')
             fwLoadResults();
         }
     }
-}
-
-function renderStepGuidance(node) {
-    const type = ['checklist', 'selection', 'decision', 'info', 'endpoint'].includes(node.type) ? node.type : 'info';
-    const links = new Set();
-    if (node.options === 'screeners' || /assessment|progress|screener/.test(node.id)) links.add('schedule');
-    if (type === 'decision') links.add('scores');
-    if (node.options === 'interventions' || node.options === 'drillDownAssessments' || type === 'endpoint') links.add('interventions');
-    const nextKey = type === 'endpoint' ? 'guided_next_endpoint'
-        : type === 'selection' || type === 'decision' ? 'guided_next_choice' : 'guided_next_continue';
-    return `<div class="step-guidance">
-        <p class="step-guidance-now"><strong>${escapeHtml(t('guided_now'))}</strong> ${escapeHtml(node.subtitle || node.description || node.title)}</p>
-        <details><summary>${escapeHtml(t('guided_help'))}</summary>
-            <dl>
-                <dt>${escapeHtml(t('guided_why'))}</dt><dd>${escapeHtml(t(`guided_why_${type}`))}</dd>
-                <dt>${escapeHtml(t('guided_need'))}</dt><dd>${escapeHtml(t(`guided_need_${type}`))}</dd>
-                <dt>${escapeHtml(t('guided_next'))}</dt><dd>${escapeHtml(t(nextKey))}</dd>
-            </dl>
-        </details>
-        ${links.size ? `<div class="step-guidance-resources"><span>${escapeHtml(t('guided_related'))}</span>
-            ${Array.from(links, page => `<button type="button" onclick="openPathwayReference('${page}')">${escapeHtml(t(`nav_${page}`))}</button>`).join('')}
-        </div>` : ''}
-    </div>`;
-}
-
-function openPathwayReference(page) {
-    if (!['schedule', 'scores', 'interventions'].includes(page)) return;
-    savePathwayProgress();
-    closeVisualFlowchartModal({ immediate: true });
-    navigateToPage(page);
-    document.getElementById('pathway-return-banner')?.querySelector('button')?.focus();
 }
 
 // Reference links surfaced inside checklist points: the phrase is matched in the

@@ -11027,10 +11027,8 @@ body.program-prompt-open { overflow: hidden; }
   border-radius: var(--radius);
   background: var(--bg-alt);
 }
-.journey-alternate-starts summary,
-.flowchart-step .step-guidance summary { cursor: pointer; font-weight: 600; }
-.journey-alternate-starts summary:focus-visible,
-.flowchart-step .step-guidance summary:focus-visible { outline: 2px solid var(--primary-light); outline-offset: 4px; }
+.journey-alternate-starts summary { cursor: pointer; font-weight: 600; }
+.journey-alternate-starts summary:focus-visible { outline: 2px solid var(--primary-light); outline-offset: 4px; }
 .journey-alternate-starts > p { margin-top: 1rem; font-size: 0.9rem; color: var(--text-secondary); }
 .journey-tier-starts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; margin-top: 1rem; }
 .journey-tier-starts p { margin: 0.5rem 0 0.75rem; font-size: 0.88rem; }
@@ -11061,25 +11059,6 @@ body.program-prompt-open { overflow: hidden; }
   font-size: 0.88rem;
 }
 .pathway-return-banner button { min-height: 44px; font-weight: 700; color: var(--primary); text-decoration: underline; text-underline-offset: 0.2em; }
-.flowchart-step .step-guidance {
-  margin-bottom: 1.25rem;
-  padding: 1rem 1.25rem;
-  border-left: 3px solid var(--secondary);
-  border-radius: var(--radius-sm);
-  background: var(--bg-alt);
-  color: var(--text);
-}
-.flowchart-step .step-guidance-now { font-weight: 600; color: var(--primary); }
-.flowchart-step .step-guidance details { margin-top: 0.5rem; }
-.flowchart-step .step-guidance details[open] summary { margin-bottom: 0.75rem; }
-.flowchart-step .step-guidance h4,
-.flowchart-step .step-guidance dt { margin-top: 0.75rem; font-size: 0.9rem; font-weight: 700; }
-.flowchart-step .step-guidance p,
-.flowchart-step .step-guidance dd { margin-top: 0.25rem; font-size: 0.88rem; line-height: 1.65; }
-.flowchart-step .step-guidance a,
-.flowchart-step .step-guidance button { min-height: 44px; color: var(--primary); text-decoration: underline; }
-.flowchart-step .step-guidance-resources { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1rem; margin-top: 0.75rem; font-size: 0.85rem; }
-.flowchart-step .step-guidance-resources > span { font-weight: 600; }
 @media (max-width: 1100px) {
   .guided-home-hero .hero-inner { grid-template-columns: minmax(0, 1fr); }
   .guided-home-hero .hero-photo-wrap { display: none; }
@@ -11093,5 +11072,4 @@ body.program-prompt-open { overflow: hidden; }
   .journey-stages { grid-template-columns: minmax(0, 1fr); }
   .home-program-controls { flex-direction: column; }
   .guided-primary-btn { width: 100%; }
-  .flowchart-step .step-guidance { padding: 0.85rem; }
 }
