@@ -65,28 +65,36 @@ function queueProgressStorage(operation) {
     return progressStorageQueue;
 }
 
+function parseProgressStorage(raw) {
+    try {
+        const state = raw && raw.length <= 100000 ? JSON.parse(raw) : null;
+        if (!state || !state.defaults || typeof state.defaults !== 'object' || Array.isArray(state.defaults) ||
+            !Object.hasOwn(state, 'pathway') || (state.pathway !== null &&
+                (typeof state.pathway !== 'object' || Array.isArray(state.pathway)))) return null;
+        return state;
+    } catch (e) {
+        return null;
+    }
+}
+
 async function readProgressStorage() {
     // Do not revive legacy localStorage progress after browser caches are cleared.
     try {
         localStorage.removeItem(PATHWAY_PREFERENCE_KEY);
         localStorage.removeItem(`${LEGACY_STORAGE_KEY_PREFIX}-pathway`);
     } catch (e) { /* Storage may be disabled. */ }
-    let raw;
+    let state = null;
     try {
         const cache = await caches.open(PATHWAY_CACHE_NAME);
         const response = await cache.match(PATHWAY_CACHE_URL);
-        raw = response ? await response.text() : null;
-        try { sessionStorage.removeItem(PATHWAY_SESSION_KEY); } catch (error) { /* Session storage is optional. */ }
-    } catch (e) {
-        try { raw = sessionStorage.getItem(PATHWAY_SESSION_KEY); } catch (error) { return null; }
-    }
+        state = response ? parseProgressStorage(await response.text()) : null;
+    } catch (e) { /* A failed write may have saved a session-only fallback. */ }
     try {
-        const state = raw && raw.length <= 100000 ? JSON.parse(raw) : null;
-        pathwayDefaults = state?.defaults && typeof state.defaults === 'object' ? state.defaults : {};
-        return state?.pathway || null;
-    } catch (e) {
-        return null;
-    }
+        const fallback = parseProgressStorage(sessionStorage.getItem(PATHWAY_SESSION_KEY));
+        if (fallback) state = fallback;
+    } catch (e) { /* Session storage is optional. */ }
+    pathwayDefaults = state?.defaults || {};
+    return state?.pathway || null;
 }
 
 function persistProgressStorage() {
@@ -98,6 +106,9 @@ function persistProgressStorage() {
             const cache = await caches.open(PATHWAY_CACHE_NAME);
             if (epoch !== progressStorageEpoch) return;
             await cache.put(PATHWAY_CACHE_URL, new Response(payload, { headers: { 'Content-Type': 'application/json' } }));
+            if (epoch === progressStorageEpoch) {
+                try { sessionStorage.removeItem(PATHWAY_SESSION_KEY); } catch (error) { /* Session storage is optional. */ }
+            }
         } catch (e) {
             if (epoch !== progressStorageEpoch) return;
             try { sessionStorage.setItem(PATHWAY_SESSION_KEY, payload); } catch (error) { /* Current visit still works. */ }
