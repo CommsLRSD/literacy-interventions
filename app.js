@@ -148,7 +148,7 @@ function showPathwaySetup(tierId) {
     container.style.display = 'block';
     delete container.dataset.initialized;
     container.innerHTML = `
-        <section class="integrated-flowchart" aria-labelledby="pathway-setup-title">
+        <section class="integrated-flowchart pathway-setup" aria-labelledby="pathway-setup-title">
             <div class="step-content">
                 <h2 id="pathway-setup-title" tabindex="-1">${escapeHtml(t('guided_setup_title'))}</h2>
                 <p>${escapeHtml(t('guided_setup_hint'))}</p>
@@ -167,8 +167,10 @@ function showPathwaySetup(tierId) {
                             ${GRADE_SORT_ORDER.map(grade => `<option value="${grade}"${grade === defaults.grade ? ' selected' : ''}>${escapeHtml(translateGrade(grade))}</option>`).join('')}
                         </select>
                     </div>
-                    <button type="submit" class="action-btn action-primary"${screeners.length ? '' : ' disabled'}>${escapeHtml(t('guided_setup_confirm'))}</button>
-                    <button type="button" class="action-btn action-secondary" onclick="navigateToPage('home')">${escapeHtml(t('guided_home'))}</button>
+                    <div class="pathway-setup-actions">
+                        <button type="submit" class="action-btn action-primary"${screeners.length ? '' : ' disabled'}>${escapeHtml(t('guided_setup_confirm'))}</button>
+                        <button type="button" class="action-btn action-secondary" onclick="navigateToPage('home')">${escapeHtml(t('guided_home'))}</button>
+                    </div>
                 </form>
             </div>
         </section>`;
@@ -2253,11 +2255,7 @@ function initIntegratedFlowchart(tierId) {
 
                 <div class="flowchart-glass-header-end">
                     ${showTier1Guidance ? renderTier1GuidanceHtml('flowchart', false, "navigateToPage('scores')") : ''}
-                    <div class="flowchart-screener-indicator" id="flowchart-screener-indicator" hidden>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                        <span class="flowchart-screener-indicator-label">${escapeHtml(t('fc_screener_label'))}</span>
-                        <span class="flowchart-screener-indicator-value" id="flowchart-screener-indicator-value"></span>
-                    </div>
+                    ${renderPathwayContextHtml()}
                 </div>
             </div>
             
@@ -3324,7 +3322,9 @@ function updateVisualFlowchartTierBar() {
         <span class="visual-flowchart-tier-bar-chip">${escapeHtml(tierLabel)}</span>
         <span class="visual-flowchart-tier-bar-name">${escapeHtml(tierName)}</span>
         ${renderTierTabsHtml(tierId, 'visual-flowchart-tier-tabs')}
-        ${tierId === 'tier1' ? renderTier1GuidanceHtml('visual-flowchart', guidanceOpen, 'openScoresFromVisualFlowchart()') : ''}`;
+        ${tierId === 'tier1' ? renderTier1GuidanceHtml('visual-flowchart', guidanceOpen, 'openScoresFromVisualFlowchart()') : ''}
+        ${renderPathwayContextHtml()}`;
+    updateScreenerIndicator();
 }
 
 // Tier 1's "How do we determine if instruction is effective…" guidance lives
@@ -7863,18 +7863,29 @@ function getScreenerName(idOrName) {
 
 // Reflect the currently selected screener in the visible flowchart indicator so
 // the user can always see which screener they chose.
+function renderPathwayContextHtml() {
+    return `<details class="pathway-context" hidden>
+        <summary>
+            <span class="material-symbols-rounded" aria-hidden="true" translate="no">tune</span>
+            <span class="pathway-context-summary"></span>
+        </summary>
+        <div class="pathway-context-popover"></div>
+    </details>`;
+}
+
 function updateScreenerIndicator() {
-    const indicator = document.getElementById('flowchart-screener-indicator');
-    if (!indicator) return;
-    const valueEl = document.getElementById('flowchart-screener-indicator-value');
-    const id = getRememberedScreenerId();
-    if (id) {
-        if (valueEl) valueEl.textContent = `${getScreenerName(id)}${pathwayContext?.grade ? ` · ${t('guided_teaching_grade')}: ${translateGrade(pathwayContext.grade)}` : ''}`;
-        indicator.hidden = false;
-    } else {
-        if (valueEl) valueEl.textContent = '';
-        indicator.hidden = true;
-    }
+    const screener = (appState.tierFlowchartData?.tier1?.screeners || []).find(item => item.id === pathwayContext?.screener);
+    const text = screener && pathwayContext?.grade
+        ? `${t('fc_screener_label')} ${screener.name} · ${t('guided_teaching_grade')}: ${translateGrade(pathwayContext.grade)}`
+        : '';
+    document.querySelectorAll('.pathway-context').forEach(indicator => {
+        indicator.hidden = !text;
+        indicator.querySelector('.pathway-context-summary').textContent = text;
+        indicator.querySelector('.pathway-context-popover').textContent = text;
+        const summary = indicator.querySelector('summary');
+        summary.title = text;
+        summary.setAttribute('aria-label', text);
+    });
 }
 
 function openInteractiveFlowchart() {
