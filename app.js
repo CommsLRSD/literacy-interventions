@@ -133,8 +133,8 @@ function clearPathwayProgress() {
 function getPathwaySetupDefaults() {
     const stored = pathwayDefaults[appState.selectedProgram] || {};
     const screeners = (appState.tierFlowchartData?.tier1?.screeners || []).filter(item => isScreenerIdForCurrentProgram(item.id));
-    const screener = screeners.find(item => item.id === stored.screener) || screeners.find(item => item.id === 'dibels') || screeners[0];
-    return { screener: screener?.id || '', grade: GRADE_SORT_ORDER.includes(stored.grade) ? stored.grade : '1',
+    const screener = screeners.find(item => item.id === stored.screener);
+    return { screener: screener?.id || '', grade: GRADE_SORT_ORDER.includes(stored.grade) ? stored.grade : '',
         pillar: typeof stored.pillar === 'string' ? stored.pillar : 'Phonics' };
 }
 
@@ -156,12 +156,14 @@ function showPathwaySetup(tierId) {
                     <div class="fw-select-group">
                         <label for="pathway-setup-screener">${escapeHtml(t('fc_screener_label'))}</label>
                         <select id="pathway-setup-screener" class="fw-select" required>
+                            <option value=""${defaults.screener ? '' : ' selected'}>${escapeHtml(t('wizard_select_placeholder'))}</option>
                             ${screeners.map(item => `<option value="${escapeAttr(item.id)}"${item.id === defaults.screener ? ' selected' : ''}>${escapeHtml(item.name)}</option>`).join('')}
                         </select>
                     </div>
                     <div class="fw-select-group">
                         <label for="pathway-setup-grade">${escapeHtml(t('guided_teaching_grade'))}</label>
                         <select id="pathway-setup-grade" class="fw-select" required>
+                            <option value=""${defaults.grade ? '' : ' selected'}>${escapeHtml(t('wizard_select_placeholder'))}</option>
                             ${GRADE_SORT_ORDER.map(grade => `<option value="${grade}"${grade === defaults.grade ? ' selected' : ''}>${escapeHtml(translateGrade(grade))}</option>`).join('')}
                         </select>
                     </div>
