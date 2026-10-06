@@ -400,6 +400,7 @@ function applyTranslations() {
     document.documentElement.lang = appState.language;
     // Update the page <title>
     document.title = t('page_title');
+    updateMobilePageTitle();
 }
 
 // Toggle language between English and French and refresh the UI.
@@ -590,11 +591,23 @@ function ensureProgramSelectionBeforeInteraction() {
     return false;
 }
 
+// On mobile (all pages except Home) the top bar shows the current page title
+// in place of the site name, and the page's hero banner is hidden.
+function updateMobilePageTitle() {
+    const titleEl = document.getElementById('mobile-page-title');
+    if (!titleEl) return;
+    const page = appState.currentPage || 'home';
+    const heading = document.querySelector(`#${page}-section .hero-area .section-title`);
+    titleEl.textContent = heading ? heading.textContent.trim() : '';
+}
+
 function navigateToPage(pageName) {
     if (pageName === 'flowchart' && (!appReady || !ensureProgramSelectionBeforeInteraction())) return;
 
     // Update state
     appState.currentPage = pageName;
+    document.body.dataset.page = pageName;
+    updateMobilePageTitle();
     
     // Update active states in desktop nav
     document.querySelectorAll('.nav-link').forEach(link => {
@@ -1955,19 +1968,21 @@ const FLOWCHART_DEFINITIONS = {
     }
 };
 
-// The Standard (vertical list) view is switched off for now but kept in the
-// code so it can be reinstated later by flipping this flag back to true.
-const STANDARD_VIEW_ENABLED = false;
-
-// Coerce a stored/requested layout mode to one that is currently offered.
-function normalizeJourneyLayoutMode(mode) {
-    if (mode === 'horizontal') return 'horizontal';
-    return STANDARD_VIEW_ENABLED ? 'standard' : 'horizontal';
+// The Standard (vertical list) view is offered on mobile only, where it is
+// labelled "Alt view"; on desktop it is switched off (code kept) and the
+// visual pathway / summary views are used instead.
+function isStandardViewAvailable() {
+    return isVisualFlowchartMobile();
 }
 
-// Markup for the Standard view toggle button; empty while the view is disabled.
+// Coerce a stored/requested layout mode to one that is currently offered.
+// The summary ('horizontal') view is the default everywhere.
+function normalizeJourneyLayoutMode(mode) {
+    return mode === 'standard' && isStandardViewAvailable() ? 'standard' : 'horizontal';
+}
+
+// Markup for the Alt (standard) view toggle button. CSS hides it on desktop.
 function renderStandardViewToggleHtml(attrs) {
-    if (!STANDARD_VIEW_ENABLED) return '';
     return `<button class="layout-toggle-btn layout-toggle-btn-standard" type="button" ${attrs} aria-label="${escapeHtml(t('fc_standard_view'))}" title="${escapeHtml(t('fc_standard_view'))}">
                 <svg class="layout-toggle-icon layout-toggle-icon-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>
             </button>`;
@@ -2037,11 +2052,11 @@ function initIntegratedFlowchart(tierId) {
                 <span class="flowchart-tier-name-value" id="flowchart-tier-name-value">${escapeHtml(getTierName(flowchartDef.title))}</span>
             </div>
             <div class="flowchart-glass-header">
-                <button class="flowchart-back-btn" onclick="closeIntegratedFlowchart()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <button class="flowchart-back-btn" type="button" onclick="closeIntegratedFlowchart()" aria-label="${escapeHtml(t('guided_home'))}" title="${escapeHtml(t('guided_home'))}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
-                    <span>${escapeHtml(t('guided_home'))}</span>
+                    <span class="flowchart-back-btn-label">${escapeHtml(t('guided_home'))}</span>
                 </button>
                 
                 ${renderTierTabsHtml(tierId)}
@@ -2065,10 +2080,10 @@ function initIntegratedFlowchart(tierId) {
                                 <span class="journey-map-title" id="journey-map-title">${escapeHtml(getTierGateLabel(tierId))}</span>
                             </div>
                             <div class="layout-toggle-group" id="layout-toggle-group" role="group" aria-label="${escapeHtml(t('fc_view_switcher'))}">
-                                ${renderStandardViewToggleHtml(`id="layout-toggle-standard-btn" onclick="setJourneyLayoutMode('standard')" aria-pressed="true"`)}
                                 <button class="layout-toggle-btn layout-toggle-btn-summary" id="layout-toggle-summary-btn" type="button" onclick="setJourneyLayoutMode('horizontal')" aria-pressed="false" aria-label="${escapeHtml(t('fc_summary_view'))}" title="${escapeHtml(t('fc_summary_view'))}">
                                     <svg class="layout-toggle-icon layout-toggle-icon-summary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true"><rect x="2" y="7" width="5" height="10" rx="1"/><rect x="9.5" y="7" width="5" height="10" rx="1"/><rect x="17" y="7" width="5" height="10" rx="1"/></svg>
                                 </button>
+                                ${renderStandardViewToggleHtml(`id="layout-toggle-standard-btn" onclick="setJourneyLayoutMode('standard')" aria-pressed="false"`)}
                                 <button class="layout-toggle-btn layout-toggle-btn-visual" id="visual-flowchart-open-btn" type="button" onclick="openVisualFlowchartModal()" aria-label="${escapeHtml(t('fc_visual_open'))}" title="${escapeHtml(t('fc_visual_open'))}">
                                     <span class="material-symbols-rounded layout-toggle-icon-visual" aria-hidden="true" translate="no">account_tree</span>
                                 </button>
@@ -2660,10 +2675,8 @@ function ensureActiveStepPresent(activeNode, direction = 'forward') {
     if (slot) createIntegratedNodeElement(activeNode, slot, direction);
 }
 
-// Switch between 'standard' (vertical list) and 'horizontal' (bubble track) layout modes.
-// While STANDARD_VIEW_ENABLED is false, a 'standard' request becomes 'horizontal'.
-// Part of the "Your Decisions" view switcher (summary / visual pathway; the
-// standard button is hidden while STANDARD_VIEW_ENABLED is false).
+// Switch between 'standard' (vertical list, "Alt view") and 'horizontal'
+// (summary) layout modes. Off mobile a 'standard' request becomes 'horizontal'.
 function setJourneyLayoutMode(mode) {
     const vf = appState.visualFlowchart;
     if (!vf || (mode !== 'standard' && mode !== 'horizontal')) return;
@@ -2740,9 +2753,8 @@ function getVisualFlowchartEntries() {
 }
 
 // The visual pathway modal's header carries its own copy of the "Your
-// Decisions" view switcher (summary / visual, plus standard when
-// STANDARD_VIEW_ENABLED), since the
-// underlying panel is made inert while the modal is open and would otherwise
+// Decisions" view switcher (summary / visual; the Alt view is mobile-only and
+// the pathway is desktop-only), since the underlying panel is made inert while the modal is open and would otherwise
 // be unreachable.
 function renderVisualFlowchartHeaderControlsHtml() {
     // The visual pathway is itself the currently active view whenever this
@@ -2752,7 +2764,6 @@ function renderVisualFlowchartHeaderControlsHtml() {
     return `
         <div class="visual-flowchart-header-controls">
             <div class="layout-toggle-group" role="group" aria-label="${escapeHtml(t('fc_view_switcher'))}">
-                ${renderStandardViewToggleHtml(`onclick="switchVisualFlowchartToLayout('standard')" aria-pressed="false"`)}
                 <button class="layout-toggle-btn layout-toggle-btn-summary" type="button" onclick="switchVisualFlowchartToLayout('horizontal')" aria-pressed="false" aria-label="${escapeHtml(t('fc_summary_view'))}" title="${escapeHtml(t('fc_summary_view'))}">
                     <svg class="layout-toggle-icon layout-toggle-icon-summary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true"><rect x="2" y="7" width="5" height="10" rx="1"/><rect x="9.5" y="7" width="5" height="10" rx="1"/><rect x="17" y="7" width="5" height="10" rx="1"/></svg>
                 </button>
@@ -2777,6 +2788,17 @@ const VISUAL_FLOWCHART_MOBILE_QUERY = '(max-width: 768px), (pointer: coarse) and
 function isVisualFlowchartMobile() {
     return window.matchMedia(VISUAL_FLOWCHART_MOBILE_QUERY).matches;
 }
+
+// The visual pathway is desktop-only and the Alt view mobile-only, so keep the
+// flowchart consistent when the window crosses the mobile breakpoint.
+window.matchMedia(VISUAL_FLOWCHART_MOBILE_QUERY).addEventListener('change', event => {
+    if (event.matches) {
+        if (appState.visualFlowchartModal) closeVisualFlowchartModal({ immediate: true });
+        return;
+    }
+    if (appState.visualFlowchart?.layoutMode === 'standard') setJourneyLayoutMode('horizontal');
+    openDefaultVisualFlowchart();
+});
 
 // The visual pathway is the default view on desktop: open it whenever the
 // flowchart page is shown there, unless it is already open.
@@ -2866,6 +2888,8 @@ function lockVisualFlowchartLandscape(modal) {
 }
 
 function openVisualFlowchartModal() {
+    // The visual pathway is not offered on mobile.
+    if (isVisualFlowchartMobile()) return;
     appState.visualFlowchartDismissed = false;
     closeVisualFlowchartModal({ immediate: true });
     // Drop any earlier modal still fading out so it cannot overlap the new one.

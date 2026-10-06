@@ -305,6 +305,8 @@ strong { font-weight: 600; }
   padding-top: 12px;
 }
 
+.mobile-page-title { display: none; }
+
 .nav-right {
   display: flex;
   align-items: center;
@@ -6889,28 +6891,113 @@ body.step-review-modal-open { overflow: hidden; }
 
   .endpoint-card, .vf-endpoint { padding: var(--space-lg); }
 
-  .flowchart-glass-header,
   .integrated-flowchart-header {
     grid-template-columns: 1fr;
     justify-items: center;
     row-gap: var(--space-xs);
   }
-  .flowchart-glass-header .flowchart-back-btn { justify-self: center; }
-  .flowchart-glass-header .tier-tabs { justify-self: center; justify-content: center; }
-  .flowchart-glass-header .flowchart-screener-indicator {
+
+  /* Mobile flowchart header: one compact row — back arrow, tier tabs, ? —
+     with the selected screener (when shown) on a row of its own. */
+  .flowchart-glass-header {
+    position: relative;
+    top: auto;
+    grid-template-columns: 36px 1fr 36px;
+    row-gap: var(--space-xs);
+    padding: 6px;
+  }
+  .flowchart-glass-header .flowchart-back-btn {
+    grid-column: 1;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
+  }
+  .flowchart-glass-header .flowchart-back-btn svg { width: 18px; height: 18px; }
+  .flowchart-back-btn-label { display: none; }
+  .flowchart-glass-header .tier-tabs {
+    grid-column: 2;
     justify-self: center;
     justify-content: center;
+    flex-wrap: nowrap;
+    min-width: 0;
   }
-  .flowchart-glass-header-end {
-    justify-self: center;
-    flex-wrap: wrap;
+  .flowchart-glass-header .tier-tab { padding: 0.35rem 0.65rem; }
+  .flowchart-glass-header-end { display: contents; }
+  .flowchart-glass-header .tier1-guidance {
+    position: static;
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .flowchart-glass-header .tier1-guidance-btn {
     justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
   }
+  .flowchart-glass-header .tier1-guidance-btn .material-symbols-rounded { font-size: 22px; }
+  .flowchart-glass-header .tier1-guidance-btn-label { display: none; }
   .flowchart-glass-header .tier1-guidance-popup.tier1-success-sidebar {
-    right: auto;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 0;
+    right: 0;
+    width: auto;
   }
+  .flowchart-glass-header .flowchart-screener-indicator {
+    grid-column: 1 / -1;
+    justify-self: center;
+    justify-content: center;
+  }
+
+  /* "Universal Classroom" etc.: a small frosted tab hanging from the top bar
+     that stays pinned while the flowchart scrolls. */
+  #flowchart-section { overflow: clip; }
+  #flowchart-container .integrated-flowchart.flowchart-tier-1,
+  #flowchart-container .integrated-flowchart.flowchart-tier-2,
+  #flowchart-container .integrated-flowchart.flowchart-tier-3 {
+    border-top: 0;
+    border-radius: 0;
+  }
+  .integrated-flowchart { padding-top: 0; }
+  .flowchart-tier-name-bar {
+    position: sticky;
+    top: var(--nav-height);
+    z-index: 901;
+    width: fit-content;
+    max-width: calc(100% - 2 * var(--space-lg));
+    margin: 0 auto var(--space-sm);
+    padding: 0.3rem 1.1rem 0.4rem;
+    border-radius: 0 0 14px 14px;
+    background: color-mix(in srgb, var(--tier-color, var(--primary)) 72%, transparent);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    backdrop-filter: blur(12px) saturate(160%);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+  }
+  .flowchart-tier-name-value { font-size: 0.8rem; }
+
+  /* Mobile top bar on every page except Home: no site name or hero banner;
+     the page title sits centred and the logo moves to the right corner. */
+  .top-nav .nav-container { position: relative; }
+  body:not([data-page="home"]) .logo-text { display: none; }
+  body:not([data-page="home"]) .logo-section { order: 10; }
+  body:not([data-page="home"]) .mobile-page-title {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    max-width: calc(100% - 140px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: "Nunito", sans-serif;
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: var(--primary);
+    pointer-events: none;
+  }
+  body:not([data-page="home"]) .hero-area { display: none; }
 
   .tier-selection { gap: var(--space-sm); }
   .tier-option { padding: var(--space-md); }
@@ -10241,8 +10328,9 @@ body.step-review-modal-open { overflow: hidden; }
 
 /* ====================================================================
    LAYOUT TOGGLE GROUP — "Your Decisions" panel header
-   Icon toggle: summary bubbles and visual pathway (the standard list
-   button is currently disabled via STANDARD_VIEW_ENABLED in app.js).
+   Icon toggle: summary bubbles plus the visual pathway on desktop, or the
+   Alt (standard list) view on mobile. Keep the media query in sync with
+   VISUAL_FLOWCHART_MOBILE_QUERY in app.js.
    ==================================================================== */
 
 .layout-toggle-group {
@@ -10297,6 +10385,13 @@ body.step-review-modal-open { overflow: hidden; }
 
 .layout-toggle-icon-visual {
   font-size: 16px;
+}
+
+.layout-toggle-btn-standard { display: none; }
+
+@media (max-width: 768px), (pointer: coarse) and (max-height: 600px) {
+  .layout-toggle-btn-standard { display: inline-flex; }
+  #visual-flowchart-open-btn { display: none; }
 }
 
 /* ====================================================================
