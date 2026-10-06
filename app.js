@@ -76,7 +76,7 @@ async function readProgressStorage() {
         const cache = await caches.open(PATHWAY_CACHE_NAME);
         const response = await cache.match(PATHWAY_CACHE_URL);
         raw = response ? await response.text() : null;
-        sessionStorage.removeItem(PATHWAY_SESSION_KEY);
+        try { sessionStorage.removeItem(PATHWAY_SESSION_KEY); } catch (error) { /* Session storage is optional. */ }
     } catch (e) {
         try { raw = sessionStorage.getItem(PATHWAY_SESSION_KEY); } catch (error) { return null; }
     }
@@ -141,14 +141,14 @@ function showPathwaySetup(tierId) {
             <div class="step-content">
                 <h2 id="pathway-setup-title" tabindex="-1">${escapeHtml(t('guided_setup_title'))}</h2>
                 <p>${escapeHtml(t('guided_setup_hint'))}</p>
-                <form id="pathway-setup-form" class="fw-controls">
-                    <div class="fw-field">
+                <form id="pathway-setup-form" class="fw-wizard-selects">
+                    <div class="fw-select-group">
                         <label for="pathway-setup-screener">${escapeHtml(t('fc_screener_label'))}</label>
                         <select id="pathway-setup-screener" class="fw-select" required>
                             ${screeners.map(item => `<option value="${escapeAttr(item.id)}"${item.id === defaults.screener ? ' selected' : ''}>${escapeHtml(item.name)}</option>`).join('')}
                         </select>
                     </div>
-                    <div class="fw-field">
+                    <div class="fw-select-group">
                         <label for="pathway-setup-grade">${escapeHtml(t('guided_teaching_grade'))}</label>
                         <select id="pathway-setup-grade" class="fw-select" required>
                             ${GRADE_SORT_ORDER.map(grade => `<option value="${grade}"${grade === defaults.grade ? ' selected' : ''}>${escapeHtml(translateGrade(grade))}</option>`).join('')}
@@ -173,7 +173,7 @@ function confirmPathwaySetup() {
         item.id === document.getElementById('pathway-setup-screener')?.value && isScreenerIdForCurrentProgram(item.id));
     const grade = document.getElementById('pathway-setup-grade')?.value;
     if (!screener || !GRADE_SORT_ORDER.includes(grade)) return;
-    pathwayContext = { program: appState.selectedProgram, screener: screener.id, grade };
+    pathwayContext = Object.freeze({ program: appState.selectedProgram, screener: screener.id, grade });
     pathwayDefaults[appState.selectedProgram] = { ...getPathwaySetupDefaults(), screener: screener.id, grade };
     setRememberedScreener(screener.name);
     setRememberedMenuFilters({ program: appState.selectedProgram, screener: appState.selectedScreener, grade,
@@ -188,6 +188,7 @@ function confirmPathwaySetup() {
 }
 
 async function hardResetApp() {
+    if (!appReady) return;
     if (!window.confirm(t('guided_hard_reset_confirm'))) return;
     appReady = false;
     pendingPathwayTier = null;
@@ -216,6 +217,14 @@ async function hardResetApp() {
     appState.language = 'en';
     appState.rememberedMenuFilters = {};
     appState.interventionHistory = [];
+    appState.currentPath = [];
+    Object.assign(menuState, { tier: '', program: MENU_LANGUAGE_DEFAULT, resourceType: '', pillar: '',
+        screener: '', subtest: '', grade: '', evidence: '', search: '' });
+    menuUiState.view = 'search';
+    menuUiState.editingField = '';
+    activeScheduleGradeId = 'all';
+    renderHistoryPanel();
+    clearHistoryUnseen();
     document.getElementById('flowchart-container').innerHTML = '';
     applyTranslations();
     updateTopProgramLangControls();
@@ -394,6 +403,8 @@ function updateGuidedHome() {
         start.hidden = hasPath;
         start.disabled = !appReady;
     }
+    const reset = document.getElementById('home-hard-reset-btn');
+    if (reset) reset.disabled = !appReady;
     const status = document.getElementById('home-program-status');
     if (status) status.textContent = appState.selectedProgram ? '' : t('guided_choose_program_hint');
     const banner = document.getElementById('pathway-return-banner');
@@ -414,7 +425,9 @@ function restorePathway(saved) {
     if (!current) return false;
     restoringPathway = true;
     try {
-        pathwayContext = { ...saved.context };
+        pathwayContext = Object.freeze({
+            program: saved.context.program, screener: saved.context.screener, grade: saved.context.grade
+        });
         initIntegratedFlowchart(current.tierId);
         setRememberedMenuFilters(validatePathwayFilters(saved.filters));
         appState.visualFlowchart = { ...appState.visualFlowchart, ...current,
@@ -422,7 +435,7 @@ function restorePathway(saved) {
             lastRenderedActiveNodeId: null };
         appState.fullJourney = (saved.fullJourney || []).map(validateTierPathway).filter(Boolean);
         const screener = appState.tierFlowchartData.tier1.screeners.find(item => item.id === pathwayContext.screener);
-        setRememberedScreener(screener.name);
+        setRememberedScreener(saved.filters?.screener || screener.name);
         appState.currentTierFlow = { screener: screener.id, screenerName: screener.name, grade: pathwayContext.grade };
         setRememberedMenuFilters({ screener: appState.selectedScreener, grade: pathwayContext.grade });
         const node = getFlowchartDefs()[current.tierId].nodes[appState.visualFlowchart.currentNodeId];
@@ -596,6 +609,7 @@ function updateTopProgramLangControls() {
 // Intervention Names are rendered from JSON data and are intentionally kept
 // in their original form regardless of the UI language.
 function rerenderForLanguage() {
+    if (pendingPathwayTier) showPathwaySetup(pendingPathwayTier);
     // Flowchart: re-initialise at the same tier if one is open
     const fc = document.getElementById('flowchart-container');
     if (fc && fc.dataset.initialized) {
@@ -744,7 +758,7 @@ function setupNavigation() {
     });
     
     // Mobile navigation
-    document.querySelectorAll('.mobile-nav-item').forEach(link => {
+    document.querySelectorAll('.mobile-nav-item[data-page]').forEach(link => {
         link.addEventListener('click', (e) => {
             const page = e.currentTarget.dataset.page;
             navigateToPage(page);
@@ -1145,11 +1159,7 @@ function renderFlowchartStart() {
 }
 
 function selectTier(tierId) {
-    const tier = appState.flowchartData.tiers.find(t => t.id === tierId);
-    if (!tier) return;
-    
-    appState.currentPath = [{ type: 'tier', id: tierId, name: tier.name }];
-    renderScreenerSelection(tier);
+    startGuidedPathway(tierId);
 }
 
 function renderScreenerSelection(tier) {
@@ -1398,8 +1408,7 @@ function goBackInFlow() {
 }
 
 function resetFlowchart() {
-    appState.currentPath = [];
-    renderFlowchartStart();
+    startGuidedPathway('tier1');
 }
 
 function exportFlowchart() {
@@ -4384,8 +4393,12 @@ function createIntegratedSelectionNode(nodeData) {
         setRememberedMenuFilters({ tier: tierNum, program: program });
 
         const baseState = { tier: tierNum, program: program, resourceType: itemType, grade: appState.fwState.grade };
-        const pillarOptionsHtml = buildFacetOptionsHtml(distinctTagValues(baseState, 'pillar'), appState.fwState.pillar, translatePillar);
-        const screenerOptionsHtml = buildFacetOptionsHtml(distinctTagValues({ ...baseState, pillar: appState.fwState.pillar }, 'screener'), appState.fwState.screener);
+        const pillarValues = distinctTagValues(baseState, 'pillar');
+        if (appState.fwState.pillar && !pillarValues.includes(appState.fwState.pillar)) pillarValues.unshift(appState.fwState.pillar);
+        const pillarOptionsHtml = buildFacetOptionsHtml(pillarValues, appState.fwState.pillar, translatePillar);
+        const screenerValues = distinctTagValues({ ...baseState, pillar: appState.fwState.pillar }, 'screener');
+        if (appState.fwState.screener && !screenerValues.includes(appState.fwState.screener)) screenerValues.unshift(appState.fwState.screener);
+        const screenerOptionsHtml = buildFacetOptionsHtml(screenerValues, appState.fwState.screener);
 
         return `
             <div class="step-header">
@@ -4508,9 +4521,12 @@ function fwOnPillarChange(value) {
             tier: appState.fwState.tier,
             program: appState.fwState.program,
             resourceType: appState.fwState.resourceType,
-            pillar: appState.fwState.pillar
+            pillar: appState.fwState.pillar,
+            grade: appState.fwState.grade
         };
-        screenerSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(context, 'screener'), appState.fwState.screener);
+        const values = distinctTagValues(context, 'screener');
+        if (appState.fwState.screener && !values.includes(appState.fwState.screener)) values.unshift(appState.fwState.screener);
+        screenerSel.innerHTML = buildFacetOptionsHtml(values, appState.fwState.screener);
     }
 
     fwLoadResults();
@@ -5827,10 +5843,12 @@ function closeIntegratedFlowchart() {
 
 // Integrated tier transition handlers
 function startTier2VisualIntegrated() {
+    if (!pathwayContext) return startGuidedPathway('tier2');
     showGoToTierStep('tier2');
 }
 
 function startTier3VisualIntegrated() {
+    if (!pathwayContext) return startGuidedPathway('tier3');
     showGoToTierStep('tier3');
 }
 
@@ -7802,6 +7820,12 @@ function setRememberedScreener(idOrName) {
     const resolved = resolveScreenerId(idOrName);
     if (resolved) {
         appState.selectedScreener = resolved;
+        const screener = (appState.tierFlowchartData?.tier1?.screeners || []).find(item =>
+            resolveScreenerId(item.name) === resolved && isScreenerIdForCurrentProgram(item.id));
+        if (appReady && appState.selectedProgram && screener) {
+            pathwayDefaults[appState.selectedProgram] = { ...getPathwaySetupDefaults(), screener: screener.id };
+            persistProgressStorage();
+        }
     }
     updateScreenerIndicator();
     return resolved;
@@ -7832,7 +7856,7 @@ function updateScreenerIndicator() {
     const valueEl = document.getElementById('flowchart-screener-indicator-value');
     const id = getRememberedScreenerId();
     if (id) {
-        if (valueEl) valueEl.textContent = getScreenerName(id);
+        if (valueEl) valueEl.textContent = `${getScreenerName(id)}${pathwayContext?.grade ? ` · ${t('guided_teaching_grade')}: ${translateGrade(pathwayContext.grade)}` : ''}`;
         indicator.hidden = false;
     } else {
         if (valueEl) valueEl.textContent = '';
@@ -7889,12 +7913,14 @@ function requestFlowchartProgramChange(program, options = {}) {
             return;
         }
     }
+    const setupTier = pendingPathwayTier || appState.visualFlowchart?.tierId || 'tier1';
     pendingPathwayTier = null;
     clearPathwayProgress();
     setRememberedMenuFilters({ pillar: '', screener: '' });
     closeVisualFlowchartModal({ immediate: true });
     const lang = program === PROGRAM_FRENCH_IMMERSION ? (appState.language === 'fr' ? 'fr' : 'en') : 'en';
     finalizeProgramSelection(program, lang);
+    if (appState.currentPage === 'flowchart') showPathwaySetup(setupTier);
     refreshVisualFlowchartHeaderControls();
 }
 

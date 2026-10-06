@@ -67,12 +67,12 @@ const TRANSLATIONS = {
         guided_continue: 'Continue',
         guided_restart: 'Start again',
         guided_resume: 'Continue my guided process',
-        guided_progress_privacy: 'Your catalog choices and checklist progress are saved in this app’s browser cache on this device (for this visit only if cache storage is unavailable). Clearing browser caches or using Hard reset clears guided progress. A reload does not reset progress. No student details are saved in guided progress.',
+        guided_progress_privacy: 'Your catalog choices and checklist progress are saved in this app’s browser cache on this device (for this visit only if cache storage is unavailable). Clearing browser caches clears guided progress. Reloading or hard-refreshing does not clear saved device choices. Reset saved data clears all app-owned choices and caches. No student details are saved in guided progress.',
         guided_setup_title: 'Confirm your screener and teaching grade',
         guided_setup_hint: 'Check these settings before starting any tier. Your saved defaults are preselected; confirm them again for every fresh start.',
         guided_teaching_grade: 'Teaching grade',
         guided_setup_confirm: 'Confirm settings and start',
-        guided_hard_reset: 'Hard reset: clear saved data & app caches',
+        guided_hard_reset: 'Reset saved data (hard reset)',
         guided_hard_reset_confirm: 'Clear all saved app progress, defaults, selection history, and app caches on this device? This cannot be undone. Other websites’ data will not be touched.',
         guided_return: 'Return to my next step',
         guided_home: 'Back to overview',
@@ -475,12 +475,12 @@ const TRANSLATIONS = {
         guided_continue: 'Continuer',
         guided_restart: 'Recommencer',
         guided_resume: 'Poursuivre ma démarche guidée',
-        guided_progress_privacy: 'Vos choix et votre progression sont enregistrés dans le cache de cette application sur cet appareil (pour cette visite seulement si le cache est indisponible). Effacer le cache du navigateur ou utiliser la réinitialisation complète efface la progression. Recharger la page ne la réinitialise pas. Aucun renseignement sur les élèves n’est enregistré dans la démarche guidée.',
+        guided_progress_privacy: 'Vos choix et votre progression sont enregistrés dans le cache de cette application sur cet appareil (pour cette visite seulement si le cache est indisponible). Effacer le cache du navigateur efface la progression. Recharger la page, même en forçant l’actualisation, n’efface pas les choix enregistrés sur cet appareil. Effacer les données enregistrées supprime tous les choix et caches de cette application. Aucun renseignement sur les élèves n’est enregistré dans la démarche guidée.',
         guided_setup_title: 'Confirmez votre outil de dépistage et votre niveau scolaire',
         guided_setup_hint: 'Vérifiez ces réglages avant de commencer un palier. Vos valeurs enregistrées sont présélectionnées; confirmez-les à chaque nouvelle démarche.',
         guided_teaching_grade: 'Niveau scolaire enseigné',
         guided_setup_confirm: 'Confirmer et commencer',
-        guided_hard_reset: 'Réinitialisation complète : effacer les données et les caches',
+        guided_hard_reset: 'Effacer les données enregistrées (réinitialisation complète)',
         guided_hard_reset_confirm: 'Effacer la progression, les valeurs par défaut, l’historique et les caches de cette application sur cet appareil? Cette action est irréversible. Les données des autres sites ne seront pas modifiées.',
         guided_return: 'Revenir à ma prochaine étape',
         guided_home: 'Retour à l’aperçu',
@@ -1146,10 +1146,6 @@ const NODE_SUMMARIES_FR = {
     'tier1-principles': {
         text: 'Vous avez confirm\u00e9 que l\u2019enseignement en classe respecte les principes de l\u2019enseignement explicite et syst\u00e9matique\u00a0\u2014 les bases sont solides\u00a0! 📚',
         variant: 'step1'
-    },
-    'tier1-screener': {
-        text: (choice) => `Vous avez administr\u00e9 ${choice || 'l\u2019outil de d\u00e9pistage en litt\u00e9ratie'} pour mesurer o\u00f9 en sont les \u00e9l\u00e8ves. Place aux donn\u00e9es\u00a0! 📊`,
-        variant: 'selection'
     },
     'tier1-effectiveness': {
         effective:   { text: 'L\u2019outil de d\u00e9pistage indique Bleu ou Vert\u00a0\u2014 cet \u00e9l\u00e8ve est sur la bonne voie et l\u2019enseignement fonctionne\u00a0! 🎉', variant: 'effective' },
