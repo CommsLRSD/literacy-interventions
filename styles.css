@@ -536,6 +536,7 @@ body.side-nav-collapsed .site-footer { margin-left: var(--side-nav-collapsed-wid
   width: 280px;
   height: 100%;
   background: var(--bg);
+  overflow-y: auto;
   padding: calc(var(--nav-height) + var(--space-lg)) var(--space-lg) var(--space-lg);
   display: flex;
   flex-direction: column;
@@ -558,6 +559,7 @@ body.side-nav-collapsed .site-footer { margin-left: var(--side-nav-collapsed-wid
   gap: var(--space-md);
   padding: 0 var(--space-lg);
   height: 60px;
+  flex-shrink: 0;
   border-radius: var(--radius-lg);
   font-size: 1.05rem;
   font-weight: 500;
@@ -10719,6 +10721,7 @@ button.horiz-bubble-done:focus-visible .horiz-bubble-revisit {
 }
 
 .install-app-btn[hidden] { display: none; }
+.install-app-menu-btn[hidden] { display: none; }
 
 .install-app-btn:hover,
 .install-app-btn:focus-visible {
@@ -10730,14 +10733,15 @@ button.horiz-bubble-done:focus-visible .horiz-bubble-revisit {
 
 .install-app-btn .material-symbols-rounded { font-size: 18px; }
 
+@media (max-width: 768px) {
+  .nav-right > .install-app-btn { display: none; }
+}
+
 @media (max-width: 560px) {
   .top-program-lang-select {
     min-width: 82px;
     font-size: 0.72rem;
   }
-  /* Icon-only on very small screens to protect the nav layout. */
-  .install-app-btn { padding: 6px 9px; }
-  .install-app-btn-label { display: none; }
 }
 
 /* ── First-visit install banner ──────────────────────────────── */

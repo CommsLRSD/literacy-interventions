@@ -51,6 +51,178 @@ const PATHWAY_PREFERENCE_KEY = `${STORAGE_KEY_PREFIX}-pathway`;
 let savedPathway = null;
 let restoringPathway = false;
 let appReady = false;
+const PATHWAY_CACHE_NAME = 'literacy-interventions-progress-v1';
+const PATHWAY_CACHE_URL = new URL('./.literacy-interventions-progress.json', window.location.href).href;
+const PATHWAY_SESSION_KEY = `${STORAGE_KEY_PREFIX}-progress-session`;
+let pathwayDefaults = {};
+let pathwayContext = null;
+let pendingPathwayTier = null;
+let progressStorageQueue = Promise.resolve();
+let progressStorageEpoch = 0;
+
+function queueProgressStorage(operation) {
+    progressStorageQueue = progressStorageQueue.catch(() => {}).then(operation);
+    return progressStorageQueue;
+}
+
+async function readProgressStorage() {
+    // Do not revive legacy localStorage progress after browser caches are cleared.
+    try {
+        localStorage.removeItem(PATHWAY_PREFERENCE_KEY);
+        localStorage.removeItem(`${LEGACY_STORAGE_KEY_PREFIX}-pathway`);
+    } catch (e) { /* Storage may be disabled. */ }
+    let raw;
+    try {
+        const cache = await caches.open(PATHWAY_CACHE_NAME);
+        const response = await cache.match(PATHWAY_CACHE_URL);
+        raw = response ? await response.text() : null;
+        sessionStorage.removeItem(PATHWAY_SESSION_KEY);
+    } catch (e) {
+        try { raw = sessionStorage.getItem(PATHWAY_SESSION_KEY); } catch (error) { return null; }
+    }
+    try {
+        const state = raw && raw.length <= 100000 ? JSON.parse(raw) : null;
+        pathwayDefaults = state?.defaults && typeof state.defaults === 'object' ? state.defaults : {};
+        return state?.pathway || null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function persistProgressStorage() {
+    const epoch = progressStorageEpoch;
+    const payload = JSON.stringify({ pathway: savedPathway, defaults: pathwayDefaults });
+    return queueProgressStorage(async () => {
+        if (epoch !== progressStorageEpoch) return;
+        try {
+            const cache = await caches.open(PATHWAY_CACHE_NAME);
+            if (epoch !== progressStorageEpoch) return;
+            await cache.put(PATHWAY_CACHE_URL, new Response(payload, { headers: { 'Content-Type': 'application/json' } }));
+        } catch (e) {
+            if (epoch !== progressStorageEpoch) return;
+            try { sessionStorage.setItem(PATHWAY_SESSION_KEY, payload); } catch (error) { /* Current visit still works. */ }
+        }
+    });
+}
+
+function clearPathwayProgress() {
+    progressStorageEpoch++;
+    savedPathway = null;
+    pathwayContext = null;
+    appState.fullJourney = [];
+    appState.currentTierFlow = null;
+    appState.fwState = null;
+    appState.visualFlowchart = { nodes: [], connections: [], currentNodeId: null, selectedPath: [] };
+    const container = document.getElementById('flowchart-container');
+    if (container) delete container.dataset.initialized;
+    persistProgressStorage();
+    updateGuidedHome();
+}
+
+function getPathwaySetupDefaults() {
+    const stored = pathwayDefaults[appState.selectedProgram] || {};
+    const screeners = (appState.tierFlowchartData?.tier1?.screeners || []).filter(item => isScreenerIdForCurrentProgram(item.id));
+    const screener = screeners.find(item => item.id === stored.screener) || screeners.find(item => item.id === 'dibels') || screeners[0];
+    return { screener: screener?.id || '', grade: GRADE_SORT_ORDER.includes(stored.grade) ? stored.grade : '1',
+        pillar: typeof stored.pillar === 'string' ? stored.pillar : 'Phonics' };
+}
+
+function showPathwaySetup(tierId) {
+    pendingPathwayTier = tierId;
+    const defaults = getPathwaySetupDefaults();
+    const screeners = (appState.tierFlowchartData?.tier1?.screeners || []).filter(item => isScreenerIdForCurrentProgram(item.id));
+    const container = document.getElementById('flowchart-container');
+    if (!container) return;
+    container.classList.remove('flowchart-hidden', 'flowchart-view-hidden');
+    container.style.display = 'block';
+    delete container.dataset.initialized;
+    container.innerHTML = `
+        <section class="integrated-flowchart" aria-labelledby="pathway-setup-title">
+            <div class="step-content">
+                <h2 id="pathway-setup-title" tabindex="-1">${escapeHtml(t('guided_setup_title'))}</h2>
+                <p>${escapeHtml(t('guided_setup_hint'))}</p>
+                <form id="pathway-setup-form" class="fw-controls">
+                    <div class="fw-field">
+                        <label for="pathway-setup-screener">${escapeHtml(t('fc_screener_label'))}</label>
+                        <select id="pathway-setup-screener" class="fw-select" required>
+                            ${screeners.map(item => `<option value="${escapeAttr(item.id)}"${item.id === defaults.screener ? ' selected' : ''}>${escapeHtml(item.name)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="fw-field">
+                        <label for="pathway-setup-grade">${escapeHtml(t('guided_teaching_grade'))}</label>
+                        <select id="pathway-setup-grade" class="fw-select" required>
+                            ${GRADE_SORT_ORDER.map(grade => `<option value="${grade}"${grade === defaults.grade ? ' selected' : ''}>${escapeHtml(translateGrade(grade))}</option>`).join('')}
+                        </select>
+                    </div>
+                    <button type="submit" class="action-btn action-primary"${screeners.length ? '' : ' disabled'}>${escapeHtml(t('guided_setup_confirm'))}</button>
+                    <button type="button" class="action-btn action-secondary" onclick="navigateToPage('home')">${escapeHtml(t('guided_home'))}</button>
+                </form>
+            </div>
+        </section>`;
+    container.querySelector('form').addEventListener('submit', event => {
+        event.preventDefault();
+        confirmPathwaySetup();
+    });
+    navigateToPage('flowchart');
+    document.getElementById('pathway-setup-title')?.focus();
+}
+
+function confirmPathwaySetup() {
+    if (!pendingPathwayTier) return;
+    const screener = (appState.tierFlowchartData?.tier1?.screeners || []).find(item =>
+        item.id === document.getElementById('pathway-setup-screener')?.value && isScreenerIdForCurrentProgram(item.id));
+    const grade = document.getElementById('pathway-setup-grade')?.value;
+    if (!screener || !GRADE_SORT_ORDER.includes(grade)) return;
+    pathwayContext = { program: appState.selectedProgram, screener: screener.id, grade };
+    pathwayDefaults[appState.selectedProgram] = { ...getPathwaySetupDefaults(), screener: screener.id, grade };
+    setRememberedScreener(screener.name);
+    setRememberedMenuFilters({ program: appState.selectedProgram, screener: appState.selectedScreener, grade,
+        pillar: pathwayDefaults[appState.selectedProgram].pillar });
+    appState.currentTierFlow = { screener: screener.id, screenerName: screener.name, grade };
+    const tierId = pendingPathwayTier;
+    pendingPathwayTier = null;
+    initIntegratedFlowchart(tierId);
+    document.getElementById('flowchart-container').dataset.initialized = 'true';
+    navigateToPage('flowchart');
+    requestAnimationFrame(focusActivePathwayStep);
+}
+
+async function hardResetApp() {
+    if (!window.confirm(t('guided_hard_reset_confirm'))) return;
+    appReady = false;
+    pendingPathwayTier = null;
+    pathwayDefaults = {};
+    clearPathwayProgress();
+    closeVisualFlowchartModal({ immediate: true });
+    closeFinalSummaryDialog({ immediate: true });
+    await queueProgressStorage(async () => {
+        for (const storageName of ['localStorage', 'sessionStorage']) {
+            try {
+                const storage = window[storageName];
+                const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index));
+                keys.filter(key => key && (key.startsWith(`${STORAGE_KEY_PREFIX}-`) ||
+                    key.startsWith(`${LEGACY_STORAGE_KEY_PREFIX}-`) || key.startsWith(`${LEGACY_STORAGE_KEY_PREFIX}_`)))
+                    .forEach(key => storage.removeItem(key));
+            } catch (e) { /* Storage may be disabled. */ }
+        }
+        try {
+            const keys = await caches.keys();
+            await Promise.all(keys.filter(key => key === PATHWAY_CACHE_NAME || /^literacy-interventions-v\d+$/.test(key))
+                .map(key => caches.delete(key)));
+        } catch (e) { /* CacheStorage may be unavailable. */ }
+    });
+    appState.selectedProgram = null;
+    appState.selectedScreener = null;
+    appState.language = 'en';
+    appState.rememberedMenuFilters = {};
+    appState.interventionHistory = [];
+    document.getElementById('flowchart-container').innerHTML = '';
+    applyTranslations();
+    updateTopProgramLangControls();
+    appReady = true;
+    navigateToPage('home');
+    updateGuidedHome();
+}
 const SCHEDULE_GRADE_PREFERENCE_KEY = `${STORAGE_KEY_PREFIX}-schedule-grade-preference`;
 const LEGACY_SCHEDULE_GRADE_PREFERENCE_KEY = `${LEGACY_STORAGE_KEY_PREFIX}-schedule-grade-preference`;
 
@@ -172,18 +344,18 @@ function validateTierPathway(raw) {
         layoutMode: normalizeJourneyLayoutMode(raw.layoutMode) };
 }
 
-function readSavedPathway() {
+function readSavedPathway(saved) {
     try {
         if (![PROGRAM_ENGLISH, PROGRAM_FRENCH_IMMERSION].includes(appState.selectedProgram)) return null;
-        const raw = getStoredValue(localStorage, PATHWAY_PREFERENCE_KEY);
-        if (!raw || raw.length > 50000) return null;
-        const saved = JSON.parse(raw);
-        if (saved.version !== 1 || saved.program !== appState.selectedProgram) return null;
+        if (!saved || saved.version !== 2 || saved.program !== appState.selectedProgram) return null;
+        if (saved.context?.program !== saved.program || !GRADE_SORT_ORDER.includes(saved.context?.grade) ||
+            !(appState.tierFlowchartData?.tier1?.screeners || []).some(item =>
+                item.id === saved.context?.screener && isScreenerIdForCurrentProgram(item.id))) return null;
         const current = validateTierPathway(saved.current);
         if (!current) return null;
         const fullJourney = (Array.isArray(saved.fullJourney) ? saved.fullJourney.slice(0, 3) : []).map(validateTierPathway);
         if (fullJourney.some(tier => !tier)) return null;
-        return { version: 1, program: saved.program, current, fullJourney, filters: validatePathwayFilters(saved.filters) };
+        return { version: 2, program: saved.program, context: saved.context, current, fullJourney, filters: validatePathwayFilters(saved.filters) };
     } catch (e) {
         return null;
     }
@@ -191,24 +363,20 @@ function readSavedPathway() {
 
 function validatePathwayFilters(filters) {
     const context = { program: appState.selectedProgram };
-    return Object.fromEntries(['pillar', 'screener'].map(field => [
+    return Object.fromEntries(['pillar', 'screener', 'grade'].map(field => [
         field, distinctTagValues(context, field).includes(filters?.[field]) ? filters[field] : ''
     ]));
 }
 
 function savePathwayProgress() {
     const vf = appState.visualFlowchart;
-    if (restoringPathway || !appState.selectedProgram || !vf?.tierId || !vf.selectedPath.length) return;
+    if (restoringPathway || !pathwayContext || pendingPathwayTier || !appState.selectedProgram || !vf?.tierId || !vf.selectedPath.length) return;
     savedPathway = {
-        version: 1, program: appState.selectedProgram, current: serializeTierPathway(vf),
+        version: 2, program: appState.selectedProgram, context: { ...pathwayContext }, current: serializeTierPathway(vf),
         fullJourney: (appState.fullJourney || []).map(serializeTierPathway),
         filters: validatePathwayFilters(appState.rememberedMenuFilters)
     };
-    try {
-        setStoredValue(localStorage, PATHWAY_PREFERENCE_KEY, JSON.stringify(savedPathway));
-    } catch (e) {
-        // The in-memory pathway still works without browser storage.
-    }
+    persistProgressStorage();
     updateGuidedHome();
 }
 
@@ -237,13 +405,8 @@ function startGuidedPathway(tierId = 'tier1') {
     if (savedPathway && !window.confirm(t('guided_restart_confirm'))) return;
     closeVisualFlowchartModal({ immediate: true });
     appState.visualFlowchartDismissed = false;
-    appState.selectedScreener = null;
-    appState.currentTierFlow = null;
-    setRememberedMenuFilters({ pillar: '', screener: '' });
-    initIntegratedFlowchart(tierId);
-    document.getElementById('flowchart-container').dataset.initialized = 'true';
-    navigateToPage('flowchart');
-    requestAnimationFrame(focusActivePathwayStep);
+    clearPathwayProgress();
+    showPathwaySetup(tierId);
 }
 
 function restorePathway(saved) {
@@ -251,16 +414,17 @@ function restorePathway(saved) {
     if (!current) return false;
     restoringPathway = true;
     try {
+        pathwayContext = { ...saved.context };
         initIntegratedFlowchart(current.tierId);
         setRememberedMenuFilters(validatePathwayFilters(saved.filters));
         appState.visualFlowchart = { ...appState.visualFlowchart, ...current,
             currentNodeId: current.selectedPath[current.selectedPath.length - 1].nodeId,
             lastRenderedActiveNodeId: null };
         appState.fullJourney = (saved.fullJourney || []).map(validateTierPathway).filter(Boolean);
-        const screener = current.choices['tier1-screener'] ||
-            appState.fullJourney.find(tier => tier.tierId === 'tier1')?.choices['tier1-screener'];
-        if (screener) setRememberedScreener(screener.name);
-        else if (appState.rememberedMenuFilters.screener) setRememberedScreener(appState.rememberedMenuFilters.screener);
+        const screener = appState.tierFlowchartData.tier1.screeners.find(item => item.id === pathwayContext.screener);
+        setRememberedScreener(screener.name);
+        appState.currentTierFlow = { screener: screener.id, screenerName: screener.name, grade: pathwayContext.grade };
+        setRememberedMenuFilters({ screener: appState.selectedScreener, grade: pathwayContext.grade });
         const node = getFlowchartDefs()[current.tierId].nodes[appState.visualFlowchart.currentNodeId];
         renderJourney();
         updateCarouselNav();
@@ -504,7 +668,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initialize assessment schedules
     await initializeAssessmentSchedules();
-    savedPathway = readSavedPathway();
+    savedPathway = readSavedPathway(await readProgressStorage());
+    if (!savedPathway && appState.selectedProgram) {
+        const defaults = getPathwaySetupDefaults();
+        setRememberedMenuFilters({ pillar: defaults.pillar, grade: defaults.grade });
+    }
     appReady = true;
     updateGuidedHome();
     
@@ -603,6 +771,12 @@ function updateMobilePageTitle() {
 
 function navigateToPage(pageName) {
     if (pageName === 'flowchart' && (!appReady || !ensureProgramSelectionBeforeInteraction())) return;
+    if (pageName === 'flowchart' && !pathwayContext && !pendingPathwayTier) {
+        if (!savedPathway || !restorePathway(savedPathway)) {
+            startGuidedPathway('tier1');
+            return;
+        }
+    }
 
     // Update state
     appState.currentPage = pageName;
@@ -630,11 +804,11 @@ function navigateToPage(pageName) {
     // Lazy-initialize sections on first visit
     if (pageName === 'flowchart') {
         const fc = document.getElementById('flowchart-container');
-        if (fc && !fc.dataset.initialized) {
+        if (fc && !fc.dataset.initialized && !pendingPathwayTier) {
             if (!savedPathway || !restorePathway(savedPathway)) openInteractiveFlowchart();
             fc.dataset.initialized = 'true';
         }
-        openDefaultVisualFlowchart();
+        if (!pendingPathwayTier) openDefaultVisualFlowchart();
     } else if (pageName === 'interventions') {
         // Every visit re-syncs the filters to whatever was chosen last —
         // here or during a flowchart drilldown — so context always carries over.
@@ -1661,23 +1835,13 @@ const FLOWCHART_DEFINITIONS = {
                     'Is progress being tracked?',
                     'Does Instruction incorporate the simple view of reading?'
                 ],
-                nextNode: 'tier1-screener',
-                buttonText: 'Continue to Literacy Screener'
-            },
-            'tier1-screener': {
-                id: 'tier1-screener',
-                type: 'selection',
-                title: 'Step 2: Literacy Screener',
-                subtitle: '',
-                description: '',
-                options: 'screeners', // Will fetch from tierFlowchartData
                 nextNode: 'tier1-effectiveness',
-                nextHandler: 'selectTier1ScreenerVisual'
+                buttonText: 'Continue to Results'
             },
             'tier1-effectiveness': {
                 id: 'tier1-effectiveness',
                 type: 'decision',
-                title: 'Step 3: Result',
+                title: 'Step 2: Result',
                 subtitle: 'Was instruction effective?',
                 description: '',
                 choices: [
@@ -1695,7 +1859,7 @@ const FLOWCHART_DEFINITIONS = {
             'tier1-percentage': {
                 id: 'tier1-percentage',
                 type: 'decision',
-                title: 'Step 4: Instruction Ineffective',
+                title: 'Step 3: Instruction Ineffective',
                 subtitle: 'What percentage of students are unsuccessful?',
                 description: 'Based on screener results, how many students are below benchmark?',
                 choices: [
@@ -2021,6 +2185,10 @@ function buildTier1GuidanceBlocksHtml(scoresOnclick) {
 
 // Initialize the integrated flowchart (new main interface)
 function initIntegratedFlowchart(tierId) {
+    if (!pathwayContext && !restoringPathway) {
+        startGuidedPathway(tierId);
+        return;
+    }
     const container = document.getElementById('flowchart-container');
     if (!container) return;
     closeFinalSummaryDialog({ immediate: true });
@@ -2159,7 +2327,7 @@ function buildGoToTierStepHtml(tierId, flowchartDef) {
             <h2 class="go-to-tier-heading">${escapeHtml(t('go_to_tier'))} ${num}</h2>
             ${subtitle ? `<p class="go-to-tier-sub">${escapeHtml(subtitle)}</p>` : ''}
             <p class="go-to-tier-note">${escapeHtml(t('go_to_tier_note'))}</p>
-            <button class="action-btn action-primary go-to-tier-btn" onclick="switchToTier('${tierId}')">
+            <button class="action-btn action-primary go-to-tier-btn" onclick="switchToTier('${tierId}', true)">
                 ${escapeHtml(t('continue_to_tier'))} ${num}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </button>
@@ -2195,7 +2363,7 @@ function showGoToTierStep(tierId) {
     const stepsContainer = getActiveStepTarget();
     const flowchartDef = getFlowchartDefs()[tierId];
     if (!stepsContainer || !flowchartDef) {
-        switchToTier(tierId);
+        switchToTier(tierId, true);
         return;
     }
 
@@ -4207,6 +4375,7 @@ function createIntegratedSelectionNode(nodeData) {
             resourceType: itemType,
             pillar: remembered.pillar || '',
             screener: remembered.screener || '',
+            grade: pathwayContext?.grade || remembered.grade || '',
             nodeId: nodeData.id,
             handlerName: nodeData.nextHandler
         };
@@ -4214,7 +4383,7 @@ function createIntegratedSelectionNode(nodeData) {
         // opens scoped to this same drilldown if visited right afterwards.
         setRememberedMenuFilters({ tier: tierNum, program: program });
 
-        const baseState = { tier: tierNum, program: program, resourceType: itemType };
+        const baseState = { tier: tierNum, program: program, resourceType: itemType, grade: appState.fwState.grade };
         const pillarOptionsHtml = buildFacetOptionsHtml(distinctTagValues(baseState, 'pillar'), appState.fwState.pillar, translatePillar);
         const screenerOptionsHtml = buildFacetOptionsHtml(distinctTagValues({ ...baseState, pillar: appState.fwState.pillar }, 'screener'), appState.fwState.screener);
 
@@ -4354,8 +4523,8 @@ function fwLoadResults() {
     const resultsEl = document.getElementById('fw-results');
     if (!resultsEl) return;
 
-    const { tier, program, resourceType, pillar, screener } = appState.fwState;
-    const wizardState = { tier, program, resourceType, pillar, screener };
+    const { tier, program, resourceType, pillar, screener, grade } = appState.fwState;
+    const wizardState = { tier, program, resourceType, pillar, screener, grade };
     const filtered = getFilteredResources(wizardState, null);
 
     if (filtered.length === 0) {
@@ -4853,7 +5022,11 @@ function renderTierTabsHtml(tierId, extraClass = '') {
         </div>`;
 }
 
-function switchToTier(tierId) {
+function switchToTier(tierId, continuing = false) {
+    if (!pathwayContext || !continuing) {
+        startGuidedPathway(tierId);
+        return;
+    }
     // Update tab states
     document.querySelectorAll('.tier-tab').forEach(tab => {
         const isActive = tab.dataset.tier === tierId;
@@ -4997,10 +5170,6 @@ const NODE_SUMMARIES = {
     'tier1-principles': {
         text: 'You confirmed that classroom instruction follows the principles of explicit and systematic teaching — the foundation is solid! 📚',
         variant: 'step1'
-    },
-    'tier1-screener': {
-        text: (choice) => `You administered the ${choice || 'literacy screener'} to measure where students are right now. Time to look at the data! 📊`,
-        variant: 'selection'
     },
     'tier1-effectiveness': {
         effective:   { text: 'The literacy screener came back Blue or Green — this student is on track and instruction is working! 🎉', variant: 'effective' },
@@ -5645,7 +5814,7 @@ function buildStepReviewContent(nodeDef, choice) {
 
 // Restart current tier
 function restartCurrentTier() {
-    initIntegratedFlowchart('tier1');
+    startGuidedPathway(appState.visualFlowchart?.tierId || 'tier1');
 }
 
 // Close integrated flowchart
@@ -5666,12 +5835,11 @@ function startTier3VisualIntegrated() {
 }
 
 function restartTier1VisualIntegrated() {
-    appState.fullJourney = [];
-    switchToTier('tier1');
+    startGuidedPathway('tier1');
 }
 
 function restartTier2VisualIntegrated() {
-    switchToTier('tier2');
+    switchToTier('tier2', true);
 }
 
 // Called from the visual pathway's "review before continuing" card. Only at
@@ -5682,7 +5850,7 @@ function confirmVisualFlowchartTierTransition() {
     const tierId = vf?.pendingTierTransition;
     if (!tierId) return;
     vf.pendingTierTransition = null;
-    switchToTier(tierId);
+    switchToTier(tierId, true);
 }
 
 // Handler functions for integrated tier 1
@@ -5737,7 +5905,7 @@ function selectTier3InterventionVisualIntegrated(nodeId, interventionId, interve
 // Initialize the visual flowchart (legacy - kept for backwards compatibility)
 function initVisualFlowchart(tierId) {
     // Redirect to integrated flowchart
-    initIntegratedFlowchart(tierId);
+    startGuidedPathway(tierId);
 }
 
 // Show a flowchart node with animation
@@ -6525,31 +6693,22 @@ function selectTier3InterventionVisual(nodeId, interventionId, interventionName)
 
 // Action handlers for endpoint buttons
 function startTier2Visual() {
-    closeVisualFlowchart();
-    setTimeout(() => {
-        initVisualFlowchart('tier2');
-    }, 300);
+    if (pathwayContext) showGoToTierStep('tier2');
+    else startGuidedPathway('tier2');
 }
 
 function startTier3Visual() {
-    closeVisualFlowchart();
-    setTimeout(() => {
-        initVisualFlowchart('tier3');
-    }, 300);
+    if (pathwayContext) showGoToTierStep('tier3');
+    else startGuidedPathway('tier3');
 }
 
 function restartTier1Visual() {
-    closeVisualFlowchart();
-    setTimeout(() => {
-        initVisualFlowchart('tier1');
-    }, 300);
+    startGuidedPathway('tier1');
 }
 
 function restartTier2Visual() {
-    closeVisualFlowchart();
-    setTimeout(() => {
-        initVisualFlowchart('tier2');
-    }, 300);
+    if (pathwayContext) switchToTier('tier2', true);
+    else startGuidedPathway('tier2');
 }
 
 // ============================================
@@ -7682,22 +7841,7 @@ function updateScreenerIndicator() {
 }
 
 function openInteractiveFlowchart() {
-    console.log('Opening Interactive Flowchart');
-    if (!ensureProgramSelectionBeforeInteraction()) return;
-    
-    // Show and initialize the flowchart container
-    const flowchartContainer = document.getElementById('flowchart-container');
-    if (flowchartContainer) {
-        flowchartContainer.classList.remove('flowchart-view-hidden');
-        flowchartContainer.style.display = 'block';
-    }
-    
-    initIntegratedFlowchart('tier1');
-    
-    // Scroll to the top of the flowchart
-    if (flowchartContainer) {
-        flowchartContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    startGuidedPathway('tier1');
 }
 
 // Screener ids (as used in data/tier-flowcharts.json) that are only offered
@@ -7745,13 +7889,9 @@ function requestFlowchartProgramChange(program, options = {}) {
             return;
         }
     }
-    savedPathway = null;
+    pendingPathwayTier = null;
+    clearPathwayProgress();
     setRememberedMenuFilters({ pillar: '', screener: '' });
-    try {
-        localStorage.removeItem(PATHWAY_PREFERENCE_KEY);
-    } catch (e) {
-        // Program changes also work when storage is disabled.
-    }
     closeVisualFlowchartModal({ immediate: true });
     const lang = program === PROGRAM_FRENCH_IMMERSION ? (appState.language === 'fr' ? 'fr' : 'en') : 'en';
     finalizeProgramSelection(program, lang);
@@ -8074,6 +8214,10 @@ function getAllResources() {
 // drilldown — so the other one can pre-fill from the same context.
 function setRememberedMenuFilters(partial) {
     appState.rememberedMenuFilters = { ...(appState.rememberedMenuFilters || {}), ...partial };
+    if (appReady && appState.selectedProgram && Object.hasOwn(partial, 'pillar') && typeof partial.pillar === 'string' && partial.pillar) {
+        pathwayDefaults[appState.selectedProgram] = { ...getPathwaySetupDefaults(), pillar: partial.pillar };
+        persistProgressStorage();
+    }
 }
 
 // A single tag matches `state` when every tier/pillar/resourceType/screener/
@@ -9794,11 +9938,11 @@ function rememberInstallBannerDismissed() {
     }
 }
 
-// Reveal (or hide) the Install App button in the top navigation.
+// Reveal (or hide) the desktop and mobile menu install actions.
 function setInstallButtonVisible(visible) {
-    const btn = document.getElementById('install-app-btn');
-    if (!btn) return;
-    btn.hidden = !visible;
+    document.querySelectorAll('#install-app-btn, #mobile-install-app-btn').forEach(btn => {
+        btn.hidden = !visible;
+    });
 }
 
 // Show the first-visit banner, unless it was dismissed or the app is installed.
@@ -9923,12 +10067,17 @@ function handleInstallModalKeydown(event) {
 // ── Wiring ──────────────────────────────────────────────────────────
 function setupPwaInstall() {
     const installBtn = document.getElementById('install-app-btn');
+    const mobileInstallBtn = document.getElementById('mobile-install-app-btn');
     const bannerInstallBtn = document.getElementById('install-banner-install');
     const bannerDismissBtn = document.getElementById('install-banner-dismiss');
     const modalCloseBtn = document.getElementById('install-modal-close');
     const modalDoneBtn = document.getElementById('install-modal-done');
 
     if (installBtn) installBtn.addEventListener('click', triggerInstall);
+    if (mobileInstallBtn) mobileInstallBtn.addEventListener('click', () => {
+        closeMobileMenu();
+        triggerInstall();
+    });
     if (bannerInstallBtn) {
         bannerInstallBtn.addEventListener('click', () => {
             hideInstallBanner(true);

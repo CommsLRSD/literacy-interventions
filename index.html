@@ -187,6 +187,11 @@
                     </select>
                 </label>
             </div>
+            <button class="mobile-nav-item install-app-menu-btn" id="mobile-install-app-btn" type="button" hidden
+                    aria-label="Install app" data-i18n-aria="install_btn_label">
+                <span class="material-symbols-rounded" aria-hidden="true" translate="no">install_mobile</span>
+                <span data-i18n="install_btn">Install App</span>
+            </button>
         </div>
     </div>
 
@@ -230,8 +235,9 @@
                             </button>
                             <button type="button" class="guided-primary-btn" id="home-resume-btn" onclick="resumeGuidedPathway()" hidden data-i18n="guided_resume">Continue my guided process</button>
                             <button type="button" class="guided-secondary-btn" id="home-restart-btn" onclick="startGuidedPathway('tier1')" hidden data-i18n="guided_restart">Start again</button>
+                            <button type="button" class="guided-secondary-btn" id="home-hard-reset-btn" onclick="hardResetApp()" data-i18n="guided_hard_reset">Hard reset: clear saved data &amp; app caches</button>
                         </div>
-                        <p class="home-progress-privacy" data-i18n="guided_progress_privacy">Your catalog choices and checklist progress are saved on this device. No student details are saved.</p>
+                        <p class="home-progress-privacy" data-i18n="guided_progress_privacy">Your catalog choices and checklist progress are saved in this app’s browser cache on this device. Clearing browser caches or using Hard reset clears guided progress. A reload does not reset progress. No student details are saved in guided progress.</p>
                         <button type="button" class="home-resource-shortcut" onclick="navigateToPage('interventions')" data-i18n="guided_resource_shortcut">I’m looking for a specific teaching resource</button>
                     </div>
                     <div class="hero-photo-wrap" aria-hidden="true">

@@ -67,7 +67,13 @@ const TRANSLATIONS = {
         guided_continue: 'Continue',
         guided_restart: 'Start again',
         guided_resume: 'Continue my guided process',
-        guided_progress_privacy: 'Your catalog choices and checklist progress are saved on this device. No student details are saved.',
+        guided_progress_privacy: 'Your catalog choices and checklist progress are saved in this app’s browser cache on this device (for this visit only if cache storage is unavailable). Clearing browser caches or using Hard reset clears guided progress. A reload does not reset progress. No student details are saved in guided progress.',
+        guided_setup_title: 'Confirm your screener and teaching grade',
+        guided_setup_hint: 'Check these settings before starting any tier. Your saved defaults are preselected; confirm them again for every fresh start.',
+        guided_teaching_grade: 'Teaching grade',
+        guided_setup_confirm: 'Confirm settings and start',
+        guided_hard_reset: 'Hard reset: clear saved data & app caches',
+        guided_hard_reset_confirm: 'Clear all saved app progress, defaults, selection history, and app caches on this device? This cannot be undone. Other websites’ data will not be touched.',
         guided_return: 'Return to my next step',
         guided_home: 'Back to overview',
         guided_return_hint: 'Your guided process is still available.',
@@ -469,7 +475,13 @@ const TRANSLATIONS = {
         guided_continue: 'Continuer',
         guided_restart: 'Recommencer',
         guided_resume: 'Poursuivre ma démarche guidée',
-        guided_progress_privacy: 'Vos choix dans le catalogue et votre progression dans les listes de contrôle sont enregistrés sur cet appareil. Aucun renseignement sur les élèves n’est enregistré.',
+        guided_progress_privacy: 'Vos choix et votre progression sont enregistrés dans le cache de cette application sur cet appareil (pour cette visite seulement si le cache est indisponible). Effacer le cache du navigateur ou utiliser la réinitialisation complète efface la progression. Recharger la page ne la réinitialise pas. Aucun renseignement sur les élèves n’est enregistré dans la démarche guidée.',
+        guided_setup_title: 'Confirmez votre outil de dépistage et votre niveau scolaire',
+        guided_setup_hint: 'Vérifiez ces réglages avant de commencer un palier. Vos valeurs enregistrées sont présélectionnées; confirmez-les à chaque nouvelle démarche.',
+        guided_teaching_grade: 'Niveau scolaire enseigné',
+        guided_setup_confirm: 'Confirmer et commencer',
+        guided_hard_reset: 'Réinitialisation complète : effacer les données et les caches',
+        guided_hard_reset_confirm: 'Effacer la progression, les valeurs par défaut, l’historique et les caches de cette application sur cet appareil? Cette action est irréversible. Les données des autres sites ne seront pas modifiées.',
         guided_return: 'Revenir à ma prochaine étape',
         guided_home: 'Retour à l’aperçu',
         guided_return_hint: 'Votre démarche guidée est toujours disponible.',
@@ -834,23 +846,13 @@ const FLOWCHART_DEFINITIONS_FR = {
                     'Les progr\u00e8s sont-ils suivis\u00a0?',
                     'L\u2019enseignement int\u00e8gre-t-il la conception simple de la lecture\u00a0?'
                 ],
-                nextNode: 'tier1-screener',
-                buttonText: 'Continuer vers le d\u00e9pistage en litt\u00e9ratie'
-            },
-            'tier1-screener': {
-                id: 'tier1-screener',
-                type: 'selection',
-                title: '\u00c9tape 2\u00a0: D\u00e9pistage en litt\u00e9ratie',
-                subtitle: '',
-                description: '',
-                options: 'screeners',
                 nextNode: 'tier1-effectiveness',
-                nextHandler: 'selectTier1ScreenerVisual'
+                buttonText: 'Continuer vers les résultats'
             },
             'tier1-effectiveness': {
                 id: 'tier1-effectiveness',
                 type: 'decision',
-                title: '\u00c9tape 3\u00a0: R\u00e9sultat',
+                title: '\u00c9tape 2\u00a0: R\u00e9sultat',
                 subtitle: 'L\u2019enseignement \u00e9tait-il efficace\u00a0?',
                 description: '',
                 choices: [
@@ -868,7 +870,7 @@ const FLOWCHART_DEFINITIONS_FR = {
             'tier1-percentage': {
                 id: 'tier1-percentage',
                 type: 'decision',
-                title: 'Voie B\u00a0: Enseignement inefficace',
+                title: '\u00c9tape 3\u00a0: Enseignement inefficace',
                 subtitle: 'Quel pourcentage d\u2019\u00e9l\u00e8ves est en difficult\u00e9\u00a0?',
                 description: 'D\u2019apr\u00e8s les r\u00e9sultats du d\u00e9pistage, combien d\u2019\u00e9l\u00e8ves sont en dessous du niveau de r\u00e9f\u00e9rence\u00a0?',
                 choices: [
