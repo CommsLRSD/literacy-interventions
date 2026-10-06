@@ -4100,15 +4100,36 @@ details > p {
   margin-bottom: var(--space-md);
 }
 
-.pathway-setup {
+.integrated-flowchart.pathway-setup {
   max-width: 640px;
   margin-inline: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-lg);
+}
+
+.pathway-setup .step-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.pathway-setup .step-content > h2,
+.pathway-setup .step-content > p {
+  margin: 0;
+}
+
+.pathway-setup .step-content > p {
+  line-height: 1.6;
 }
 
 .pathway-setup .fw-wizard-selects {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-md);
+  margin: 0;
 }
 
 .pathway-setup-actions {
@@ -4116,6 +4137,7 @@ details > p {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);
+  margin-top: var(--space-sm);
 }
 
 .pathway-context {

@@ -205,6 +205,7 @@ function confirmPathwaySetup() {
 async function hardResetApp() {
     if (!appReady) return;
     if (!window.confirm(t('guided_hard_reset_confirm'))) return;
+    closeMobileMenu();
     appReady = false;
     pendingPathwayTier = null;
     pathwayDefaults = {};
@@ -418,8 +419,9 @@ function updateGuidedHome() {
         start.hidden = hasPath;
         start.disabled = !appReady;
     }
-    const reset = document.getElementById('home-hard-reset-btn');
-    if (reset) reset.disabled = !appReady;
+    document.querySelectorAll('.menu-hard-reset').forEach(reset => {
+        reset.disabled = !appReady;
+    });
     const status = document.getElementById('home-program-status');
     if (status) status.textContent = appState.selectedProgram ? '' : t('guided_choose_program_hint');
     const banner = document.getElementById('pathway-return-banner');
@@ -765,7 +767,7 @@ async function loadInterventionMenuData() {
 // ============================================
 function setupNavigation() {
     // Desktop navigation
-    document.querySelectorAll('.nav-link').forEach(link => {
+    document.querySelectorAll('.nav-link[data-page]').forEach(link => {
         link.addEventListener('click', (e) => {
             const page = e.currentTarget.dataset.page;
             navigateToPage(page);
