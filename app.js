@@ -236,6 +236,7 @@ function startGuidedPathway(tierId = 'tier1') {
     if (!appReady || !['tier1', 'tier2', 'tier3'].includes(tierId) || !ensureProgramSelectionBeforeInteraction()) return;
     if (savedPathway && !window.confirm(t('guided_restart_confirm'))) return;
     closeVisualFlowchartModal({ immediate: true });
+    appState.visualFlowchartDismissed = false;
     appState.selectedScreener = null;
     appState.currentTierFlow = null;
     setRememberedMenuFilters({ pillar: '', screener: '' });
@@ -2668,6 +2669,7 @@ function ensureActiveStepPresent(activeNode, direction = 'forward') {
 }
 
 // Switch between 'standard' (vertical list) and 'horizontal' (bubble track) layout modes.
+// While STANDARD_VIEW_ENABLED is false, a 'standard' request becomes 'horizontal'.
 // Part of the "Your Decisions" view switcher (summary / visual pathway; the
 // standard button is hidden while STANDARD_VIEW_ENABLED is false).
 function setJourneyLayoutMode(mode) {
@@ -2772,7 +2774,7 @@ function renderVisualFlowchartHeaderControlsHtml() {
 // Leave the visual pathway and switch the "Your Decisions" panel to the
 // requested layout mode (called from the modal header's view switcher).
 function switchVisualFlowchartToLayout(mode) {
-    closeVisualFlowchartModal();
+    dismissVisualFlowchartModal();
     setJourneyLayoutMode(mode);
 }
 
@@ -2787,7 +2789,7 @@ function isVisualFlowchartMobile() {
 // The visual pathway is the default view on desktop: open it whenever the
 // flowchart page is shown there, unless it is already open.
 function openDefaultVisualFlowchart() {
-    if (appState.currentPage !== 'flowchart' || appState.visualFlowchartModal) return;
+    if (appState.currentPage !== 'flowchart' || appState.visualFlowchartModal || appState.visualFlowchartDismissed) return;
     if (!appState.visualFlowchart?.tierId || isVisualFlowchartMobile()) return;
     openVisualFlowchartModal();
 }
@@ -2815,13 +2817,15 @@ function updateVisualFlowchartMobileLayout() {
 
 function lockVisualFlowchartLandscape(modal) {
     if (!isVisualFlowchartMobile() || !window.matchMedia('(pointer: coarse)').matches) return;
+    const state = appState.visualFlowchartModal;
     const lock = () => {
-        if (!appState.visualFlowchartModal) return;
+        if (appState.visualFlowchartModal !== state) return;
         try {
             const result = screen.orientation?.lock?.('landscape');
             if (result && typeof result.then === 'function') {
                 result.then(() => {
-                    if (appState.visualFlowchartModal) appState.visualFlowchartModal.orientationLocked = true;
+                    // Release straight away if the pathway closed while the lock was pending.
+                    if (appState.visualFlowchartModal !== state) screen.orientation?.unlock?.();
                 }).catch(() => {});
             }
         } catch (e) {
@@ -2836,6 +2840,7 @@ function lockVisualFlowchartLandscape(modal) {
 }
 
 function openVisualFlowchartModal() {
+    appState.visualFlowchartDismissed = false;
     closeVisualFlowchartModal({ immediate: true });
     // Drop any earlier modal still fading out so it cannot overlap the new one.
     document.querySelectorAll('.visual-flowchart-modal').forEach(element => element.remove());
@@ -2858,7 +2863,7 @@ function openVisualFlowchartModal() {
                     <button class="visual-flowchart-fullscreen-btn" id="visual-flowchart-fullscreen-btn" type="button" onclick="toggleVisualFlowchartFullscreen()" aria-label="${escapeHtml(t('fc_visual_fullscreen'))}" title="${escapeHtml(t('fc_visual_fullscreen'))}">
                         <span class="material-symbols-rounded" aria-hidden="true" translate="no">fullscreen</span>
                     </button>
-                    <button class="visual-flowchart-close" type="button" onclick="closeVisualFlowchartModal()" aria-label="${escapeHtml(t('fc_visual_close'))}">
+                    <button class="visual-flowchart-close" type="button" onclick="dismissVisualFlowchartModal()" aria-label="${escapeHtml(t('fc_visual_close'))}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
                 </div>
@@ -2913,7 +2918,7 @@ function openVisualFlowchartModal() {
                 setVisualFlowchartGuidanceOpen(false, { restoreFocus: true });
                 return;
             }
-            closeVisualFlowchartModal();
+            dismissVisualFlowchartModal();
             return;
         }
         if (event.key === 'Tab') {
@@ -2965,6 +2970,14 @@ function openVisualFlowchartModal() {
     });
 }
 
+// The user chose to leave the pathway (close button, Escape, or the view
+// switcher), so don't reopen it automatically when they come back to the
+// flowchart; starting a new guided process restores the default.
+function dismissVisualFlowchartModal() {
+    appState.visualFlowchartDismissed = true;
+    closeVisualFlowchartModal();
+}
+
 function closeVisualFlowchartModal(options = {}) {
     const modal = document.getElementById('visual-flowchart-modal');
     if (!modal) return;
@@ -2986,7 +2999,7 @@ function closeVisualFlowchartModal(options = {}) {
         window.removeEventListener('resize', modalState.resizeHandler);
         window.removeEventListener('orientationchange', modalState.resizeHandler);
     }
-    if (modalState?.orientationLocked) {
+    if (modalState?.mobile) {
         try { screen.orientation?.unlock?.(); } catch (e) { /* nothing to unlock */ }
     }
     if (modalState?.fullscreenHandler) document.removeEventListener('fullscreenchange', modalState.fullscreenHandler);
@@ -3048,8 +3061,8 @@ function updateVisualFlowchartTierBar() {
     bar.hidden = false;
     const tierLabel = tierDef.title.split(':')[0].trim();
     const tierName = getTierName(tierDef.title);
-    const guidanceOpen = tierId === 'tier1' && !!appState.visualFlowchartModal?.guidanceOpen;
-    if (appState.visualFlowchartModal && !guidanceOpen) appState.visualFlowchartModal.guidanceOpen = false;
+    if (tierId !== 'tier1' && appState.visualFlowchartModal) appState.visualFlowchartModal.guidanceOpen = false;
+    const guidanceOpen = !!appState.visualFlowchartModal?.guidanceOpen;
     bar.innerHTML = `
         <span class="visual-flowchart-tier-bar-chip">${escapeHtml(tierLabel)}</span>
         <span class="visual-flowchart-tier-bar-name">${escapeHtml(tierName)}</span>
