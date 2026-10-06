@@ -7527,7 +7527,7 @@ body.step-review-modal-open { overflow: hidden; }
 }
 
 /* ====================================================================
-   DESKTOP VISUAL PATHWAY MODAL
+   VISUAL PATHWAY MODAL (desktop, plus a compact landscape mobile layout)
    ==================================================================== */
 
   .layout-toggle-btn-visual .material-symbols-rounded {
@@ -8098,11 +8098,171 @@ body.step-review-modal-open { overflow: hidden; }
     to { opacity: 1; transform: none; }
   }
 
-  @media (max-width: 768px) {
-      #visual-flowchart-open-btn {
-        display: none !important;
-      }
-    }
+  /* Tier 1 "effective or ineffective?" guidance: a button in the tier bar that
+     opens the same content as the summary view's sidebar as a popup. */
+  .visual-flowchart-tier-bar {
+    position: relative;
+    z-index: 2;
+  }
+
+  .visual-flowchart-guidance {
+    position: relative;
+    flex: 0 0 auto;
+  }
+
+  .visual-flowchart-guidance-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px 0 9px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--bg);
+    color: var(--step-text);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .visual-flowchart-guidance-btn .material-symbols-rounded {
+    font-size: 18px;
+    color: var(--tier-1, #5eb892);
+  }
+
+  .visual-flowchart-guidance-btn:hover,
+  .visual-flowchart-guidance-btn[aria-expanded="true"] {
+    border-color: var(--step);
+    background: var(--step-bg);
+  }
+
+  .visual-flowchart-guidance-popup.tier1-success-sidebar {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 5;
+    width: min(380px, 90vw);
+    max-height: min(70vh, 560px);
+    overflow-y: auto;
+    padding: var(--space-md) var(--space-lg) var(--space-lg);
+    text-align: left;
+  }
+
+  .visual-flowchart-guidance-popup[hidden] {
+    display: none;
+  }
+
+  .visual-flowchart-guidance-popup .tier1-success-sidebar-head h3 {
+    flex: 1 1 auto;
+    font-size: 1.05rem;
+  }
+
+  .visual-flowchart-guidance-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .visual-flowchart-guidance-close svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* ---------- Mobile visual pathway (always landscape) ----------
+     JS sets --vf-screen-w/--vf-screen-h to the window size. On phones held
+     upright (where the screen orientation can't be locked) the dialog is
+     rotated a quarter turn so the pathway is still shown in landscape. */
+  .visual-flowchart-modal.visual-flowchart-mobile {
+    --vf-dialog-h: var(--vf-screen-h, 100vh);
+  }
+
+  .visual-flowchart-modal.visual-flowchart-rotated {
+    --vf-dialog-h: var(--vf-screen-w, 100vw);
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-dialog {
+    width: var(--vf-screen-w, 100vw);
+    height: var(--vf-screen-h, 100vh);
+  }
+
+  .visual-flowchart-modal.visual-flowchart-rotated .visual-flowchart-dialog {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--vf-screen-h, 100vh);
+    height: var(--vf-screen-w, 100vw);
+    transform-origin: top left;
+    transform: translateX(var(--vf-screen-w, 100vw)) rotate(90deg);
+    transition: none;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-header {
+    gap: 8px;
+    padding: 4px 10px;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-header p,
+  .visual-flowchart-mobile .visual-flowchart-tier-bar-chip,
+  .visual-flowchart-mobile .visual-flowchart-tier-bar-name,
+  .visual-flowchart-mobile .visual-flowchart-guidance-btn-label,
+  .visual-flowchart-mobile #visual-flowchart-zoom-value {
+    display: none;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-header h2 {
+    font-size: 0.95rem;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-header-controls {
+    min-width: 0;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-close,
+  .visual-flowchart-mobile .visual-flowchart-fullscreen-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-tier-bar {
+    gap: 8px;
+    padding: 4px 10px;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-tier-bar-info {
+    gap: 6px;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-toolbar {
+    gap: 5px;
+    padding-left: 8px;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-toolbar button,
+  .visual-flowchart-mobile .visual-flowchart-guidance-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-guidance-btn {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-guidance-popup.tier1-success-sidebar {
+    max-height: calc(var(--vf-dialog-h) - 96px);
+    padding: var(--space-sm) var(--space-md) var(--space-md);
+  }
 
   @media (prefers-reduced-motion: reduce) {
     .visual-flowchart-modal,
@@ -10009,7 +10169,8 @@ body.step-review-modal-open { overflow: hidden; }
 
 /* ====================================================================
    LAYOUT TOGGLE GROUP — "Your Decisions" panel header
-   Three-way icon toggle: standard list, summary bubbles, visual pathway.
+   Icon toggle: summary bubbles and visual pathway (the standard list
+   button is currently disabled via STANDARD_VIEW_ENABLED in app.js).
    ==================================================================== */
 
 .layout-toggle-group {
