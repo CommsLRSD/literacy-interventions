@@ -6842,17 +6842,6 @@ body.step-review-modal-open { overflow: hidden; }
     max-width: 100%;
   }
 
-  /* The tier-1 success layout uses a 3-column grid with a wide fixed-width
-     centre column; collapse it to a single stacked column on mobile so the
-     summary/question area never dictates the viewport width. */
-  .journey-shell-tier1 {
-    display: block;
-    width: 100%;
-  }
-  .journey-shell-tier1 .journey-map {
-    width: 100%;
-  }
-
   /* Horizontal step-summary track: keep it (and everything below it) locked
      to the viewport width. Only the track itself scrolls sideways; the
      question area beneath it stays static and fully on-screen. */
@@ -6911,6 +6900,16 @@ body.step-review-modal-open { overflow: hidden; }
   .flowchart-glass-header .flowchart-screener-indicator {
     justify-self: center;
     justify-content: center;
+  }
+  .flowchart-glass-header-end {
+    justify-self: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .flowchart-glass-header .tier1-guidance-popup.tier1-success-sidebar {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   .tier-selection { gap: var(--space-sm); }
@@ -8098,99 +8097,15 @@ body.step-review-modal-open { overflow: hidden; }
     to { opacity: 1; transform: none; }
   }
 
-  /* Tier 1 "effective or ineffective?" guidance: a button in the tier bar that
-     opens the same content as the summary view's sidebar as a popup. */
   .visual-flowchart-tier-bar {
     position: relative;
     z-index: 2;
-  }
-
-  .visual-flowchart-guidance {
-    position: relative;
-    flex: 0 0 auto;
-  }
-
-  .visual-flowchart-guidance-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    height: 32px;
-    padding: 0 12px 0 9px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-pill);
-    background: var(--bg);
-    color: var(--step-text);
-    font: inherit;
-    font-size: 0.8rem;
-    font-weight: 800;
-    white-space: nowrap;
-    cursor: pointer;
-  }
-
-  .visual-flowchart-guidance-btn .material-symbols-rounded {
-    font-size: 18px;
-    color: var(--tier-1, #5eb892);
-  }
-
-  .visual-flowchart-guidance-btn:hover,
-  .visual-flowchart-guidance-btn[aria-expanded="true"] {
-    border-color: var(--step);
-    background: var(--step-bg);
-  }
-
-  .visual-flowchart-guidance-popup.tier1-success-sidebar {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: 0;
-    z-index: 5;
-    width: min(380px, 90vw);
-    max-height: min(70vh, 560px);
-    overflow-y: auto;
-    padding: var(--space-md) var(--space-lg) var(--space-lg);
-    text-align: left;
-  }
-
-  .visual-flowchart-guidance-popup[hidden] {
-    display: none;
-  }
-
-  .visual-flowchart-guidance-popup .tier1-success-sidebar-head h3 {
-    flex: 1 1 auto;
-    font-size: 1.05rem;
-  }
-
-  .visual-flowchart-guidance-close {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 auto;
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    background: var(--bg);
-    color: var(--text-secondary);
-    cursor: pointer;
-  }
-
-  .visual-flowchart-guidance-close svg {
-    width: 15px;
-    height: 15px;
   }
 
   /* ---------- Mobile visual pathway (always landscape) ----------
      JS sets --vf-screen-w/--vf-screen-h to the window size. On phones held
      upright (where the screen orientation can't be locked) the dialog is
      rotated a quarter turn so the pathway is still shown in landscape. */
-  .visual-flowchart-modal.visual-flowchart-mobile {
-    --vf-dialog-h: var(--vf-screen-h, 100vh);
-  }
-
-  .visual-flowchart-modal.visual-flowchart-rotated {
-    --vf-dialog-h: var(--vf-screen-w, 100vw);
-  }
-
   .visual-flowchart-mobile .visual-flowchart-dialog {
     width: var(--vf-screen-w, 100vw);
     height: var(--vf-screen-h, 100vh);
@@ -8207,61 +8122,166 @@ body.step-review-modal-open { overflow: hidden; }
     transition: none;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-header {
-    gap: 8px;
-    padding: 4px 10px;
+  /* Desktop: the header and tier bar sit in the dialog grid as normal; the
+     drawer wrapper, its menu button and scrim only take effect on mobile. */
+  .visual-flowchart-chrome {
+    display: contents;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-header p,
-  .visual-flowchart-mobile .visual-flowchart-tier-bar-chip,
-  .visual-flowchart-mobile .visual-flowchart-tier-bar-name,
-  .visual-flowchart-mobile .visual-flowchart-guidance-btn-label,
-  .visual-flowchart-mobile #visual-flowchart-zoom-value {
+  .visual-flowchart-drawer-toggle,
+  .visual-flowchart-drawer-scrim {
     display: none;
   }
 
+  /* Mobile: the whole screen is the pathway canvas. The header and tier bar
+     move into a slide-out drawer opened from a small floating menu button. */
+  .visual-flowchart-mobile .visual-flowchart-dialog {
+    display: block;
+    position: relative;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-viewport {
+    position: absolute;
+    inset: 0;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-drawer-toggle {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 6;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--bg);
+    color: var(--step-text);
+    box-shadow: var(--shadow-md, 0 4px 14px rgba(5, 20, 37, 0.18));
+    cursor: pointer;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-drawer-toggle .material-symbols-rounded {
+    font-size: 22px;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-drawer-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 7;
+    display: block;
+    background: rgba(8, 23, 40, 0.42);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+  }
+
+  .visual-flowchart-mobile.visual-flowchart-drawer-open .visual-flowchart-drawer-scrim {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-chrome {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 8;
+    display: flex;
+    flex-direction: column;
+    width: min(340px, 88%);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--bg);
+    box-shadow: 8px 0 28px rgba(5, 20, 37, 0.24);
+    transform: translateX(-104%);
+    visibility: hidden;
+    transition: transform 0.2s ease, visibility 0s linear 0.2s;
+  }
+
+  .visual-flowchart-mobile.visual-flowchart-drawer-open .visual-flowchart-chrome {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.2s ease;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-header {
+    position: relative;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-header-text {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding-right: 84px;
+  }
+
   .visual-flowchart-mobile .visual-flowchart-header h2 {
-    font-size: 0.95rem;
+    font-size: 1.05rem;
+    white-space: normal;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-header p {
+    white-space: normal;
   }
 
   .visual-flowchart-mobile .visual-flowchart-header-controls {
+    justify-content: flex-start;
     min-width: 0;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-close,
-  .visual-flowchart-mobile .visual-flowchart-fullscreen-btn {
-    width: 32px;
-    height: 32px;
+  /* Full screen + close stay in the drawer's top-right corner. */
+  .visual-flowchart-mobile .visual-flowchart-header-actions {
+    position: absolute;
+    top: 12px;
+    right: 12px;
   }
 
   .visual-flowchart-mobile .visual-flowchart-tier-bar {
-    gap: 8px;
-    padding: 4px 10px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 0;
   }
 
   .visual-flowchart-mobile .visual-flowchart-tier-bar-info {
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+  }
+
+  .visual-flowchart-mobile .visual-flowchart-tier-tabs {
+    margin-left: 0;
   }
 
   .visual-flowchart-mobile .visual-flowchart-toolbar {
-    gap: 5px;
-    padding-left: 8px;
+    margin-left: 0;
+    padding-top: 12px;
+    padding-left: 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-toolbar button,
-  .visual-flowchart-mobile .visual-flowchart-guidance-btn {
-    width: 30px;
-    height: 30px;
+  /* In the drawer the guidance opens inline, below its button. */
+  .visual-flowchart-mobile .tier1-guidance {
+    flex-basis: 100%;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-guidance-btn {
-    justify-content: center;
-    padding: 0;
-  }
-
-  .visual-flowchart-mobile .visual-flowchart-guidance-popup.tier1-success-sidebar {
-    max-height: calc(var(--vf-dialog-h) - 96px);
+  .visual-flowchart-mobile .tier1-guidance-popup.tier1-success-sidebar {
+    position: static;
+    width: auto;
+    max-height: none;
+    margin-top: 8px;
     padding: var(--space-sm) var(--space-md) var(--space-md);
+    box-shadow: none;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -8612,30 +8632,6 @@ body.step-review-modal-open { overflow: hidden; }
   padding: var(--space-lg) 0;
 }
 
-.journey-shell-tier1 {
-  display: grid;
-  grid-template-columns: minmax(280px, 340px) minmax(34rem, 760px) minmax(0, 340px);
-  gap: var(--space-lg);
-  align-items: start;
-  justify-content: center;
-  width: 100%;
-}
-
-/* Spacer pseudo-element balances the left sidebar so the main column is visually centred */
-.journey-shell-tier1::after {
-  content: '';
-}
-
-/* Column holding the small program/language selector, stacked above the
-   Tier 1 "success" sidebar when present (or standing alone on other tiers). */
-.fc-sidebar-col {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  width: 100%;
-  max-width: 400px;
-}
-
 /* Small, sleek program/language selector shown beside the flowchart. */
 .program-lang-mini {
   display: flex;
@@ -8685,10 +8681,101 @@ body.step-review-modal-open { overflow: hidden; }
   outline: none;
 }
 
+/* Tier 1 "effective or ineffective?" guidance: a button that opens the
+   guidance as a popup, used in the summary view header and the visual
+   pathway's tier bar. */
+.tier1-guidance {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.tier1-guidance-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px 0 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  color: var(--step-text);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tier1-guidance-btn .material-symbols-rounded {
+  font-size: 18px;
+  color: var(--tier-1, #5eb892);
+}
+
+.tier1-guidance-btn:hover,
+.tier1-guidance-btn[aria-expanded="true"] {
+  border-color: var(--step);
+  background: var(--step-bg);
+}
+
+.tier1-guidance-btn:focus-visible,
+.tier1-guidance-close:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.tier1-guidance-popup.tier1-success-sidebar {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 5;
+  width: min(380px, 90vw);
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  padding: var(--space-md) var(--space-lg) var(--space-lg);
+  text-align: left;
+}
+
+.tier1-guidance-popup[hidden] {
+  display: none;
+}
+
+.tier1-guidance-popup .tier1-success-sidebar-head h3 {
+  flex: 1 1 auto;
+  font-size: 1.05rem;
+}
+
+.tier1-guidance-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.tier1-guidance-close svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Summary view: the guidance button sits at the right of the sticky header,
+   alongside the screener indicator. */
+.flowchart-glass-header-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-xs);
+  justify-self: end;
+  min-width: 0;
+}
+
 .tier1-success-sidebar {
-  position: sticky;
-  top: 128px;
-  z-index: 200;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -9566,21 +9653,6 @@ body.step-review-modal-open { overflow: hidden; }
 
 /* ---------- Responsive: narrow screens ---------- */
 @media (max-width: 1260px) {
-  .journey-shell-tier1 {
-    grid-template-columns: 1fr;
-    gap: var(--space-md);
-  }
-
-  .journey-shell-tier1::after {
-    display: none;
-  }
-
-  .tier1-success-sidebar {
-    position: static;
-    top: auto;
-    z-index: auto;
-  }
-
   .journey-map {
     border-radius: var(--radius);
   }

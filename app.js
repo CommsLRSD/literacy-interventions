@@ -1973,9 +1973,8 @@ function renderStandardViewToggleHtml(attrs) {
             </button>`;
 }
 
-// The Tier 1 "How do we determine if instruction is effective…" guidance.
-// Shown as a sidebar beside the summary view and as a popup in the visual
-// pathway, so both share this single source of markup.
+// Content of the Tier 1 "How do we determine if instruction is effective…"
+// guidance popup (shared by the summary view and the visual pathway).
 function buildTier1GuidanceBlocksHtml(scoresOnclick) {
     return `
         <div class="tier1-success-sidebar-block">
@@ -2013,7 +2012,7 @@ function initIntegratedFlowchart(tierId) {
     
     const flowchartDef = getFlowchartDefs()[tierId];
     if (!flowchartDef) return;
-    const showTier1SuccessSidebar = tierId === 'tier1';
+    const showTier1Guidance = tierId === 'tier1';
     
     // Preserve layout mode across tier switches so the user's view preference is retained
     const prevLayoutMode = normalizeJourneyLayoutMode(appState.visualFlowchart?.layoutMode);
@@ -2047,25 +2046,18 @@ function initIntegratedFlowchart(tierId) {
                 
                 ${renderTierTabsHtml(tierId)}
 
-                <div class="flowchart-screener-indicator" id="flowchart-screener-indicator" hidden>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                    <span class="flowchart-screener-indicator-label">${escapeHtml(t('fc_screener_label'))}</span>
-                    <span class="flowchart-screener-indicator-value" id="flowchart-screener-indicator-value"></span>
+                <div class="flowchart-glass-header-end">
+                    ${showTier1Guidance ? renderTier1GuidanceHtml('flowchart', false, "navigateToPage('scores')") : ''}
+                    <div class="flowchart-screener-indicator" id="flowchart-screener-indicator" hidden>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        <span class="flowchart-screener-indicator-label">${escapeHtml(t('fc_screener_label'))}</span>
+                        <span class="flowchart-screener-indicator-value" id="flowchart-screener-indicator-value"></span>
+                    </div>
                 </div>
             </div>
             
             <div class="flowchart-content-area" id="flowchart-content">
-                <div class="journey-shell${showTier1SuccessSidebar ? ' journey-shell-tier1' : ''}">
-                    <div class="fc-sidebar-col">
-                        ${showTier1SuccessSidebar ? `
-                        <aside class="tier1-success-sidebar" aria-label="Tier 1 instruction effectiveness guidance">
-                            <div class="tier1-success-sidebar-head">
-                                <span class="material-symbols-rounded tier1-success-sidebar-icon" aria-hidden="true" translate="no">help</span>
-                                <h3>${escapeHtml(t('tier1_sidebar_heading'))}</h3>
-                            </div>
-                            ${buildTier1GuidanceBlocksHtml("navigateToPage('scores')")}
-                        </aside>` : ''}
-                    </div>
+                <div class="journey-shell">
                     <aside class="journey-map" id="journey-map" aria-label="Decision summary">
                         <div class="journey-map-head">
                             <div class="journey-map-head-left">
@@ -2812,7 +2804,41 @@ function updateVisualFlowchartMobileLayout() {
     const changed = state.rotated !== rotate || state.mobile !== isMobile;
     state.rotated = rotate;
     state.mobile = isMobile;
+    if (!isMobile) state.drawerOpen = false;
+    syncVisualFlowchartDrawer();
     return changed;
+}
+
+// On mobile the whole screen is the pathway canvas: the title, view switcher,
+// tier info/toggle, Tier 1 guidance and zoom controls live in a slide-out
+// drawer opened from a small floating menu button.
+function syncVisualFlowchartDrawer() {
+    const modal = document.getElementById('visual-flowchart-modal');
+    const state = appState.visualFlowchartModal;
+    if (!modal || !state) return;
+    const open = !!(state.mobile && state.drawerOpen);
+    modal.classList.toggle('visual-flowchart-drawer-open', open);
+    const chrome = modal.querySelector('.visual-flowchart-chrome');
+    if (chrome) chrome.inert = !!state.mobile && !open;
+    modal.querySelector('.visual-flowchart-drawer-toggle')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function setVisualFlowchartDrawerOpen(open, options = {}) {
+    const state = appState.visualFlowchartModal;
+    if (!state) return;
+    state.drawerOpen = !!open;
+    if (!open && state.guidanceOpen) setTier1GuidanceOpen('visual-flowchart', false);
+    syncVisualFlowchartDrawer();
+    const modal = document.getElementById('visual-flowchart-modal');
+    if (open) {
+        modal?.querySelector('.visual-flowchart-chrome button')?.focus();
+    } else if (options.restoreFocus) {
+        modal?.querySelector('.visual-flowchart-drawer-toggle')?.focus();
+    }
+}
+
+function toggleVisualFlowchartDrawer() {
+    setVisualFlowchartDrawerOpen(!appState.visualFlowchartModal?.drawerOpen);
 }
 
 function lockVisualFlowchartLandscape(modal) {
@@ -2853,6 +2879,13 @@ function openVisualFlowchartModal() {
     modal.setAttribute('aria-labelledby', 'visual-flowchart-modal-title');
     modal.innerHTML = `
         <div class="visual-flowchart-dialog">
+            <button type="button" class="visual-flowchart-drawer-toggle" id="visual-flowchart-drawer-toggle"
+                    onclick="toggleVisualFlowchartDrawer()" aria-expanded="false" aria-controls="visual-flowchart-chrome"
+                    aria-label="${escapeHtml(t('fc_visual_menu'))}" title="${escapeHtml(t('fc_visual_menu'))}">
+                <span class="material-symbols-rounded" aria-hidden="true" translate="no">menu</span>
+            </button>
+            <div class="visual-flowchart-drawer-scrim" onclick="setVisualFlowchartDrawerOpen(false)" aria-hidden="true"></div>
+            <div class="visual-flowchart-chrome" id="visual-flowchart-chrome">
             <header class="visual-flowchart-header">
                 <div class="visual-flowchart-header-text">
                     <h2 id="visual-flowchart-modal-title">${escapeHtml(t('fc_visual_title'))}</h2>
@@ -2879,6 +2912,7 @@ function openVisualFlowchartModal() {
                     </button>
                 </div>
             </div>
+            </div>
             <div class="visual-flowchart-viewport" id="visual-flowchart-viewport" tabindex="0" aria-label="${escapeHtml(t('fc_visual_canvas'))}">
                 <div class="visual-flowchart-stage" id="visual-flowchart-stage"></div>
             </div>
@@ -2893,7 +2927,8 @@ function openVisualFlowchartModal() {
         lastY: 0,
         previousFocus: document.activeElement,
         expandedTiers: new Set(),
-        guidanceOpen: false
+        guidanceOpen: false,
+        drawerOpen: false
     };
     document.body.appendChild(modal);
     updateVisualFlowchartMobileLayout();
@@ -2908,21 +2943,26 @@ function openVisualFlowchartModal() {
     });
     // Clicking anywhere outside the Tier 1 guidance popup closes it.
     modal.addEventListener('pointerdown', event => {
-        if (appState.visualFlowchartModal?.guidanceOpen && !event.target.closest('.visual-flowchart-guidance')) {
-            setVisualFlowchartGuidanceOpen(false);
+        if (appState.visualFlowchartModal?.guidanceOpen && !event.target.closest('.tier1-guidance')) {
+            setTier1GuidanceOpen('visual-flowchart', false);
         }
     });
     const keyHandler = event => {
         if (event.key === 'Escape') {
             if (appState.visualFlowchartModal?.guidanceOpen) {
-                setVisualFlowchartGuidanceOpen(false, { restoreFocus: true });
+                setTier1GuidanceOpen('visual-flowchart', false, { restoreFocus: true });
+                return;
+            }
+            if (appState.visualFlowchartModal?.drawerOpen) {
+                setVisualFlowchartDrawerOpen(false, { restoreFocus: true });
                 return;
             }
             dismissVisualFlowchartModal();
             return;
         }
         if (event.key === 'Tab') {
-            const focusable = Array.from(modal.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+            const focusable = Array.from(modal.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+                .filter(element => !element.closest('[inert]') && element.getClientRects().length);
             if (!focusable.length) return;
             const first = focusable[0];
             const last = focusable[focusable.length - 1];
@@ -2966,7 +3006,10 @@ function openVisualFlowchartModal() {
     refreshVisualFlowchartModal();
     requestAnimationFrame(() => {
         modal.classList.add('visual-flowchart-modal-visible');
-        modal.querySelector('.visual-flowchart-close')?.focus();
+        const focusTarget = appState.visualFlowchartModal?.mobile
+            ? modal.querySelector('.visual-flowchart-drawer-toggle')
+            : modal.querySelector('.visual-flowchart-close');
+        focusTarget?.focus();
     });
 }
 
@@ -3067,50 +3110,70 @@ function updateVisualFlowchartTierBar() {
         <span class="visual-flowchart-tier-bar-chip">${escapeHtml(tierLabel)}</span>
         <span class="visual-flowchart-tier-bar-name">${escapeHtml(tierName)}</span>
         ${renderTierTabsHtml(tierId, 'visual-flowchart-tier-tabs')}
-        ${tierId === 'tier1' ? renderVisualFlowchartGuidanceHtml(guidanceOpen) : ''}`;
+        ${tierId === 'tier1' ? renderTier1GuidanceHtml('visual-flowchart', guidanceOpen, 'openScoresFromVisualFlowchart()') : ''}`;
 }
 
-// Tier 1's "How do we determine if instruction is effective…" guidance sits in
-// a sidebar in the other views; in the visual pathway it lives behind a button
-// that opens it as a popup so it doesn't permanently take up canvas space.
-function renderVisualFlowchartGuidanceHtml(isOpen) {
+// Tier 1's "How do we determine if instruction is effective…" guidance lives
+// behind a button that opens it as a popup, in every flowchart view, so it is
+// always one click away without permanently taking up space. idPrefix keeps
+// the summary view's copy and the visual pathway's copy distinct.
+function renderTier1GuidanceHtml(idPrefix, isOpen, scoresOnclick) {
     return `
-        <div class="visual-flowchart-guidance">
-            <button type="button" class="visual-flowchart-guidance-btn" id="visual-flowchart-guidance-btn"
-                    onclick="toggleVisualFlowchartGuidance()" aria-expanded="${isOpen ? 'true' : 'false'}"
-                    aria-controls="visual-flowchart-guidance-popup" title="${escapeHtml(t('tier1_sidebar_heading'))}">
+        <div class="tier1-guidance">
+            <button type="button" class="tier1-guidance-btn" id="${idPrefix}-guidance-btn"
+                    onclick="toggleTier1Guidance('${idPrefix}')" aria-expanded="${isOpen ? 'true' : 'false'}"
+                    aria-controls="${idPrefix}-guidance-popup" title="${escapeHtml(t('tier1_sidebar_heading'))}">
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">help</span>
-                <span class="visual-flowchart-guidance-btn-label">${escapeHtml(t('fc_visual_guidance_btn'))}</span>
+                <span class="tier1-guidance-btn-label">${escapeHtml(t('fc_visual_guidance_btn'))}</span>
             </button>
-            <div class="visual-flowchart-guidance-popup tier1-success-sidebar" id="visual-flowchart-guidance-popup"
-                 role="dialog" aria-labelledby="visual-flowchart-guidance-title"${isOpen ? '' : ' hidden'}>
+            <div class="tier1-guidance-popup tier1-success-sidebar" id="${idPrefix}-guidance-popup"
+                 role="dialog" aria-labelledby="${idPrefix}-guidance-title"${isOpen ? '' : ' hidden'}>
                 <div class="tier1-success-sidebar-head">
                     <span class="material-symbols-rounded tier1-success-sidebar-icon" aria-hidden="true" translate="no">help</span>
-                    <h3 id="visual-flowchart-guidance-title">${escapeHtml(t('tier1_sidebar_heading'))}</h3>
-                    <button type="button" class="visual-flowchart-guidance-close" onclick="setVisualFlowchartGuidanceOpen(false, { restoreFocus: true })" aria-label="${escapeHtml(t('fc_visual_guidance_close'))}">
+                    <h3 id="${idPrefix}-guidance-title">${escapeHtml(t('tier1_sidebar_heading'))}</h3>
+                    <button type="button" class="tier1-guidance-close" onclick="setTier1GuidanceOpen('${idPrefix}', false, { restoreFocus: true })" aria-label="${escapeHtml(t('fc_visual_guidance_close'))}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
                 </div>
-                ${buildTier1GuidanceBlocksHtml('openScoresFromVisualFlowchart()')}
+                ${buildTier1GuidanceBlocksHtml(scoresOnclick)}
             </div>
         </div>`;
 }
 
-function setVisualFlowchartGuidanceOpen(open, options = {}) {
-    const state = appState.visualFlowchartModal;
-    if (!state) return;
-    state.guidanceOpen = !!open;
-    const btn = document.getElementById('visual-flowchart-guidance-btn');
-    const popup = document.getElementById('visual-flowchart-guidance-popup');
+function isTier1GuidanceOpen(idPrefix) {
+    const popup = document.getElementById(`${idPrefix}-guidance-popup`);
+    return !!popup && !popup.hidden;
+}
+
+function setTier1GuidanceOpen(idPrefix, open, options = {}) {
+    // The visual pathway re-renders its tier bar, so remember the open state there.
+    if (idPrefix === 'visual-flowchart' && appState.visualFlowchartModal) {
+        appState.visualFlowchartModal.guidanceOpen = !!open;
+    }
+    const btn = document.getElementById(`${idPrefix}-guidance-btn`);
+    const popup = document.getElementById(`${idPrefix}-guidance-popup`);
     if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     if (popup) popup.hidden = !open;
-    if (open) popup?.querySelector('.visual-flowchart-guidance-close')?.focus();
+    if (open) popup?.querySelector('.tier1-guidance-close')?.focus();
     else if (options.restoreFocus) btn?.focus();
 }
 
-function toggleVisualFlowchartGuidance() {
-    setVisualFlowchartGuidanceOpen(!appState.visualFlowchartModal?.guidanceOpen);
+function toggleTier1Guidance(idPrefix) {
+    setTier1GuidanceOpen(idPrefix, !isTier1GuidanceOpen(idPrefix));
 }
+
+// The summary view's popup closes on Escape or a click outside it. (The visual
+// pathway handles its own copy in its modal key/pointer handlers.)
+document.addEventListener('pointerdown', event => {
+    if (isTier1GuidanceOpen('flowchart') && !event.target.closest('.flowchart-glass-header .tier1-guidance')) {
+        setTier1GuidanceOpen('flowchart', false);
+    }
+});
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !appState.visualFlowchartModal && isTier1GuidanceOpen('flowchart')) {
+        setTier1GuidanceOpen('flowchart', false, { restoreFocus: true });
+    }
+});
 
 // The scores page lives outside the modal, so leave the pathway to show it.
 function openScoresFromVisualFlowchart() {
@@ -3454,10 +3517,12 @@ function refreshVisualFlowchartModal() {
 function fitVisualFlowchartCardToViewportHeight(stage, viewport) {
     const card = stage?.querySelector('.visual-flowchart-card-fit-height');
     if (!card || !viewport) return;
-    const availableHeight = viewport.clientHeight - VISUAL_FLOWCHART_FIT_HEIGHT_PADDING * 2;
+    const padding = getVisualFlowchartPadding();
+    const fitHeightPad = Math.min(VISUAL_FLOWCHART_FIT_HEIGHT_PADDING, padding.top);
+    const availableHeight = viewport.clientHeight - fitHeightPad * 2;
     if (!card.dataset.baseWidth) card.dataset.baseWidth = String(Math.round(parseFloat(card.style.width) || card.offsetWidth));
     const minWidth = Number(card.dataset.baseWidth);
-    const maxWidth = Math.max(minWidth, viewport.clientWidth - VISUAL_FLOWCHART_EDGE_PADDING * 2);
+    const maxWidth = Math.max(minWidth, viewport.clientWidth - padding.left - padding.right);
     if (availableHeight <= 0 || !minWidth) return;
     const heightAt = width => {
         card.style.width = `${width}px`;
@@ -3496,7 +3561,7 @@ function autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId) 
     if (!state || !stage || !viewport) return;
     const bounds = measureVisualFlowchartContent(stage);
     state.contentBounds = bounds;
-    const pad = VISUAL_FLOWCHART_EDGE_PADDING;
+    const pad = getVisualFlowchartPadding();
     const cards = Array.from(stage.querySelectorAll('.visual-flowchart-card'));
     let activeIndex = items.findIndex(item => item.type === 'tier-review');
     if (activeIndex === -1) activeIndex = items.findIndex(item => item.type === 'entry' && item.entry.isCurrent);
@@ -3511,20 +3576,20 @@ function autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId) 
         // The live step card (checklists, option grids) is by far the tallest piece
         // of the pathway, so scale the canvas down until it fits entirely on screen.
         const fillsHeight = activeCard.classList.contains('visual-flowchart-card-fit-height');
-        const padY = fillsHeight ? VISUAL_FLOWCHART_FIT_HEIGHT_PADDING : pad;
+        const padY = fillsHeight ? Math.min(VISUAL_FLOWCHART_FIT_HEIGHT_PADDING, pad.top) : pad.top;
         // Phones keep the text readable instead of shrinking the card to fit;
         // the card is top-aligned and the rest is reached by dragging.
         const minFitScale = state.mobile ? VISUAL_FLOWCHART_MOBILE_MIN_FIT_SCALE : 0.35;
         const fitScale = Math.max(minFitScale, Math.min(1,
-            (viewport.clientWidth - pad * 2) / activeCard.offsetWidth,
+            (viewport.clientWidth - pad.left - pad.right) / activeCard.offsetWidth,
             (viewport.clientHeight - padY * 2) / activeCard.offsetHeight));
         // Auto-fit unless the user has taken manual control of the zoom, in which
         // case only shrink further when their zoom would cut the active card off.
         state.scale = state.userZoom ? Math.min(state.scale, fitScale) : fitScale;
         // Keep the pathway reading left to right: stay anchored to the left edge of
         // the content and only shift left far enough to reveal the active card.
-        const leftAnchor = pad - bounds.minX * state.scale;
-        const revealActive = viewport.clientWidth - pad
+        const leftAnchor = pad.left - bounds.minX * state.scale;
+        const revealActive = viewport.clientWidth - pad.right
             - (activeCard.offsetLeft + activeCard.offsetWidth) * state.scale;
         state.x = Math.min(leftAnchor, revealActive);
         const activeHeight = activeCard.offsetHeight * state.scale;
@@ -3535,14 +3600,27 @@ function autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId) 
         // between its top and bottom margins.
         state.y = fillsHeight
             ? Math.max(padY, (viewport.clientHeight - activeHeight) / 2) - activeCard.offsetTop * state.scale
-            : activeHeight + pad * 2 <= viewport.clientHeight
+            : activeHeight + pad.top + pad.bottom <= viewport.clientHeight
                 ? (viewport.clientHeight - activeHeight) * VISUAL_FLOWCHART_VERTICAL_BIAS - activeCard.offsetTop * state.scale
-                : pad - activeCard.offsetTop * state.scale;
+                : pad.top - activeCard.offsetTop * state.scale;
     }
     applyVisualFlowchartTransform();
 }
 
 const VISUAL_FLOWCHART_EDGE_PADDING = 40;
+// Mobile keeps a tight margin so the canvas gets as much room as possible,
+// plus a left gutter so cards never sit under the floating menu button.
+const VISUAL_FLOWCHART_MOBILE_EDGE_PADDING = 10;
+const VISUAL_FLOWCHART_MOBILE_MENU_GUTTER = 54;
+
+function getVisualFlowchartPadding() {
+    if (appState.visualFlowchartModal?.mobile) {
+        const pad = VISUAL_FLOWCHART_MOBILE_EDGE_PADDING;
+        return { left: VISUAL_FLOWCHART_MOBILE_MENU_GUTTER, right: pad, top: pad, bottom: pad };
+    }
+    const pad = VISUAL_FLOWCHART_EDGE_PADDING;
+    return { left: pad, right: pad, top: pad, bottom: pad };
+}
 // Smallest automatic zoom used for the live card on the mobile pathway.
 const VISUAL_FLOWCHART_MOBILE_MIN_FIT_SCALE = 0.7;
 // Top/bottom margin kept around the height-fitted Tier 2 / Tier 3 step 1 card,
@@ -3580,18 +3658,18 @@ function measureVisualFlowchartContent(stage) {
 function clampVisualFlowchartPan(state, viewport) {
     const bounds = state.contentBounds;
     if (!bounds || !viewport) return;
-    const pad = VISUAL_FLOWCHART_EDGE_PADDING;
+    const pad = getVisualFlowchartPadding();
     const scale = state.scale;
     const contentWidth = (bounds.maxX - bounds.minX) * scale;
     const contentHeight = (bounds.maxY - bounds.minY) * scale;
-    const maxX = pad - bounds.minX * scale;
-    const minX = viewport.clientWidth - pad - bounds.maxX * scale;
-    state.x = contentWidth + pad * 2 <= viewport.clientWidth
+    const maxX = pad.left - bounds.minX * scale;
+    const minX = viewport.clientWidth - pad.right - bounds.maxX * scale;
+    state.x = contentWidth + pad.left + pad.right <= viewport.clientWidth
         ? maxX
         : Math.min(maxX, Math.max(minX, state.x));
-    const maxY = pad - bounds.minY * scale;
-    const minY = viewport.clientHeight - pad - bounds.maxY * scale;
-    state.y = contentHeight + pad * 2 <= viewport.clientHeight
+    const maxY = pad.top - bounds.minY * scale;
+    const minY = viewport.clientHeight - pad.bottom - bounds.maxY * scale;
+    state.y = contentHeight + pad.top + pad.bottom <= viewport.clientHeight
         ? (viewport.clientHeight - contentHeight) / 2 - bounds.minY * scale
         : Math.min(maxY, Math.max(minY, state.y));
 }
@@ -3693,16 +3771,17 @@ function fitVisualFlowchart() {
     const stage = document.getElementById('visual-flowchart-stage');
     const state = appState.visualFlowchartModal;
     if (!viewport || !stage || !state) return;
-    const padding = VISUAL_FLOWCHART_EDGE_PADDING;
+    const padding = getVisualFlowchartPadding();
     state.userZoom = true;
     const bounds = measureVisualFlowchartContent(stage);
     state.contentBounds = bounds;
     const contentWidth = Math.max(1, bounds.maxX - bounds.minX);
     const contentHeight = Math.max(1, bounds.maxY - bounds.minY);
+    const availableWidth = viewport.clientWidth - padding.left - padding.right;
     state.scale = Math.min(1, Math.max(0.35,
-        Math.min((viewport.clientWidth - padding * 2) / contentWidth,
-            (viewport.clientHeight - padding * 2) / contentHeight)));
-    state.x = (viewport.clientWidth - contentWidth * state.scale) / 2 - bounds.minX * state.scale;
+        Math.min(availableWidth / contentWidth,
+            (viewport.clientHeight - padding.top - padding.bottom) / contentHeight)));
+    state.x = padding.left + (availableWidth - contentWidth * state.scale) / 2 - bounds.minX * state.scale;
     state.y = (viewport.clientHeight - contentHeight * state.scale) / 2 - bounds.minY * state.scale;
     applyVisualFlowchartTransform();
 }

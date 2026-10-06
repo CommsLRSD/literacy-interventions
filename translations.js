@@ -328,6 +328,7 @@ const TRANSLATIONS = {
         fc_visual_tier_review_label: 'Review before continuing',
         fc_visual_guidance_btn: 'Effective or ineffective?',
         fc_visual_guidance_close: 'Close guidance',
+        fc_visual_menu: 'Pathway menu',
 
         // ── Flowchart program / language mini selector (shown beside the flowchart) ──
         fc_program_mini_label: 'Program',
@@ -729,6 +730,7 @@ const TRANSLATIONS = {
         fc_visual_tier_review_label: 'Révisez avant de continuer',
         fc_visual_guidance_btn: 'Efficace ou inefficace?',
         fc_visual_guidance_close: 'Fermer les directives',
+        fc_visual_menu: 'Menu du parcours',
 
         // ── Flowchart program / language mini selector (shown beside the flowchart) ──
         fc_program_mini_label: 'Programme',
