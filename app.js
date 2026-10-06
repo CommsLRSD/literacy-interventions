@@ -10,6 +10,7 @@ const appState = {
     flowchartData: null,
     tierFlowchartData: null,
     interventionMenuData: null,
+    interventionMenuDataLoaded: false,
     currentPath: [],
     currentTierFlow: null,
     // UI language: 'en' (English) or 'fr' (French).
@@ -766,9 +767,12 @@ async function loadInterventionMenuData() {
         const response = await fetch('data/intervention-menu.json');
         if (!response.ok) throw new Error('Failed to load intervention menu data');
         appState.interventionMenuData = await response.json();
+        appState.interventionMenuDataLoaded = true;
+        favouriteCatalog = null;
         console.log('Intervention menu data loaded successfully');
     } catch (error) {
         console.error('Error loading intervention menu data:', error);
+        appState.interventionMenuDataLoaded = false;
         appState.interventionMenuData = { screeners: [], pillars: [], resourceTypes: [], resources: [] };
     }
 }
@@ -8260,7 +8264,7 @@ function getFavouriteIds() {
         try { stored = JSON.parse(localStorage.getItem(FAVOURITES_KEY) || '[]'); } catch (e) { /* Storage is optional. */ }
         favouriteIds = new Set(Array.isArray(stored) ? stored.filter(id => typeof id === 'string') : []);
     }
-    if (appState.interventionMenuData && favouriteCatalog !== appState.interventionMenuData) {
+    if (appState.interventionMenuDataLoaded && appState.interventionMenuData && favouriteCatalog !== appState.interventionMenuData) {
         favouriteCatalog = appState.interventionMenuData;
         const validIds = new Set(getAllResources().map(item => item.id));
         favouriteIds = new Set([...favouriteIds].filter(id => validIds.has(id)));
