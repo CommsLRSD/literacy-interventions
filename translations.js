@@ -299,9 +299,9 @@ const TRANSLATIONS = {
         fc_back: 'Restart',
         fc_your_decisions: 'Your Decisions',
         fc_summary_view: 'Summary View',
-        fc_standard_view: 'Standard View',
+        fc_standard_view: 'Alt View',
         fc_switch_summary: 'Switch to summary view',
-        fc_switch_standard: 'Switch to standard view',
+        fc_switch_standard: 'Switch to alt view',
         fc_view_switcher: 'Switch decision view',
         fc_back_one_step: 'Back one step',
         fc_screener_label: 'Screener:',
@@ -326,6 +326,9 @@ const TRANSLATIONS = {
         fc_visual_tier_collapsed: (n, count) => `Tier ${n} · ${count} step${count !== 1 ? 's' : ''} · Tap to expand`,
         fc_visual_tier_collapse: 'Collapse this tier',
         fc_visual_tier_review_label: 'Review before continuing',
+        fc_visual_guidance_btn: 'Effective or ineffective?',
+        fc_visual_guidance_close: 'Close guidance',
+        fc_visual_menu: 'Pathway menu',
 
         // ── Flowchart program / language mini selector (shown beside the flowchart) ──
         fc_program_mini_label: 'Program',
@@ -698,9 +701,9 @@ const TRANSLATIONS = {
         fc_back: 'Recommencer',
         fc_your_decisions: 'Vos décisions',
         fc_summary_view: 'Vue sommaire',
-        fc_standard_view: 'Vue standard',
+        fc_standard_view: 'Vue alternative',
         fc_switch_summary: 'Passer à la vue sommaire',
-        fc_switch_standard: 'Passer à la vue standard',
+        fc_switch_standard: 'Passer à la vue alternative',
         fc_view_switcher: 'Changer la vue des décisions',
         fc_back_one_step: 'Revenir d\'une étape',
         fc_screener_label: 'Dépistage\u00a0:',
@@ -725,6 +728,9 @@ const TRANSLATIONS = {
         fc_visual_tier_collapsed: (n, count) => `Palier ${n} · ${count} étape${count !== 1 ? 's' : ''} · Toucher pour développer`,
         fc_visual_tier_collapse: 'Réduire ce palier',
         fc_visual_tier_review_label: 'Révisez avant de continuer',
+        fc_visual_guidance_btn: 'Efficace ou inefficace?',
+        fc_visual_guidance_close: 'Fermer les directives',
+        fc_visual_menu: 'Menu du parcours',
 
         // ── Flowchart program / language mini selector (shown beside the flowchart) ──
         fc_program_mini_label: 'Programme',
