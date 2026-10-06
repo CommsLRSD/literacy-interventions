@@ -22,7 +22,13 @@ const TRANSLATIONS = {
         nav_about: 'About',
         nav_interventions_mobile: 'Teaching Resources',
         nav_schedule: 'Assessment Schedule',
-        nav_history: 'History',
+        nav_favourites: 'Favourites',
+        favourites_intro: 'Your saved resources, across all programs and filters.',
+        favourites_empty: 'No favourites yet. Use the star beside a resource to save it here.',
+        favourite_add: 'Add to favourites',
+        favourite_remove: 'Remove from favourites',
+        pathway_selections: 'Selected resources',
+        pathway_selections_close: 'Close selected resources',
         nav_guided_process: 'Guided process',
         nav_reference_resources: 'Reference resources',
         nav_lang_toggle_label: 'Switch to French',
@@ -73,7 +79,7 @@ const TRANSLATIONS = {
         guided_teaching_grade: 'Teaching grade',
         guided_setup_confirm: 'Confirm settings and start',
         guided_hard_reset: 'Reset saved data (hard reset)',
-        guided_hard_reset_confirm: 'Clear all saved app progress, defaults, selection history, and app caches on this device? This cannot be undone. Other websites’ data will not be touched.',
+        guided_hard_reset_confirm: 'Clear all saved app progress, defaults, favourites, and app caches on this device? This cannot be undone. Other websites’ data will not be touched.',
         guided_return: 'Return to my next step',
         guided_home: 'Back to overview',
         guided_return_hint: 'Your guided process is still available.',
@@ -143,7 +149,7 @@ const TRANSLATIONS = {
         filter_advanced_label: 'Advanced filters',
         filter_advanced_description: 'Contains optional Subtest, Grade Level, Evidence Classification, and Keyword search filters.',
         filter_tier_label: 'Tier',
-        filter_grade_label: 'Grade Level',
+        filter_grade_label: 'Grade',
         filter_required_hint: 'Select Tier, a Screener when available, Resource Type, and Literacy Pillar to view resources.',
         filter_active_none: 'No filters applied yet.',
         filter_next_label: 'Next:',
@@ -293,13 +299,6 @@ const TRANSLATIONS = {
         // ── Footer ──
         footer_text: '© 2025–2026 Literacy Interventions · Louis Riel School Division · Supporting educators in literacy intervention',
 
-        // ── Selection history / tracker ──
-        history_label: 'History',
-        history_panel_label: 'Selection History',
-        history_panel_intro: 'A running record of every drill-down assessment and intervention you select in the flowchart, grouped by session with the date you chose each item.',
-        history_panel_warning: 'This history is saved only in this browser. Clearing your browser cache or site data will permanently erase it. Export to CSV to keep a copy.',
-        history_export_csv: 'Export CSV',
-        history_clear_all: 'Clear All',
 
         // ── Flowchart UI (dynamic) ──
         fc_back: 'Restart',
@@ -430,7 +429,13 @@ const TRANSLATIONS = {
         nav_about: 'À propos',
         nav_interventions_mobile: 'Ressources pédagogiques',
         nav_schedule: 'Calendrier d\'évaluation',
-        nav_history: 'Historique',
+        nav_favourites: 'Favoris',
+        favourites_intro: 'Vos ressources sauvegardées, pour tous les programmes et filtres.',
+        favourites_empty: 'Aucun favori pour le moment. Utilisez l’étoile à côté d’une ressource pour la sauvegarder ici.',
+        favourite_add: 'Ajouter aux favoris',
+        favourite_remove: 'Retirer des favoris',
+        pathway_selections: 'Ressources sélectionnées',
+        pathway_selections_close: 'Fermer les ressources sélectionnées',
         nav_guided_process: 'Démarche guidée',
         nav_reference_resources: 'Ressources de référence',
         nav_lang_toggle_label: 'Passer à l\'anglais',
@@ -481,7 +486,7 @@ const TRANSLATIONS = {
         guided_teaching_grade: 'Niveau scolaire enseigné',
         guided_setup_confirm: 'Confirmer et commencer',
         guided_hard_reset: 'Effacer les données enregistrées (réinitialisation complète)',
-        guided_hard_reset_confirm: 'Effacer la progression, les valeurs par défaut, l’historique et les caches de cette application sur cet appareil? Cette action est irréversible. Les données des autres sites ne seront pas modifiées.',
+        guided_hard_reset_confirm: 'Effacer la progression, les valeurs par défaut, les favoris et les caches de cette application sur cet appareil? Cette action est irréversible. Les données des autres sites ne seront pas modifiées.',
         guided_return: 'Revenir à ma prochaine étape',
         guided_home: 'Retour à l’aperçu',
         guided_return_hint: 'Votre démarche guidée est toujours disponible.',
@@ -701,13 +706,6 @@ const TRANSLATIONS = {
         // ── Footer ──
         footer_text: '© 2025–2026 Literacy Interventions · Division scolaire Louis-Riel · Soutenir les éducateurs dans les interventions en littératie',
 
-        // ── Selection history / tracker ──
-        history_label: 'Historique',
-        history_panel_label: 'Historique des sélections',
-        history_panel_intro: 'Un registre continu de chaque évaluation approfondie et intervention que vous sélectionnez dans l\'organigramme, regroupé par session avec la date à laquelle vous avez choisi chaque élément.',
-        history_panel_warning: 'Cet historique est sauvegardé uniquement dans ce navigateur. Vider le cache de votre navigateur ou les données du site effacera définitivement cet historique. Exportez en CSV pour en conserver une copie.',
-        history_export_csv: 'Exporter en CSV',
-        history_clear_all: 'Tout effacer',
 
         // ── Flowchart UI (dynamic) ──
         fc_back: 'Recommencer',
