@@ -249,6 +249,8 @@ async function hardResetApp() {
     menuUiState.editingField = '';
     activeScheduleGradeId = 'all';
     favouriteIds = new Set();
+    clearFavouriteFeedback();
+    setPathwaySelectionsOpen(false);
     renderFavourites();
     document.getElementById('flowchart-container').innerHTML = '';
     applyTranslations();
@@ -731,6 +733,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initialize bubble background on all page sections
     document.querySelectorAll('.content-section').forEach(initBubbles);
+    document.querySelectorAll('.favourites-page-wrapper, .interventions-page-wrapper').forEach(ensureFavouriteFeedback);
 
     console.log('Literacy Interventions - Ready!');
 });
@@ -826,6 +829,8 @@ function navigateToPage(pageName) {
 
     // Update state
     appState.currentPage = pageName;
+    clearFavouriteFeedback();
+    if (pageName !== 'flowchart') closeVisualFlowchartModal({ immediate: true });
     document.body.dataset.page = pageName;
     updateMobilePageTitle();
     
@@ -3263,9 +3268,8 @@ function closeVisualFlowchartModal(options = {}) {
     // standard or summary view — would treat the dying modal as live and move
     // the freshly created live step into it, destroying it moments later.
     appState.visualFlowchartModal = null;
-    const selections = document.getElementById('pathway-selections');
-    if (selections) document.body.appendChild(selections);
     modal.removeAttribute('id');
+    updatePathwaySelections();
     modal.querySelector('#visual-flowchart-stage')?.removeAttribute('id');
     modal.querySelector('#visual-flowchart-viewport')?.removeAttribute('id');
     if (modalState?.keyHandler) document.removeEventListener('keydown', modalState.keyHandler);
@@ -8257,6 +8261,73 @@ function getAllResources() {
 const FAVOURITES_KEY = `${STORAGE_KEY_PREFIX}-favourites`;
 let favouriteIds = null;
 let favouriteCatalog = null;
+let favouriteFeedbackTimer = null;
+
+function clearFavouriteFeedback() {
+    clearTimeout(favouriteFeedbackTimer);
+    favouriteFeedbackTimer = null;
+    document.querySelectorAll('.favourite-feedback').forEach(host => {
+        host.textContent = '';
+    });
+}
+
+function getFlowchartResourceTools() {
+    const modal = document.getElementById('visual-flowchart-modal');
+    const host = modal?.querySelector('.visual-flowchart-dialog') ||
+        document.querySelector('.flowchart-page-body');
+    if (!host) return null;
+    let tools = document.querySelector('.flowchart-resource-tools');
+    if (!tools) {
+        tools = document.createElement('div');
+        tools.className = 'flowchart-resource-tools';
+    }
+    if (tools.parentElement !== host) {
+        if (modal) host.insertBefore(tools, host.querySelector('.visual-flowchart-viewport'));
+        else host.prepend(tools);
+    }
+    ensureFavouriteFeedback(tools);
+    return tools;
+}
+
+function ensureFavouriteFeedback(host) {
+    let status = host.querySelector(':scope > .favourite-feedback');
+    if (!status) {
+        status = document.createElement('div');
+        status.className = 'favourite-feedback';
+        status.setAttribute('role', 'status');
+        status.setAttribute('aria-live', 'polite');
+        status.setAttribute('aria-atomic', 'true');
+        host.prepend(status);
+    }
+    return status;
+}
+
+function showFavouriteFeedback(selected, anchor, context) {
+    clearFavouriteFeedback();
+    const modal = document.getElementById('visual-flowchart-modal');
+    if (!modal && context?.scope?.isConnected) {
+        const navBottom = document.querySelector('.top-nav')?.getBoundingClientRect().bottom || 0;
+        const visible = Array.from(context.scope.querySelectorAll('[data-favourite-id]'))
+            .filter(button => {
+                const bounds = button.getBoundingClientRect();
+                return bounds.bottom > navBottom && bounds.top < window.innerHeight;
+            })
+            .sort((a, b) => Math.abs(a.getBoundingClientRect().top - context.top) -
+                Math.abs(b.getBoundingClientRect().top - context.top));
+        anchor = visible[0] || anchor;
+    }
+    const card = !modal && anchor?.closest('.resource-card, .fw-result-item, .legacy-resource-option, .intervention-card');
+    const links = card?.querySelector('.resource-card-links');
+    const host = links || card?.parentElement || ((modal || appState.currentPage === 'flowchart')
+        ? getFlowchartResourceTools()
+        : document.querySelector('.content-section.active > :not(.bubble-bg)'));
+    if (!host) return;
+    const status = ensureFavouriteFeedback(host);
+    if (links) links.prepend(status);
+    else if (card) card.before(status);
+    status.textContent = t(selected ? 'favourite_added' : 'favourite_removed');
+    favouriteFeedbackTimer = setTimeout(clearFavouriteFeedback, 3000);
+}
 
 function getFavouriteIds() {
     if (!favouriteIds) {
@@ -8324,6 +8395,7 @@ function setPathwaySelectionsOpen(open, restoreFocus = false) {
     const root = document.getElementById('pathway-selections');
     if (!root) return;
     const button = root.querySelector('.pathway-selections-tab');
+    if (open && root.hidden) return;
     root.querySelector('.pathway-selections-panel').hidden = !open;
     button.setAttribute('aria-expanded', String(open));
     if (open) root.querySelector('.pathway-selections-close').focus();
@@ -8340,6 +8412,10 @@ function updatePathwaySelections() {
             <section id="pathway-selections-panel" class="pathway-selections-panel" hidden aria-labelledby="pathway-selections-title">
                 <header><h2 id="pathway-selections-title"></h2><button type="button" class="pathway-selections-close"><span aria-hidden="true">×</span></button></header>
                 <div class="pathway-selections-list"></div>
+                <section class="pathway-favourites" aria-labelledby="pathway-favourites-title">
+                    <h3 id="pathway-favourites-title"></h3>
+                    <div class="pathway-favourites-list"></div>
+                </section>
             </section>`;
         root.querySelector('.pathway-selections-tab').addEventListener('click', event =>
             setPathwaySelectionsOpen(event.currentTarget.getAttribute('aria-expanded') !== 'true'));
@@ -8353,18 +8429,33 @@ function updatePathwaySelections() {
         });
     }
     // Keep the drawer within the modal's focus scope, never behind its inert background.
-    const host = document.getElementById('visual-flowchart-modal') || document.body;
+    const tools = getFlowchartResourceTools();
+    const host = (document.getElementById('visual-flowchart-modal') || window.matchMedia('(max-width: 768px)').matches)
+        ? tools : document.body;
+    if (!host) return;
     if (root.parentElement !== host) host.appendChild(root);
     root.inert = false;
     const selections = getCurrentPathwaySelections();
-    root.hidden = appState.currentPage !== 'flowchart' || !!pendingPathwayTier || !pathwayContext || !selections.length;
+    const favourites = getAllResources().filter(item => getFavouriteIds().has(item.id));
+    root.hidden = appState.currentPage !== 'flowchart' || (!selections.length && !favourites.length);
     if (root.hidden) setPathwaySelectionsOpen(false);
-    root.querySelector('.pathway-selections-tab').textContent = `${t('pathway_selections')} (${selections.length})`;
-    root.querySelector('#pathway-selections-title').textContent = t('pathway_selections');
-    root.querySelector('.pathway-selections-close').setAttribute('aria-label', t('pathway_selections_close'));
+    const sections = [
+        selections.length ? `${t('pathway_selections')} (${selections.length})` : '',
+        favourites.length ? `${t('nav_favourites')} (${favourites.length})` : ''
+    ].filter(Boolean).join(' · ');
+    root.querySelector('.pathway-selections-tab').textContent = sections;
+    root.querySelector('#pathway-selections-title').textContent = t('pathway_resources');
+    root.querySelector('.pathway-selections-close').setAttribute('aria-label', t('pathway_resources_close'));
     root.querySelector('.pathway-selections-list').innerHTML = selections.map(({ item, tier, label }) =>
         `<div class="pathway-selection-entry"><p>${escapeHtml(t('filter_tier_option')(tier))} · ${escapeHtml(label)}</p>${buildResourceCardHtml(item, { tier })}</div>`).join('');
+    const selectionList = root.querySelector('.pathway-selections-list');
+    if (selections.length) selectionList.insertAdjacentHTML('afterbegin', `<h3>${escapeHtml(t('pathway_selections'))}</h3>`);
+    root.querySelector('.pathway-favourites').hidden = !favourites.length;
+    root.querySelector('#pathway-favourites-title').textContent = t('nav_favourites');
+    root.querySelector('.pathway-favourites-list').innerHTML = favourites.map(item => buildResourceCardHtml(item, {})).join('');
 }
+
+window.matchMedia('(max-width: 768px)').addEventListener('change', updatePathwaySelections);
 
 document.addEventListener('keydown', event => {
     if (event.target.closest?.('[data-favourite-id]') && (event.key === 'Enter' || event.key === ' ')) {
@@ -8387,7 +8478,10 @@ document.addEventListener('click', event => {
     event.stopPropagation();
     const id = button.dataset.favouriteId;
     if (!getAllResources().some(item => item.id === id)) return;
-    const scope = button.closest('.fw-results, #favourites-list, #results-list-compact, .pathway-selections-list');
+    const scope = button.closest('.fw-results, #favourites-list, #results-list-compact, .pathway-selections-list, .pathway-favourites-list') ||
+        button.parentElement;
+    const hadFocus = document.activeElement === button;
+    const feedbackContext = { scope, top: button.getBoundingClientRect().top };
     const ids = getFavouriteIds();
     if (ids.has(id)) ids.delete(id);
     else ids.add(id);
@@ -8407,8 +8501,16 @@ document.addEventListener('click', event => {
         toggle.closest('.resource-card, .fw-result-item')?.classList.toggle('is-favourite', selected);
     });
     const target = scope?.querySelector(`[data-favourite-id="${CSS.escape(id)}"]`) ||
-        scope?.querySelector('[data-favourite-id]') || document.querySelector('[data-page="favourites"].active');
-    target?.focus();
+        scope?.querySelector('[data-favourite-id]') ||
+        (appState.currentPage === 'flowchart' && !document.getElementById('pathway-selections')?.hidden
+            ? document.querySelector('.pathway-selections-tab')
+            : document.querySelector('#visual-flowchart-modal .visual-flowchart-close') ||
+                Array.from(document.querySelectorAll(appState.currentPage === 'flowchart'
+                    ? '#flowchart-container button:not([disabled]), button[data-page="flowchart"].active'
+                    : `button[data-page="${CSS.escape(appState.currentPage)}"].active`))
+                    .find(control => !control.closest('[hidden], [inert]') && control.getClientRects().length));
+    if (hadFocus) target?.focus({ preventScroll: true });
+    showFavouriteFeedback(ids.has(id), target || (button.isConnected ? button : null), feedbackContext);
 }, true);
 
 // Remember whatever filters were last touched — here or in a flowchart

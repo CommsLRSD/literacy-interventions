@@ -603,6 +603,8 @@ body.side-nav-collapsed .site-footer { margin-left: var(--side-nav-collapsed-wid
 .content-section {
   position: relative;
   overflow: hidden;
+  min-height: calc(100vh - var(--nav-height));
+  min-height: calc(100dvh - var(--nav-height));
 }
 
 .bubble-bg {
@@ -4197,10 +4199,51 @@ details > p {
 }
 
 .resource-card.is-favourite,
-.fw-result-item.is-favourite {
+.fw-result-item.is-favourite,
+.legacy-resource-option:has(.favourite-toggle[aria-pressed="true"]),
+.intervention-card:has(.favourite-toggle[aria-pressed="true"]) {
+  background: #fff5d6 !important;
+  color: var(--text);
   border-color: #be8b2b;
   box-shadow: inset 4px 0 #be8b2b;
 }
+
+.legacy-resource-option:has(.favourite-toggle[aria-pressed="true"]) > button:first-child {
+  background: transparent;
+}
+
+.favourite-feedback {
+  margin: 0.5rem 1rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #be8b2b;
+  border-radius: var(--radius);
+  background: #fff5d6;
+  color: #573900;
+  font-weight: 600;
+  scroll-margin-top: calc(var(--nav-height) + 0.5rem);
+}
+
+.favourite-feedback:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.resource-card-links:has(> .favourite-feedback:not(:empty)) { width: min(100%, 16rem); }
+.resource-card-links > .favourite-feedback {
+  flex: 1 1 100%;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+}
+.flowchart-resource-tools { min-width: 0; }
+.pathway-favourites h3,
+.pathway-selections-list h3 { font-size: 0.95rem; margin: 0.75rem 0; }
+.pathway-favourites-list { display: grid; gap: var(--space-sm); }
 
 .legacy-resource-option { display: flex; align-items: center; gap: var(--space-sm); min-width: 0; }
 .legacy-resource-option > .selection-option,
@@ -4267,6 +4310,25 @@ details > p {
 .pathway-selections-panel .resource-card-links { flex-wrap: wrap; }
 
 @media (max-width: 768px) {
+  .pathway-selections {
+    position: static;
+    margin: 0.5rem 1rem;
+  }
+  .pathway-selections-tab {
+    writing-mode: horizontal-tb;
+    max-height: none;
+    max-width: 100%;
+    border-radius: var(--radius);
+    padding: 0.6rem 0.8rem;
+  }
+  .pathway-selections-panel {
+    position: static;
+    width: 100%;
+    max-height: none;
+    margin-top: 0.5rem;
+    border-radius: var(--radius);
+    box-shadow: none;
+  }
   .pathway-setup .fw-wizard-selects { grid-template-columns: minmax(0, 1fr); }
   .integrated-flowchart .flowchart-glass-header { grid-template-columns: 36px minmax(0, 1fr) auto; }
   .flowchart-glass-header .flowchart-glass-header-end { display: flex; }
@@ -7833,7 +7895,7 @@ body.step-review-modal-open { overflow: hidden; }
      browser refuses the Fullscreen API request. */
   .visual-flowchart-dialog {
     display: grid;
-    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
     width: 100vw;
     height: 100vh;
     overflow: hidden;
