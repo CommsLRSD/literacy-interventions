@@ -3867,8 +3867,12 @@ details > p {
   font-weight: 600;
 }
 
-.checklist-principles > .checklist-line-item::before {
-  top: 0.6rem;
+.checklist-principles > li {
+  padding-left: 0;
+}
+
+.checklist-principles > li::before {
+  content: none;
 }
 
 .checklist-groups,
