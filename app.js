@@ -200,6 +200,8 @@ function confirmPathwaySetup() {
     if (!screener || !getPathwayGrades(appState.selectedProgram).includes(grade)) return;
     pathwayContext = Object.freeze({ program: appState.selectedProgram, screener: screener.id, grade });
     pathwayDefaults[appState.selectedProgram] = { ...getPathwaySetupDefaults(), screener: screener.id, grade };
+    pendingScheduleTeachingGrades[getScheduleProgramIdForSelection(appState.selectedProgram)] = grade;
+    if (schedulesData) renderScheduleCalendar(schedulesData);
     setRememberedScreener(screener.name);
     setRememberedMenuFilters({ program: appState.selectedProgram, screener: appState.selectedScreener, grade,
         pillar: pathwayDefaults[appState.selectedProgram].pillar });
@@ -248,6 +250,7 @@ async function hardResetApp() {
     menuUiState.view = 'search';
     menuUiState.editingField = '';
     activeScheduleGradeId = 'all';
+    pendingScheduleTeachingGrades = {};
     favouriteIds = new Set();
     clearFavouriteFeedback();
     setPathwaySelectionsOpen(false);
@@ -3683,7 +3686,11 @@ function refreshVisualFlowchartModal() {
             : entry.isCurrent && entry.node.id === 'tier1-move-tier2' && appState.visualFlowchart?.pendingTierTransition === 'tier2'
                 ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="confirmVisualFlowchartTierTransition()">${escapeHtml(t('continue_to_tier'))} 2</button>`
             : '';
-        return `${collapseBtn}<${tag} class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ''}${entry.isTierFirstStep ? ' visual-flowchart-card-first-step' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
+        const summaryAction = entry.isCurrent && entry.node.type === 'endpoint'
+            && appState.visualFlowchart?.summaryEndpointNodeData?.id === entry.node.id
+            ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="showCurrentJourneySummary()">${escapeHtml(t('gate_view_summary'))}</button>`
+            : '';
+        return `${collapseBtn}<${tag} class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
                     style="left:${position.x}px;top:${position.y}px;width:${position.width}px" ${revisit}>
                 <span class="visual-flowchart-tier-chip">${escapeHtml(entry.tierLabel)}</span>
                 <span class="visual-flowchart-card-icon">${cardIcon}</span>
@@ -3692,7 +3699,7 @@ function refreshVisualFlowchartModal() {
                     <strong>${escapeHtml(displayTitle)}</strong>
                     ${!usesChoiceAsTitle && answer ? `<span class="visual-flowchart-card-answer">${escapeHtml(answer)}</span>` : ''}
                     ${entry.node.type === 'endpoint' && endpointDescription ? `<span class="visual-flowchart-card-answer">${endpointDescription}</span>` : ''}
-                    ${entry.node.type === 'endpoint' ? endpointAction : ''}
+                    ${entry.node.type === 'endpoint' ? endpointAction + summaryAction : ''}
                 </span>
                 ${isInteractive ? '<div class="visual-flowchart-active-host"></div>' : ''}
             </${tag}>`;
@@ -3833,7 +3840,7 @@ function autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId) 
         state.fitNodeId = activeNodeId;
         state.userZoom = false;
     }
-    state.topAligned = activeCard?.classList.contains('visual-flowchart-card-first-step') || false;
+    state.topAligned = activeCard?.classList.contains('visual-flowchart-card-fit-height') || false;
     if (activeCard && activeCard.offsetWidth && activeCard.offsetHeight) {
         // The live step card (checklists, option grids) is by far the tallest piece
         // of the pathway, so scale the canvas down until it fits entirely on screen.
@@ -3858,7 +3865,7 @@ function autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId) 
         // Vertically, the card prefers to sit in the upper part of the viewport
         // rather than dead centre: true centring (0.5) reads as too low once the
         // header/tier-bar/toolbar above the viewport are accounted for.
-        // Each tier's first step shares the same top margin.
+        // Tier 2/3 entry cards share the same top margin.
         state.y = state.topAligned
             ? padY - activeCard.offsetTop * state.scale
             : activeHeight + pad.top + pad.bottom <= viewport.clientHeight
@@ -5662,7 +5669,10 @@ function showTerminalEndpoint(endpointNodeData, direction = 'forward') {
 
 function showCurrentJourneySummary() {
     const endpointNodeData = appState.visualFlowchart?.summaryEndpointNodeData;
-    if (endpointNodeData) showFinalSummary(endpointNodeData);
+    if (endpointNodeData) {
+        closeVisualFlowchartModal({ immediate: true });
+        showFinalSummary(endpointNodeData);
+    }
 }
 
 // Show the route completion gate — a simple "well done" screen that the user
@@ -9311,6 +9321,16 @@ const SCHEDULE_SLOT_COUNT = SCHEDULE_MONTHS.length * SCHEDULE_HALVES_PER_MONTH;
 let activeScheduleProgramId = null;
 let activeScheduleGradeId = 'all';
 let activeScheduleGradeSelections = {};
+let pendingScheduleTeachingGrades = {};
+
+function getScheduleGradeForTeachingGrade(program, teachingGrade) {
+    const gradeNumber = Number(teachingGrade);
+    return program.grades.find(grade => {
+        if (teachingGrade === 'K' || teachingGrade === 'M') return grade.id === 'k';
+        const range = /^g(\d+)(?:-(\d+))?$/.exec(grade.id);
+        return range && gradeNumber >= Number(range[1]) && gradeNumber <= Number(range[2] || range[1]);
+    })?.id || 'all';
+}
 
 // Map a free-text period/month string (e.g. "Fall (Sep-Oct)", "Winter (Jan)",
 // "Nov") to the calendar month id(s) it covers.
@@ -9566,6 +9586,12 @@ function renderScheduleCalendar(data) {
 
     const forcedProgramId = getScheduleProgramIdForSelection(appState.selectedProgram || PROGRAM_ENGLISH);
     const program = data.programs.find(p => p.id === forcedProgramId) || data.programs[0];
+    if (Object.prototype.hasOwnProperty.call(pendingScheduleTeachingGrades, program.id)) {
+        const gradeId = getScheduleGradeForTeachingGrade(program, pendingScheduleTeachingGrades[program.id]);
+        activeScheduleGradeSelections[program.id] = gradeId;
+        storeScheduleGradePreference(program.id, gradeId);
+        delete pendingScheduleTeachingGrades[program.id];
+    }
     const rememberedGrade = Object.prototype.hasOwnProperty.call(activeScheduleGradeSelections, program.id)
         ? activeScheduleGradeSelections[program.id]
         : getStoredScheduleGradePreference(program.id);
