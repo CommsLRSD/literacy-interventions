@@ -11457,3 +11457,153 @@ body.program-prompt-open { overflow: hidden; }
   .home-program-controls { flex-direction: column; }
   .guided-primary-btn { width: 100%; }
 }
+
+/* ── Home: screener + multi-select grade level setup ── */
+.home-grade-field {
+  margin: 1rem 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.home-grade-field legend {
+  padding: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.home-grade-hint {
+  margin: 0.15rem 0 0.5rem;
+  color: #e0eaf5;
+  font-size: 0.8rem;
+}
+.home-grade-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.home-grade-chip {
+  position: relative;
+  display: inline-flex;
+}
+.home-grade-chip input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.home-grade-chip span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: var(--radius-pill);
+  color: #fff;
+  font-weight: 700;
+  transition: background var(--duration) var(--ease), color var(--duration) var(--ease);
+}
+.home-grade-chip:hover span { background: rgba(255, 255, 255, 0.14); }
+.home-grade-chip input:checked + span {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--primary);
+}
+.home-grade-chip input:focus-visible + span { outline: 3px solid #fff; outline-offset: 3px; }
+.home-grade-field:disabled .home-grade-chip span { opacity: 0.5; }
+.home-grade-field:disabled .home-grade-chip input { cursor: not-allowed; }
+.home-program-controls select:disabled { opacity: 0.65; cursor: not-allowed; }
+
+/* ── Home as a drawer over the flowchart ── */
+.home-drawer-bar { display: none; }
+.home-drawer-scrim[hidden] { display: none; }
+body.home-drawer-open #home-section {
+  display: block;
+  position: fixed;
+  top: var(--nav-height);
+  bottom: 0;
+  left: var(--side-nav-width);
+  z-index: 860;
+  width: min(1100px, calc(100vw - var(--side-nav-width)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
+  background: var(--bg);
+  box-shadow: 12px 0 40px rgba(5, 20, 37, 0.28);
+  animation: homeDrawerIn 0.22s var(--ease) both;
+}
+body.home-drawer-open.side-nav-collapsed #home-section {
+  left: var(--side-nav-collapsed-width);
+  width: min(1100px, calc(100vw - var(--side-nav-collapsed-width)));
+}
+body.home-drawer-open .home-drawer-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.5rem 1rem;
+  background: var(--primary);
+}
+.home-drawer-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 40px;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: var(--radius-pill);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.home-drawer-close:hover { background: rgba(255, 255, 255, 0.14); }
+.home-drawer-close:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.home-drawer-scrim {
+  position: fixed;
+  inset: var(--nav-height) 0 0 0;
+  z-index: 850;
+  background: rgba(8, 23, 40, 0.45);
+}
+@keyframes homeDrawerIn {
+  from { transform: translateX(-24px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+@media (max-width: 768px) {
+  body.home-drawer-open #home-section,
+  body.home-drawer-open.side-nav-collapsed #home-section {
+    left: 0;
+    width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.home-drawer-open #home-section { animation: none; }
+}
+
+/* ── Visual pathway as a full screen beside the top bar and side menu ── */
+.visual-flowchart-modal {
+  inset: var(--nav-height) 0 0 var(--side-nav-width);
+  z-index: 800;
+  background: var(--bg);
+  transition: opacity 0.18s ease, left var(--duration-slow) var(--ease);
+}
+body.side-nav-collapsed .visual-flowchart-modal { left: var(--side-nav-collapsed-width); }
+.visual-flowchart-modal:fullscreen { inset: 0; }
+.visual-flowchart-modal .visual-flowchart-dialog {
+  width: 100%;
+  height: 100%;
+  box-shadow: none;
+}
+.visual-flowchart-modal .visual-flowchart-dialog:fullscreen {
+  width: 100vw;
+  height: 100vh;
+}
+.visual-flowchart-header .visual-flowchart-home-btn { flex: 0 0 auto; }
+.home-drawer-toggle .material-symbols-rounded { font-size: 18px; }
+.home-drawer-toggle[aria-expanded="true"] {
+  background: var(--primary);
+  color: #fff;
+}

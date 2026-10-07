@@ -203,6 +203,9 @@
         </div>
     </div>
 
+    <!-- Backdrop behind the Home drawer while it is open over the flowchart -->
+    <div class="home-drawer-scrim" id="home-drawer-scrim" onclick="setHomeDrawerOpen(false)" hidden></div>
+
     <!-- Main Content -->
     <main class="main-content" id="main-content">
         <div class="pathway-return-banner" id="pathway-return-banner" hidden>
@@ -212,6 +215,13 @@
 
         <!-- ── HOME ─────────────────────────────────────────── -->
         <section id="home-section" class="content-section active" data-page="home">
+            <!-- Shown only when Home is opened as a drawer over the flowchart -->
+            <div class="home-drawer-bar">
+                <button type="button" class="home-drawer-close" id="home-drawer-close" onclick="setHomeDrawerOpen(false, { restoreFocus: true })">
+                    <span class="material-symbols-rounded" aria-hidden="true" translate="no">close</span>
+                    <span data-i18n="guided_home_hide">Hide home</span>
+                </button>
+            </div>
             <div class="home-hero guided-home-hero">
                 <div class="hero-inner">
                     <div class="hero-content">
@@ -234,7 +244,18 @@
                                     <option value="fr" data-i18n-opt="fc_language_french">French</option>
                                 </select>
                             </label>
+                            <label class="top-program-lang-field" for="home-screener-select">
+                                <span data-i18n="guided_screener_label">Screener</span>
+                                <select id="home-screener-select" onchange="updateHomeSetup({ screener: this.value })" aria-describedby="home-program-status" disabled>
+                                    <option value="" data-i18n-opt="guided_choose_screener">Choose a screener</option>
+                                </select>
+                            </label>
                         </div>
+                        <fieldset class="home-grade-field" id="home-grade-field" aria-describedby="home-grade-hint" disabled>
+                            <legend data-i18n="guided_grades_label">Grade level(s)</legend>
+                            <p class="home-grade-hint" id="home-grade-hint" data-i18n="guided_grades_hint">Select every grade you teach.</p>
+                            <div class="home-grade-chips" id="home-grade-chips"></div>
+                        </fieldset>
                         <p class="home-program-status" id="home-program-status" aria-live="polite" data-i18n="guided_choose_program_hint">Choose a program to tailor your guided process. You can browse reference resources at any time.</p>
                         <div class="home-guided-actions">
                             <button type="button" class="guided-primary-btn" id="home-start-btn" onclick="startGuidedPathway('tier1')">
