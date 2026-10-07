@@ -1870,6 +1870,7 @@ const FLOWCHART_DEFINITIONS = {
                 type: 'checklist',
                 title: 'Step 1: Principles of Explicit and Systematic Instruction',
                 description: 'Review the following principles before proceeding.',
+                checklistLayout: 'principles',
                 items: [
                     'Are the lesson goals clearly stated?',
                     'Is the content presented in digestible, understandable, and logically sequenced steps, as guided by the LRSD Scope and Sequence?',
@@ -1944,7 +1945,12 @@ const FLOWCHART_DEFINITIONS = {
                 title: 'Step 1: Entry',
                 journeySummary: 'You ruled out impairments and other barriers as a cause of literacy challenges and confirmed Tier 2 supports were set up correctly.',
                 reviewHint: 'Use the process map to reopen this step and review the checklist anytime.',
-                leadText: 'Informed by data (See progress monitoring tools).',
+                checklistLayout: 'grouped',
+                leadText: 'Informed by data (See Progress Monitoring tools).',
+                leadLink: {
+                    text: 'See Progress Monitoring tools',
+                    url: 'https://media.lrsd.net/media/Default/medialib/2024_11_29-literacy_screening_and_progress_monitoring_executive_summary-v07.5b52af52587.pdf'
+                },
                 subtitle: 'Rule out that challenges are not the result of:',
                 items: [
                     'Vision impairments',
@@ -4155,14 +4161,7 @@ function createCompletedStepElement(nodeData) {
             </div>`;
         }
     } else if (nodeData.type === 'checklist') {
-        // Show the full checklist with all items checked
-        const items = nodeData.items || [];
-        const itemsHtml = items.map(item => `
-            <li class="completed-checklist-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
-                <span>${formatChecklistItemText(item)}</span>
-            </li>`).join('');
-        html = `<ul class="completed-checklist">${itemsHtml}</ul>`;
+        html = renderChecklistBody(nodeData, true);
     }
     // Info nodes have no meaningful choice to display; leave the slot empty.
 
@@ -4278,15 +4277,24 @@ function formatChecklistItemText(item) {
     return html;
 }
 
-// Create integrated checklist node – every point is visible in one list.
-// The user must tick each point off before the step can be completed; ticked
-// points keep their exact text size and weight and are marked with colour and
-// an accent bar so the selection is obvious without the layout shifting.
-function createIntegratedChecklistNode(nodeData) {
+function formatChecklistLeadText(nodeData) {
+    const text = nodeData.leadText || '';
+    const link = nodeData.leadLink;
+    const index = link?.text ? text.indexOf(link.text) : -1;
+    if (index < 0) return escapeHtml(text);
+    return `${escapeHtml(text.slice(0, index))}<a class="checklist-line-link" href="${escapeAttr(link.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">${escapeHtml(link.text)}</a>${escapeHtml(text.slice(index + link.text.length))}`;
+}
+
+// Share the same grouping and reference links in live, completed and review views.
+function renderChecklistBody(nodeData, readOnly = false) {
     const items = nodeData.items || [];
     const total = items.length;
-
-    const itemsHTML = items.map((item, index) => `
+    const principles = nodeData.checklistLayout === 'principles';
+    const itemsHTML = items.map((item, index) => readOnly ? `
+        <li class="completed-checklist-item">
+            ${principles ? '' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>'}
+            <span>${formatChecklistItemText(item)}</span>
+        </li>` : `
         <li class="checklist-line-item">
             <label class="checklist-line">
                 <input type="checkbox" data-index="${index}" ${appState.visualFlowchart.checklistChecked?.[nodeData.id]?.[index] ? 'checked' : ''}>
@@ -4299,20 +4307,39 @@ function createIntegratedChecklistNode(nodeData) {
     `).join('');
 
     const leadTextHTML = nodeData.leadText
-        ? `<p class="checklist-lead-text">${escapeHtml(nodeData.leadText)}</p>`
+        ? `<p class="checklist-lead-text">${formatChecklistLeadText(nodeData)}</p>`
         : '';
-
+    const checklistHTML = `
+        ${nodeData.subtitle ? `<p class="checklist-intro${readOnly ? ' review-checklist-intro' : ''}">${escapeHtml(nodeData.subtitle)}</p>` : ''}
+        ${readOnly ? '' : `<div class="checklist-meter">
+            <div class="checklist-meter-bar"><span class="checklist-meter-fill" style="width: 0%"></span></div>
+            <span class="checklist-meter-count">0 of ${total} checked</span>
+        </div>`}
+        <ul class="${readOnly ? 'completed-checklist' : 'checklist-lines'}${principles ? ' checklist-feature-list checklist-principles' : ''}">
+            ${itemsHTML}
+        </ul>`;
+    const bodyHTML = nodeData.checklistLayout === 'grouped'
+        ? `<ul class="checklist-feature-list checklist-groups">
+            ${leadTextHTML ? `<li>${leadTextHTML}</li>` : ''}
+            <li><div class="checklist-group-body">${checklistHTML}</div></li>
+        </ul>`
+        : `${leadTextHTML}${checklistHTML}`;
     const postSectionsHTML = nodeData.postSections
         ? nodeData.postSections.map(section => `
             <div class="checklist-post-section">
                 <h4 class="checklist-post-section-title">${escapeHtml(section.title)}</h4>
-                <ul class="checklist-post-section-list">
+                <ul class="checklist-post-section-list checklist-feature-list">
                     ${section.items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}
                 </ul>
             </div>
         `).join('')
         : '';
 
+    return `${bodyHTML}${postSectionsHTML}`;
+}
+
+// Every point stays visible and must be ticked off before continuing.
+function createIntegratedChecklistNode(nodeData) {
     const continueBtnHTML = `<button class="continue-btn checklist-continue-btn" disabled
                onclick="proceedFromIntegratedChecklist('${escapeAttr(nodeData.id)}', '${escapeAttr(nodeData.nextNode)}')">
                ${escapeHtml(nodeData.buttonText || t('guided_continue'))}
@@ -4329,16 +4356,7 @@ function createIntegratedChecklistNode(nodeData) {
             </button>
         </div>
         <div class="step-content checklist-full">
-            ${leadTextHTML}
-            ${nodeData.subtitle ? `<p class="checklist-intro">${escapeHtml(nodeData.subtitle)}</p>` : ''}
-            <div class="checklist-meter">
-                <div class="checklist-meter-bar"><span class="checklist-meter-fill" style="width: 0%"></span></div>
-                <span class="checklist-meter-count">0 of ${total} checked</span>
-            </div>
-            <ul class="checklist-lines">
-                ${itemsHTML}
-            </ul>
-            ${postSectionsHTML}
+            ${renderChecklistBody(nodeData)}
             ${continueBtnHTML}
         </div>
     `;
@@ -5761,30 +5779,7 @@ function buildStepReviewContent(nodeDef, choice) {
     }
 
     if (type === 'checklist') {
-        if (nodeDef.subtitle) {
-            html += `<p class="checklist-intro review-checklist-intro">${escapeHtml(nodeDef.subtitle)}</p>`;
-        }
-        if (nodeDef.leadText) {
-            html += `<p class="checklist-lead-text">${escapeHtml(nodeDef.leadText)}</p>`;
-        }
-        const items = nodeDef.items || [];
-        const itemsHTML = items.map(item => `
-            <li class="completed-checklist-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
-                <span>${formatChecklistItemText(item)}</span>
-            </li>`).join('');
-        html += `<ul class="completed-checklist">${itemsHTML}</ul>`;
-        if (nodeDef.postSections) {
-            nodeDef.postSections.forEach(section => {
-                html += `
-                    <div class="checklist-post-section">
-                        <h4 class="checklist-post-section-title">${escapeHtml(section.title)}</h4>
-                        <ul class="checklist-post-section-list">
-                            ${section.items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}
-                        </ul>
-                    </div>`;
-            });
-        }
+        html += renderChecklistBody(nodeDef, true);
     } else if (type === 'decision') {
         const buttonsHTML = (nodeDef.choices || []).map(c => {
             const taken = choice && c.id === choice.id;

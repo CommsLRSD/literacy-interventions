@@ -3845,6 +3845,47 @@ details > p {
   margin-bottom: var(--space-sm);
 }
 
+.checklist-feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.checklist-feature-list > li {
+  position: relative;
+  padding-left: 1.3rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.checklist-feature-list > li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  color: var(--effective);
+  font-weight: 600;
+}
+
+.checklist-principles > .checklist-line-item::before {
+  top: 0.6rem;
+}
+
+.checklist-groups,
+.checklist-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.checklist-groups .checklist-lead-text {
+  margin: 0;
+}
+
+.checklist-post-section-list.checklist-feature-list {
+  padding: 0;
+}
+
 
 /* ============================================================
    FULL CHECKLIST — every point visible in one list

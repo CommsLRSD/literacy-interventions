@@ -842,6 +842,7 @@ const FLOWCHART_DEFINITIONS_FR = {
                 type: 'checklist',
                 title: '\u00c9tape 1\u00a0: Principes de l\u2019enseignement explicite et syst\u00e9matique',
                 description: 'Examinez les principes suivants avant de continuer.',
+                checklistLayout: 'principles',
                 items: [
                     'Les objectifs de la le\u00e7on sont-ils clairement \u00e9nonc\u00e9s\u00a0?',
                     'Le contenu est-il pr\u00e9sent\u00e9 en \u00e9tapes compr\u00e9hensibles et logiquement ordonn\u00e9es, guid\u00e9 par la Progression des apprentissages de la DSLR\u00a0?',
@@ -912,7 +913,12 @@ const FLOWCHART_DEFINITIONS_FR = {
                 title: '\u00c9tape 1\u00a0: Entr\u00e9e',
                 journeySummary: 'Vous avez \u00e9cart\u00e9 les d\u00e9ficiences et autres obstacles comme cause des difficult\u00e9s en litt\u00e9ratie et confirm\u00e9 que les soutiens du palier 2 ont \u00e9t\u00e9 mis en place correctement.',
                 reviewHint: 'Utilisez la carte du processus pour rouvrir cette \u00e9tape et revoir la liste en tout temps.',
+                checklistLayout: 'grouped',
                 leadText: 'Inform\u00e9 par des donn\u00e9es (voir les outils de suivi des progr\u00e8s).',
+                leadLink: {
+                    text: 'voir les outils de suivi des progr\u00e8s',
+                    url: 'https://media.lrsd.net/media/Default/medialib/2024_11_29-literacy_screening_and_progress_monitoring_executive_summary-v07.5b52af52587.pdf'
+                },
                 subtitle: '\u00c9carter que les d\u00e9fis ne sont pas le r\u00e9sultat de\u00a0:',
                 items: [
                     'D\u00e9ficiences visuelles',
