@@ -553,10 +553,24 @@ function t(key) {
 
 // Return the FLOWCHART_DEFINITIONS for the current language.
 function getFlowchartDefs() {
-    if (appState.language === 'fr' && typeof FLOWCHART_DEFINITIONS_FR !== 'undefined') {
-        return FLOWCHART_DEFINITIONS_FR;
-    }
-    return FLOWCHART_DEFINITIONS;
+    const definitions = appState.language === 'fr' && typeof FLOWCHART_DEFINITIONS_FR !== 'undefined'
+        ? FLOWCHART_DEFINITIONS_FR : FLOWCHART_DEFINITIONS;
+    if (appState.selectedProgram === PROGRAM_FRENCH_IMMERSION) return definitions;
+    return Object.fromEntries(Object.entries(definitions).map(([tierId, tier]) => [
+        tierId, {
+            ...tier,
+            nodes: Object.fromEntries(Object.entries(tier.nodes).map(([nodeId, node]) => [
+                nodeId, node.description?.includes('DIBELS, CTOPP-2, THaFol, IDAPEL')
+                    ? { ...node, description: node.description.replace('DIBELS, CTOPP-2, THaFol, IDAPEL', getProgressMonitoringScreeners()) }
+                    : node
+            ]))
+        }
+    ]));
+}
+
+function getProgressMonitoringScreeners() {
+    return appState.selectedProgram === PROGRAM_FRENCH_IMMERSION
+        ? 'DIBELS, CTOPP-2, THaFol, IDAPEL' : 'DIBELS, CTOPP-2';
 }
 
 // Return the NODE_SUMMARIES for the current language.
@@ -3484,7 +3498,9 @@ function buildVisualFlowchartDisplayItems(entries) {
     // space) once the user clicks Continue on it — see
     // confirmVisualFlowchartTierTransition().
     const pendingTierTransition = appState.visualFlowchart?.pendingTierTransition;
-    if (pendingTierTransition) {
+    const hasTier1TransitionCard = pendingTierTransition === 'tier2'
+        && entries.some(entry => entry.isCurrent && entry.node.id === 'tier1-move-tier2');
+    if (pendingTierTransition && !hasTier1TransitionCard) {
         items.push({ type: 'tier-review', targetTierId: pendingTierTransition, variant: 'step1' });
     }
     return items;
@@ -3664,8 +3680,10 @@ function refreshVisualFlowchartModal() {
         const endpointDescription = entry.node.descriptionHtml || escapeHtml(entry.node.description || '');
         const endpointAction = entry.node.id === 'tier1-reteach'
             ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="restartTier1VisualIntegrated()">${escapeHtml(entry.node.actionButton.text)}</button>`
+            : entry.isCurrent && entry.node.id === 'tier1-move-tier2' && appState.visualFlowchart?.pendingTierTransition === 'tier2'
+                ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="confirmVisualFlowchartTierTransition()">${escapeHtml(t('continue_to_tier'))} 2</button>`
             : '';
-        return `${collapseBtn}<${tag} class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
+        return `${collapseBtn}<${tag} class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ''}${entry.isTierFirstStep ? ' visual-flowchart-card-first-step' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
                     style="left:${position.x}px;top:${position.y}px;width:${position.width}px" ${revisit}>
                 <span class="visual-flowchart-tier-chip">${escapeHtml(entry.tierLabel)}</span>
                 <span class="visual-flowchart-card-icon">${cardIcon}</span>
@@ -3815,11 +3833,12 @@ function autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId) 
         state.fitNodeId = activeNodeId;
         state.userZoom = false;
     }
+    state.topAligned = activeCard?.classList.contains('visual-flowchart-card-first-step') || false;
     if (activeCard && activeCard.offsetWidth && activeCard.offsetHeight) {
         // The live step card (checklists, option grids) is by far the tallest piece
         // of the pathway, so scale the canvas down until it fits entirely on screen.
         const fillsHeight = activeCard.classList.contains('visual-flowchart-card-fit-height');
-        const padY = fillsHeight ? Math.min(VISUAL_FLOWCHART_FIT_HEIGHT_PADDING, pad.top) : pad.top;
+        const padY = fillsHeight || state.topAligned ? Math.min(VISUAL_FLOWCHART_FIT_HEIGHT_PADDING, pad.top) : pad.top;
         // Phones keep the text readable instead of shrinking the card to fit;
         // the card is top-aligned and the rest is reached by dragging.
         const minFitScale = state.mobile ? VISUAL_FLOWCHART_MOBILE_MIN_FIT_SCALE : 0.35;
@@ -3839,10 +3858,9 @@ function autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId) 
         // Vertically, the card prefers to sit in the upper part of the viewport
         // rather than dead centre: true centring (0.5) reads as too low once the
         // header/tier-bar/toolbar above the viewport are accounted for.
-        // The height-fitted card fills the viewport, so it simply sits centred
-        // between its top and bottom margins.
-        state.y = fillsHeight
-            ? Math.max(padY, (viewport.clientHeight - activeHeight) / 2) - activeCard.offsetTop * state.scale
+        // Each tier's first step shares the same top margin.
+        state.y = state.topAligned
+            ? padY - activeCard.offsetTop * state.scale
             : activeHeight + pad.top + pad.bottom <= viewport.clientHeight
                 ? (viewport.clientHeight - activeHeight) * VISUAL_FLOWCHART_VERTICAL_BIAS - activeCard.offsetTop * state.scale
                 : pad.top - activeCard.offsetTop * state.scale;
@@ -3910,10 +3928,11 @@ function clampVisualFlowchartPan(state, viewport) {
     state.x = contentWidth + pad.left + pad.right <= viewport.clientWidth
         ? maxX
         : Math.min(maxX, Math.max(minX, state.x));
-    const maxY = pad.top - bounds.minY * scale;
+    const topPadding = state.topAligned ? Math.min(VISUAL_FLOWCHART_FIT_HEIGHT_PADDING, pad.top) : pad.top;
+    const maxY = topPadding - bounds.minY * scale;
     const minY = viewport.clientHeight - pad.bottom - bounds.maxY * scale;
     state.y = contentHeight + pad.top + pad.bottom <= viewport.clientHeight
-        ? (viewport.clientHeight - contentHeight) / 2 - bounds.minY * scale
+        ? state.topAligned ? maxY : (viewport.clientHeight - contentHeight) / 2 - bounds.minY * scale
         : Math.min(maxY, Math.max(minY, state.y));
 }
 
@@ -7556,7 +7575,7 @@ function proceedToTier3ProgressMonitoring() {
                     <div class="step-indicator">Step 3</div>
                     <div class="step-content-box">
                         <h3>Was instruction effective?</h3>
-                        <p>After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2, THaFol, IDAPEL).</p>
+                        <p>After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (${escapeHtml(getProgressMonitoringScreeners())}).</p>
                         
                         <p>If you chose the wrong option, simply choose the correct one and continue.</p>
                         
