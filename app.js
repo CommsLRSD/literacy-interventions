@@ -157,7 +157,8 @@ function formatGradeList(grades) {
 
 function getValidPathwayGrades(program, grades) {
     const allowed = getPathwayGrades(program);
-    return normalizeGradeList(grades).filter(grade => allowed.includes(grade));
+    // The guided pathway screens one grade at a time.
+    return normalizeGradeList(grades).filter(grade => allowed.includes(grade)).slice(0, 1);
 }
 
 function getProgramScreeners() {
@@ -173,8 +174,8 @@ function getPathwaySetupDefaults() {
 
 // Home is the first page of the guided process: its program, screener and
 // grade choices describe the active pathway (or the next one to start).
-// While the user is editing them, an unfinished choice (e.g. every grade
-// unticked) is kept as a draft so the active pathway is never left invalid.
+// While the user is editing them, an unfinished choice (e.g. no grade
+// chosen) is kept as a draft so the active pathway is never left invalid.
 let homeSetupDraft = null;
 let homeSetupRenderKey = '';
 
@@ -185,7 +186,7 @@ function getHomeSetup() {
     }
     const context = pathwayContext?.program === program ? pathwayContext
         : (savedPathway?.program === program ? savedPathway.context : null);
-    if (context) return { screener: context.screener, grades: normalizeGradeList(context.grades) };
+    if (context) return { screener: context.screener, grades: getValidPathwayGrades(program, context.grades) };
     const defaults = getPathwaySetupDefaults();
     return { screener: defaults.screener, grades: defaults.grades };
 }
@@ -197,9 +198,8 @@ function isHomeSetupComplete(setup = getHomeSetup()) {
 
 function renderHomeSetupControls() {
     const select = document.getElementById('home-screener-select');
-    const chips = document.getElementById('home-grade-chips');
-    const fieldset = document.getElementById('home-grade-field');
-    if (!select || !chips || !fieldset) return;
+    const gradeSelect = document.getElementById('home-grade-select');
+    if (!select || !gradeSelect) return;
     const program = appState.selectedProgram;
     const screeners = program ? getProgramScreeners() : [];
     const grades = getPathwayGrades(program);
@@ -208,23 +208,14 @@ function renderHomeSetupControls() {
         homeSetupRenderKey = key;
         select.innerHTML = `<option value="">${escapeHtml(t('guided_choose_screener'))}</option>` +
             screeners.map(item => `<option value="${escapeAttr(item.id)}">${escapeHtml(item.name)}</option>`).join('');
-        chips.innerHTML = grades.map(grade => `
-            <label class="home-grade-chip">
-                <input type="checkbox" value="${escapeAttr(grade)}" aria-label="${escapeAttr(translateGrade(grade))}">
-                <span aria-hidden="true">${escapeHtml(grade)}</span>
-            </label>`).join('');
-        chips.querySelectorAll('input').forEach(input => {
-            input.addEventListener('change', () => {
-                const selected = Array.from(chips.querySelectorAll('input:checked'), checkbox => checkbox.value);
-                updateHomeSetup({ grades: selected });
-            });
-        });
+        gradeSelect.innerHTML = `<option value="">${escapeHtml(t('guided_choose_grade'))}</option>` +
+            grades.map(grade => `<option value="${escapeAttr(grade)}">${escapeHtml(translateGrade(grade))}</option>`).join('');
     }
     const setup = getHomeSetup();
     select.disabled = !program || !screeners.length;
     select.value = screeners.some(item => item.id === setup.screener) ? setup.screener : '';
-    fieldset.disabled = !program;
-    chips.querySelectorAll('input').forEach(input => { input.checked = setup.grades.includes(input.value); });
+    gradeSelect.disabled = !program;
+    gradeSelect.value = grades.includes(setup.grades[0]) ? setup.grades[0] : '';
 }
 
 // Share the pathway's screener and grades with the Teaching Resources filters
@@ -279,7 +270,7 @@ function showHomeSetupRequired() {
     const setup = getHomeSetup();
     const target = !appState.selectedProgram ? document.getElementById('home-program-select')
         : !getProgramScreeners().some(item => item.id === setup.screener) ? document.getElementById('home-screener-select')
-            : document.querySelector('#home-grade-chips input');
+            : document.getElementById('home-grade-select');
     target?.focus();
 }
 

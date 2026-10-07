@@ -250,12 +250,13 @@
                                     <option value="" data-i18n-opt="guided_choose_screener">Choose a screener</option>
                                 </select>
                             </label>
+                            <label class="top-program-lang-field" for="home-grade-select">
+                                <span data-i18n="guided_grades_label">Grade being screened</span>
+                                <select id="home-grade-select" onchange="updateHomeSetup({ grades: this.value ? [this.value] : [] })" aria-describedby="home-program-status" disabled>
+                                    <option value="" data-i18n-opt="guided_choose_grade">Choose a grade</option>
+                                </select>
+                            </label>
                         </div>
-                        <fieldset class="home-grade-field" id="home-grade-field" aria-describedby="home-grade-hint" disabled>
-                            <legend data-i18n="guided_grades_label">Grade level(s)</legend>
-                            <p class="home-grade-hint" id="home-grade-hint" data-i18n="guided_grades_hint">Select every grade you teach.</p>
-                            <div class="home-grade-chips" id="home-grade-chips"></div>
-                        </fieldset>
                         <p class="home-program-status" id="home-program-status" aria-live="polite" data-i18n="guided_choose_program_hint">Choose a program to tailor your guided process. You can browse reference resources at any time.</p>
                         <div class="home-guided-actions">
                             <button type="button" class="guided-primary-btn" id="home-start-btn" onclick="startGuidedPathway('tier1')">
