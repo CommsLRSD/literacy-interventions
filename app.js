@@ -509,6 +509,8 @@ function updateGuidedHome() {
     updatePathwaySelections();
     renderFavourites();
     const hasPath = !!savedPathway && savedPathway.program === appState.selectedProgram;
+    const resetHint = document.getElementById('home-reset-hint');
+    if (resetHint) resetHint.hidden = !hasPath;
     for (const id of ['home-resume-btn', 'home-restart-btn']) {
         const button = document.getElementById(id);
         if (button) {
@@ -546,6 +548,21 @@ function startGuidedPathway(tierId = 'tier1') {
     appState.visualFlowchartDismissed = false;
     clearPathwayProgress();
     beginPathway(tierId, setup);
+}
+
+// Reset the flowchart: clear guided progress plus the screener and grade
+// choices, keeping only the selected program.
+function resetGuidedPathway() {
+    if (!appReady || !savedPathway || !window.confirm(t('guided_reset_confirm'))) return;
+    const program = appState.selectedProgram;
+    closeVisualFlowchartModal({ immediate: true });
+    appState.visualFlowchartDismissed = false;
+    homeSetupDraft = null;
+    if (program) pathwayDefaults[program] = { ...getPathwaySetupDefaults(), screener: '', grades: [] };
+    clearPathwayProgress();
+    if (appState.currentPage !== 'home') navigateToPage('home');
+    updateGuidedHome();
+    document.getElementById(program ? 'home-screener-select' : 'home-program-select')?.focus();
 }
 
 function restorePathway(saved) {
@@ -711,6 +728,11 @@ function applyTranslations() {
         const key = el.dataset.i18nOpt;
         const val = t(key);
         if (typeof val === 'string') el.textContent = val;
+    });
+    // title attribute
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const val = t(el.dataset.i18nTitle);
+        if (typeof val === 'string') el.setAttribute('title', val);
     });
     // placeholder attribute
     document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
@@ -938,11 +960,10 @@ function updateMobilePageTitle() {
 
 function navigateToPage(pageName) {
     if (pageName === 'flowchart' && !appReady) return;
-    if (pageName === 'flowchart' && !pathwayContext) {
-        if (!savedPathway || !restorePathway(savedPathway)) {
-            startGuidedPathway('tier1');
-            return;
-        }
+    // Home is the flowchart's first step: until a pathway has been started
+    // (or can be resumed), the Flowchart menu item shows the Home setup.
+    if (pageName === 'flowchart' && !pathwayContext && (!savedPathway || !restorePathway(savedPathway))) {
+        pageName = 'home';
     }
     setHomeDrawerOpen(false);
 
@@ -954,15 +975,16 @@ function navigateToPage(pageName) {
     updateMobilePageTitle();
     
     // Update active states in desktop nav
+    const navPage = pageName === 'home' ? 'flowchart' : pageName;
     document.querySelectorAll('.nav-link').forEach(link => {
-        const isActive = link.dataset.page === pageName;
+        const isActive = link.dataset.page === navPage;
         link.classList.toggle('active', isActive);
         link.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
     
     // Update active states in mobile nav
     document.querySelectorAll('.mobile-nav-item').forEach(link => {
-        link.classList.toggle('active', link.dataset.page === pageName);
+        link.classList.toggle('active', link.dataset.page === navPage);
     });
     
     // Show/hide the main sections
@@ -1264,6 +1286,8 @@ function setSidebarCollapsed(collapsed, options = {}) {
 // ============================================
 let homeDrawerReturnFocus = null;
 
+let homeDrawerCloseTimer = null;
+
 function isHomeDrawerOpen() {
     return document.body.classList.contains('home-drawer-open');
 }
@@ -1287,6 +1311,10 @@ function setHomeDrawerOpen(open, options = {}) {
     const section = document.getElementById('home-section');
     const scrim = document.getElementById('home-drawer-scrim');
     document.body.classList.toggle('home-drawer-open', shouldOpen);
+    // Slide the drawer back out instead of letting it vanish.
+    clearTimeout(homeDrawerCloseTimer);
+    document.body.classList.toggle('home-drawer-closing', !shouldOpen);
+    if (!shouldOpen) homeDrawerCloseTimer = setTimeout(() => document.body.classList.remove('home-drawer-closing'), 260);
     if (scrim) scrim.hidden = !shouldOpen;
     if (section) {
         if (shouldOpen) {

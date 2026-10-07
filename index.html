@@ -88,11 +88,7 @@
     <nav class="side-nav" id="side-nav" role="navigation" aria-label="Site sections">
         <div class="side-nav-links" role="menubar" aria-label="Site sections">
             <div class="nav-group-label" role="presentation" data-i18n="nav_guided_process">Guided process</div>
-            <button class="nav-link active" data-page="home" role="menuitem" aria-selected="true">
-                <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">home</span>
-                <span class="nav-link-label" data-i18n="nav_home">Home</span>
-            </button>
-            <button class="nav-link" data-page="flowchart" role="menuitem" aria-selected="false">
+            <button class="nav-link active" data-page="flowchart" role="menuitem" aria-selected="true">
                 <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">account_tree</span>
                 <span class="nav-link-label" data-i18n="nav_flowchart">Flowchart</span>
             </button>
@@ -137,11 +133,7 @@
     <div class="mobile-nav-overlay" role="dialog" aria-label="Navigation menu" aria-hidden="true">
         <div class="mobile-nav-content">
             <div class="nav-group-label" data-i18n="nav_guided_process">Guided process</div>
-            <button class="mobile-nav-item active" data-page="home">
-                <span class="material-symbols-rounded" aria-hidden="true" translate="no">home</span>
-                <span data-i18n="nav_home">Home</span>
-            </button>
-            <button class="mobile-nav-item" data-page="flowchart">
+            <button class="mobile-nav-item active" data-page="flowchart">
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">account_tree</span>
                 <span data-i18n="nav_flowchart">Flowchart</span>
             </button>
@@ -264,9 +256,11 @@
                                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">arrow_forward</span>
                             </button>
                             <button type="button" class="guided-primary-btn" id="home-resume-btn" onclick="resumeGuidedPathway()" hidden data-i18n="guided_resume">Continue my guided process</button>
-                            <button type="button" class="guided-secondary-btn" id="home-restart-btn" onclick="startGuidedPathway('tier1')" hidden data-i18n="guided_restart">Start again</button>
+                            <button type="button" class="guided-icon-btn" id="home-restart-btn" onclick="resetGuidedPathway()" hidden aria-label="Reset the flowchart" title="Reset the flowchart" data-i18n-aria="guided_reset" data-i18n-title="guided_reset">
+                                <span class="material-symbols-rounded" aria-hidden="true" translate="no">refresh</span>
+                            </button>
                         </div>
-                        <p class="home-progress-privacy" data-i18n="guided_progress_privacy">Your catalog choices and checklist progress are saved in this app’s browser cache on this device (for this visit only if cache storage is unavailable). Clearing browser caches clears guided progress. Reloading or hard-refreshing does not clear saved device choices. Reset saved data clears all app-owned choices and caches. No student details are saved in guided progress.</p>
+                        <p class="home-progress-privacy" id="home-reset-hint" data-i18n="guided_progress_privacy" hidden>To reset the flowchart, select the refresh button. This clears your progress, screener and grade, but keeps your program.</p>
                         <button type="button" class="home-resource-shortcut" onclick="navigateToPage('interventions')" data-i18n="guided_resource_shortcut">I’m looking for a specific teaching resource</button>
                     </div>
                     <div class="hero-photo-wrap" aria-hidden="true">
