@@ -10,8 +10,8 @@ const appState = {
     flowchartData: null,
     tierFlowchartData: null,
     interventionMenuData: null,
+    interventionMenuDataLoaded: false,
     currentPath: [],
-    interventionHistory: [],
     currentTierFlow: null,
     // UI language: 'en' (English) or 'fr' (French).
     // Assessment Names, Screener Names, and Intervention Names are excluded from translation.
@@ -51,6 +51,214 @@ const PATHWAY_PREFERENCE_KEY = `${STORAGE_KEY_PREFIX}-pathway`;
 let savedPathway = null;
 let restoringPathway = false;
 let appReady = false;
+const PATHWAY_CACHE_NAME = 'literacy-interventions-progress-v1';
+const PATHWAY_CACHE_URL = new URL('./.literacy-interventions-progress.json', window.location.href).href;
+const PATHWAY_SESSION_KEY = `${STORAGE_KEY_PREFIX}-progress-session`;
+let pathwayDefaults = {};
+let pathwayContext = null;
+let pendingPathwayTier = null;
+let progressStorageQueue = Promise.resolve();
+let progressStorageEpoch = 0;
+
+function queueProgressStorage(operation) {
+    progressStorageQueue = progressStorageQueue.catch(() => {}).then(operation);
+    return progressStorageQueue;
+}
+
+function parseProgressStorage(raw) {
+    try {
+        const state = raw && raw.length <= 100000 ? JSON.parse(raw) : null;
+        if (!state || !state.defaults || typeof state.defaults !== 'object' || Array.isArray(state.defaults) ||
+            !Object.hasOwn(state, 'pathway') || (state.pathway !== null &&
+                (typeof state.pathway !== 'object' || Array.isArray(state.pathway)))) return null;
+        return state;
+    } catch (e) {
+        return null;
+    }
+}
+
+async function readProgressStorage() {
+    // Do not revive legacy localStorage progress after browser caches are cleared.
+    try {
+        localStorage.removeItem(PATHWAY_PREFERENCE_KEY);
+        localStorage.removeItem(`${LEGACY_STORAGE_KEY_PREFIX}-pathway`);
+    } catch (e) { /* Storage may be disabled. */ }
+    let state = null;
+    try {
+        const cache = await caches.open(PATHWAY_CACHE_NAME);
+        const response = await cache.match(PATHWAY_CACHE_URL);
+        state = response ? parseProgressStorage(await response.text()) : null;
+    } catch (e) { /* A failed write may have saved a session-only fallback. */ }
+    try {
+        const fallback = parseProgressStorage(sessionStorage.getItem(PATHWAY_SESSION_KEY));
+        if (fallback) state = fallback;
+    } catch (e) { /* Session storage is optional. */ }
+    pathwayDefaults = state?.defaults || {};
+    return state?.pathway || null;
+}
+
+function persistProgressStorage() {
+    const epoch = progressStorageEpoch;
+    const payload = JSON.stringify({ pathway: savedPathway, defaults: pathwayDefaults });
+    return queueProgressStorage(async () => {
+        if (epoch !== progressStorageEpoch) return;
+        try {
+            const cache = await caches.open(PATHWAY_CACHE_NAME);
+            if (epoch !== progressStorageEpoch) return;
+            await cache.put(PATHWAY_CACHE_URL, new Response(payload, { headers: { 'Content-Type': 'application/json' } }));
+            if (epoch === progressStorageEpoch) {
+                try { sessionStorage.removeItem(PATHWAY_SESSION_KEY); } catch (error) { /* Session storage is optional. */ }
+            }
+        } catch (e) {
+            if (epoch !== progressStorageEpoch) return;
+            try { sessionStorage.setItem(PATHWAY_SESSION_KEY, payload); } catch (error) { /* Current visit still works. */ }
+        }
+    });
+}
+
+function clearPathwayProgress() {
+    progressStorageEpoch++;
+    savedPathway = null;
+    pathwayContext = null;
+    appState.fullJourney = [];
+    appState.currentTierFlow = null;
+    appState.fwState = null;
+    appState.visualFlowchart = { nodes: [], connections: [], currentNodeId: null, selectedPath: [] };
+    const container = document.getElementById('flowchart-container');
+    if (container) delete container.dataset.initialized;
+    persistProgressStorage();
+    updateGuidedHome();
+}
+
+function getPathwayGrades(program) {
+    if (![PROGRAM_ENGLISH, PROGRAM_FRENCH_IMMERSION].includes(program)) return [];
+    return [program === PROGRAM_FRENCH_IMMERSION ? 'M' : 'K', '1', '2', '3', '4', '5', '6', '7', '8'];
+}
+
+function getPathwayScreenerId() {
+    const screener = (appState.tierFlowchartData?.tier1?.screeners || []).find(item => item.id === pathwayContext?.screener);
+    return resolveScreenerId(screener?.name) || resolveScreenerId(pathwayContext?.screener);
+}
+
+function getPathwaySetupDefaults() {
+    const stored = pathwayDefaults[appState.selectedProgram] || {};
+    const screeners = (appState.tierFlowchartData?.tier1?.screeners || []).filter(item => isScreenerIdForCurrentProgram(item.id));
+    const screener = screeners.find(item => item.id === stored.screener);
+    return { screener: screener?.id || '', grade: getPathwayGrades(appState.selectedProgram).includes(stored.grade) ? stored.grade : '',
+        pillar: typeof stored.pillar === 'string' ? stored.pillar : 'Phonics' };
+}
+
+function showPathwaySetup(tierId) {
+    pendingPathwayTier = tierId;
+    const defaults = getPathwaySetupDefaults();
+    const screeners = (appState.tierFlowchartData?.tier1?.screeners || []).filter(item => isScreenerIdForCurrentProgram(item.id));
+    const container = document.getElementById('flowchart-container');
+    if (!container) return;
+    container.classList.remove('flowchart-hidden', 'flowchart-view-hidden');
+    container.style.display = 'block';
+    delete container.dataset.initialized;
+    container.innerHTML = `
+        <section class="integrated-flowchart pathway-setup" aria-labelledby="pathway-setup-title">
+            <div class="step-content">
+                <h2 id="pathway-setup-title" tabindex="-1">${escapeHtml(t('guided_setup_title'))}</h2>
+                <p>${escapeHtml(t('guided_setup_hint'))}</p>
+                <form id="pathway-setup-form" class="fw-wizard-selects">
+                    <div class="fw-select-group">
+                        <label for="pathway-setup-screener">${escapeHtml(t('fc_screener_label'))}</label>
+                        <select id="pathway-setup-screener" class="fw-select" required>
+                            <option value=""${defaults.screener ? '' : ' selected'}>${escapeHtml(t('wizard_select_placeholder'))}</option>
+                            ${screeners.map(item => `<option value="${escapeAttr(item.id)}"${item.id === defaults.screener ? ' selected' : ''}>${escapeHtml(item.name)}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="fw-select-group">
+                        <label for="pathway-setup-grade">${escapeHtml(t('filter_grade_label'))}</label>
+                        <select id="pathway-setup-grade" class="fw-select" required>
+                            <option value=""${defaults.grade ? '' : ' selected'}>${escapeHtml(t('wizard_select_placeholder'))}</option>
+                            ${getPathwayGrades(appState.selectedProgram).map(grade => `<option value="${grade}"${grade === defaults.grade ? ' selected' : ''}>${escapeHtml(translateGrade(grade))}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="pathway-setup-actions">
+                        <button type="submit" class="action-btn action-primary"${screeners.length ? '' : ' disabled'}>${escapeHtml(t('guided_setup_confirm'))}</button>
+                        <button type="button" class="action-btn action-secondary" onclick="navigateToPage('home')">${escapeHtml(t('guided_home'))}</button>
+                    </div>
+                </form>
+            </div>
+        </section>`;
+    container.querySelector('form').addEventListener('submit', event => {
+        event.preventDefault();
+        confirmPathwaySetup();
+    });
+    navigateToPage('flowchart');
+    document.getElementById('pathway-setup-title')?.focus();
+}
+
+function confirmPathwaySetup() {
+    if (!pendingPathwayTier) return;
+    const screener = (appState.tierFlowchartData?.tier1?.screeners || []).find(item =>
+        item.id === document.getElementById('pathway-setup-screener')?.value && isScreenerIdForCurrentProgram(item.id));
+    const grade = document.getElementById('pathway-setup-grade')?.value;
+    if (!screener || !getPathwayGrades(appState.selectedProgram).includes(grade)) return;
+    pathwayContext = Object.freeze({ program: appState.selectedProgram, screener: screener.id, grade });
+    pathwayDefaults[appState.selectedProgram] = { ...getPathwaySetupDefaults(), screener: screener.id, grade };
+    setRememberedScreener(screener.name);
+    setRememberedMenuFilters({ program: appState.selectedProgram, screener: appState.selectedScreener, grade,
+        pillar: pathwayDefaults[appState.selectedProgram].pillar });
+    appState.currentTierFlow = { screener: screener.id, screenerName: screener.name, grade };
+    const tierId = pendingPathwayTier;
+    pendingPathwayTier = null;
+    initIntegratedFlowchart(tierId);
+    document.getElementById('flowchart-container').dataset.initialized = 'true';
+    navigateToPage('flowchart');
+    requestAnimationFrame(focusActivePathwayStep);
+}
+
+async function hardResetApp() {
+    if (!appReady) return;
+    if (!window.confirm(t('guided_hard_reset_confirm'))) return;
+    closeMobileMenu();
+    appReady = false;
+    pendingPathwayTier = null;
+    pathwayDefaults = {};
+    clearPathwayProgress();
+    closeVisualFlowchartModal({ immediate: true });
+    closeFinalSummaryDialog({ immediate: true });
+    await queueProgressStorage(async () => {
+        for (const storageName of ['localStorage', 'sessionStorage']) {
+            try {
+                const storage = window[storageName];
+                const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index));
+                keys.filter(key => key && (key.startsWith(`${STORAGE_KEY_PREFIX}-`) ||
+                    key.startsWith(`${LEGACY_STORAGE_KEY_PREFIX}-`) || key.startsWith(`${LEGACY_STORAGE_KEY_PREFIX}_`)))
+                    .forEach(key => storage.removeItem(key));
+            } catch (e) { /* Storage may be disabled. */ }
+        }
+        try {
+            const keys = await caches.keys();
+            await Promise.all(keys.filter(key => key === PATHWAY_CACHE_NAME || /^literacy-interventions-v\d+$/.test(key))
+                .map(key => caches.delete(key)));
+        } catch (e) { /* CacheStorage may be unavailable. */ }
+    });
+    appState.selectedProgram = null;
+    appState.selectedScreener = null;
+    appState.language = 'en';
+    appState.rememberedMenuFilters = {};
+    appState.currentPath = [];
+    Object.assign(menuState, { tier: '', program: MENU_LANGUAGE_DEFAULT, resourceType: '', pillar: '',
+        screener: '', subtest: '', grade: '', evidence: '', search: '' });
+    menuUiState.view = 'search';
+    menuUiState.editingField = '';
+    activeScheduleGradeId = 'all';
+    favouriteIds = new Set();
+    clearFavouriteFeedback();
+    setPathwaySelectionsOpen(false);
+    renderFavourites();
+    document.getElementById('flowchart-container').innerHTML = '';
+    applyTranslations();
+    updateTopProgramLangControls();
+    appReady = true;
+    navigateToPage('home');
+    updateGuidedHome();
+}
 const SCHEDULE_GRADE_PREFERENCE_KEY = `${STORAGE_KEY_PREFIX}-schedule-grade-preference`;
 const LEGACY_SCHEDULE_GRADE_PREFERENCE_KEY = `${LEGACY_STORAGE_KEY_PREFIX}-schedule-grade-preference`;
 
@@ -172,18 +380,18 @@ function validateTierPathway(raw) {
         layoutMode: normalizeJourneyLayoutMode(raw.layoutMode) };
 }
 
-function readSavedPathway() {
+function readSavedPathway(saved) {
     try {
         if (![PROGRAM_ENGLISH, PROGRAM_FRENCH_IMMERSION].includes(appState.selectedProgram)) return null;
-        const raw = getStoredValue(localStorage, PATHWAY_PREFERENCE_KEY);
-        if (!raw || raw.length > 50000) return null;
-        const saved = JSON.parse(raw);
-        if (saved.version !== 1 || saved.program !== appState.selectedProgram) return null;
+        if (!saved || saved.version !== 2 || saved.program !== appState.selectedProgram) return null;
+        if (saved.context?.program !== saved.program || !getPathwayGrades(saved.program).includes(saved.context?.grade) ||
+            !(appState.tierFlowchartData?.tier1?.screeners || []).some(item =>
+                item.id === saved.context?.screener && isScreenerIdForCurrentProgram(item.id))) return null;
         const current = validateTierPathway(saved.current);
         if (!current) return null;
         const fullJourney = (Array.isArray(saved.fullJourney) ? saved.fullJourney.slice(0, 3) : []).map(validateTierPathway);
         if (fullJourney.some(tier => !tier)) return null;
-        return { version: 1, program: saved.program, current, fullJourney, filters: validatePathwayFilters(saved.filters) };
+        return { version: 2, program: saved.program, context: saved.context, current, fullJourney, filters: validatePathwayFilters(saved.filters) };
     } catch (e) {
         return null;
     }
@@ -191,28 +399,27 @@ function readSavedPathway() {
 
 function validatePathwayFilters(filters) {
     const context = { program: appState.selectedProgram };
-    return Object.fromEntries(['pillar', 'screener'].map(field => [
+    return Object.fromEntries(['pillar', 'screener', 'grade'].map(field => [
         field, distinctTagValues(context, field).includes(filters?.[field]) ? filters[field] : ''
     ]));
 }
 
 function savePathwayProgress() {
+    updatePathwaySelections();
     const vf = appState.visualFlowchart;
-    if (restoringPathway || !appState.selectedProgram || !vf?.tierId || !vf.selectedPath.length) return;
+    if (restoringPathway || !pathwayContext || pendingPathwayTier || !appState.selectedProgram || !vf?.tierId || !vf.selectedPath.length) return;
     savedPathway = {
-        version: 1, program: appState.selectedProgram, current: serializeTierPathway(vf),
+        version: 2, program: appState.selectedProgram, context: { ...pathwayContext }, current: serializeTierPathway(vf),
         fullJourney: (appState.fullJourney || []).map(serializeTierPathway),
         filters: validatePathwayFilters(appState.rememberedMenuFilters)
     };
-    try {
-        setStoredValue(localStorage, PATHWAY_PREFERENCE_KEY, JSON.stringify(savedPathway));
-    } catch (e) {
-        // The in-memory pathway still works without browser storage.
-    }
+    persistProgressStorage();
     updateGuidedHome();
 }
 
 function updateGuidedHome() {
+    updatePathwaySelections();
+    renderFavourites();
     const hasPath = !!savedPathway && savedPathway.program === appState.selectedProgram;
     for (const id of ['home-resume-btn', 'home-restart-btn']) {
         const button = document.getElementById(id);
@@ -226,6 +433,9 @@ function updateGuidedHome() {
         start.hidden = hasPath;
         start.disabled = !appReady;
     }
+    document.querySelectorAll('.menu-hard-reset').forEach(reset => {
+        reset.disabled = !appReady;
+    });
     const status = document.getElementById('home-program-status');
     if (status) status.textContent = appState.selectedProgram ? '' : t('guided_choose_program_hint');
     const banner = document.getElementById('pathway-return-banner');
@@ -237,13 +447,8 @@ function startGuidedPathway(tierId = 'tier1') {
     if (savedPathway && !window.confirm(t('guided_restart_confirm'))) return;
     closeVisualFlowchartModal({ immediate: true });
     appState.visualFlowchartDismissed = false;
-    appState.selectedScreener = null;
-    appState.currentTierFlow = null;
-    setRememberedMenuFilters({ pillar: '', screener: '' });
-    initIntegratedFlowchart(tierId);
-    document.getElementById('flowchart-container').dataset.initialized = 'true';
-    navigateToPage('flowchart');
-    requestAnimationFrame(focusActivePathwayStep);
+    clearPathwayProgress();
+    showPathwaySetup(tierId);
 }
 
 function restorePathway(saved) {
@@ -251,16 +456,19 @@ function restorePathway(saved) {
     if (!current) return false;
     restoringPathway = true;
     try {
+        pathwayContext = Object.freeze({
+            program: saved.context.program, screener: saved.context.screener, grade: saved.context.grade
+        });
         initIntegratedFlowchart(current.tierId);
         setRememberedMenuFilters(validatePathwayFilters(saved.filters));
         appState.visualFlowchart = { ...appState.visualFlowchart, ...current,
             currentNodeId: current.selectedPath[current.selectedPath.length - 1].nodeId,
             lastRenderedActiveNodeId: null };
         appState.fullJourney = (saved.fullJourney || []).map(validateTierPathway).filter(Boolean);
-        const screener = current.choices['tier1-screener'] ||
-            appState.fullJourney.find(tier => tier.tierId === 'tier1')?.choices['tier1-screener'];
-        if (screener) setRememberedScreener(screener.name);
-        else if (appState.rememberedMenuFilters.screener) setRememberedScreener(appState.rememberedMenuFilters.screener);
+        const screener = appState.tierFlowchartData.tier1.screeners.find(item => item.id === pathwayContext.screener);
+        setRememberedScreener(saved.filters?.screener || screener.name);
+        appState.currentTierFlow = { screener: screener.id, screenerName: screener.name, grade: pathwayContext.grade };
+        setRememberedMenuFilters({ screener: appState.selectedScreener, grade: pathwayContext.grade });
         const node = getFlowchartDefs()[current.tierId].nodes[appState.visualFlowchart.currentNodeId];
         renderJourney();
         updateCarouselNav();
@@ -432,6 +640,7 @@ function updateTopProgramLangControls() {
 // Intervention Names are rendered from JSON data and are intentionally kept
 // in their original form regardless of the UI language.
 function rerenderForLanguage() {
+    if (pendingPathwayTier) showPathwaySetup(pendingPathwayTier);
     // Flowchart: re-initialise at the same tier if one is open
     const fc = document.getElementById('flowchart-container');
     if (fc && fc.dataset.initialized) {
@@ -504,7 +713,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initialize assessment schedules
     await initializeAssessmentSchedules();
-    savedPathway = readSavedPathway();
+    savedPathway = readSavedPathway(await readProgressStorage());
+    if (!savedPathway && appState.selectedProgram) {
+        const defaults = getPathwaySetupDefaults();
+        setRememberedMenuFilters({ pillar: defaults.pillar, grade: defaults.grade });
+    }
     appReady = true;
     updateGuidedHome();
     
@@ -520,6 +733,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initialize bubble background on all page sections
     document.querySelectorAll('.content-section').forEach(initBubbles);
+    document.querySelectorAll('.favourites-page-wrapper, .interventions-page-wrapper').forEach(ensureFavouriteFeedback);
 
     console.log('Literacy Interventions - Ready!');
 });
@@ -556,9 +770,12 @@ async function loadInterventionMenuData() {
         const response = await fetch('data/intervention-menu.json');
         if (!response.ok) throw new Error('Failed to load intervention menu data');
         appState.interventionMenuData = await response.json();
+        appState.interventionMenuDataLoaded = true;
+        favouriteCatalog = null;
         console.log('Intervention menu data loaded successfully');
     } catch (error) {
         console.error('Error loading intervention menu data:', error);
+        appState.interventionMenuDataLoaded = false;
         appState.interventionMenuData = { screeners: [], pillars: [], resourceTypes: [], resources: [] };
     }
 }
@@ -568,7 +785,7 @@ async function loadInterventionMenuData() {
 // ============================================
 function setupNavigation() {
     // Desktop navigation
-    document.querySelectorAll('.nav-link').forEach(link => {
+    document.querySelectorAll('.nav-link[data-page]').forEach(link => {
         link.addEventListener('click', (e) => {
             const page = e.currentTarget.dataset.page;
             navigateToPage(page);
@@ -576,7 +793,7 @@ function setupNavigation() {
     });
     
     // Mobile navigation
-    document.querySelectorAll('.mobile-nav-item').forEach(link => {
+    document.querySelectorAll('.mobile-nav-item[data-page]').forEach(link => {
         link.addEventListener('click', (e) => {
             const page = e.currentTarget.dataset.page;
             navigateToPage(page);
@@ -603,9 +820,17 @@ function updateMobilePageTitle() {
 
 function navigateToPage(pageName) {
     if (pageName === 'flowchart' && (!appReady || !ensureProgramSelectionBeforeInteraction())) return;
+    if (pageName === 'flowchart' && !pathwayContext && !pendingPathwayTier) {
+        if (!savedPathway || !restorePathway(savedPathway)) {
+            startGuidedPathway('tier1');
+            return;
+        }
+    }
 
     // Update state
     appState.currentPage = pageName;
+    clearFavouriteFeedback();
+    if (pageName !== 'flowchart') closeVisualFlowchartModal({ immediate: true });
     document.body.dataset.page = pageName;
     updateMobilePageTitle();
     
@@ -630,18 +855,17 @@ function navigateToPage(pageName) {
     // Lazy-initialize sections on first visit
     if (pageName === 'flowchart') {
         const fc = document.getElementById('flowchart-container');
-        if (fc && !fc.dataset.initialized) {
+        if (fc && !fc.dataset.initialized && !pendingPathwayTier) {
             if (!savedPathway || !restorePathway(savedPathway)) openInteractiveFlowchart();
             fc.dataset.initialized = 'true';
         }
-        openDefaultVisualFlowchart();
+        if (!pendingPathwayTier) openDefaultVisualFlowchart();
     } else if (pageName === 'interventions') {
         // Every visit re-syncs the filters to whatever was chosen last —
         // here or during a flowchart drilldown — so context always carries over.
         initializeInterventionsFilterMenu();
-    } else if (pageName === 'history') {
-        // Visiting the History page counts as "checking" any new entries.
-        clearHistoryUnseen();
+    } else if (pageName === 'favourites') {
+        renderFavourites();
     }
     updateGuidedHome();
     
@@ -971,11 +1195,7 @@ function renderFlowchartStart() {
 }
 
 function selectTier(tierId) {
-    const tier = appState.flowchartData.tiers.find(t => t.id === tierId);
-    if (!tier) return;
-    
-    appState.currentPath = [{ type: 'tier', id: tierId, name: tier.name }];
-    renderScreenerSelection(tier);
+    startGuidedPathway(tierId);
 }
 
 function renderScreenerSelection(tier) {
@@ -1224,8 +1444,7 @@ function goBackInFlow() {
 }
 
 function resetFlowchart() {
-    appState.currentPath = [];
-    renderFlowchartStart();
+    startGuidedPathway('tier1');
 }
 
 function exportFlowchart() {
@@ -1651,6 +1870,7 @@ const FLOWCHART_DEFINITIONS = {
                 type: 'checklist',
                 title: 'Step 1: Principles of Explicit and Systematic Instruction',
                 description: 'Review the following principles before proceeding.',
+                checklistLayout: 'principles',
                 items: [
                     'Are the lesson goals clearly stated?',
                     'Is the content presented in digestible, understandable, and logically sequenced steps, as guided by the LRSD Scope and Sequence?',
@@ -1661,23 +1881,13 @@ const FLOWCHART_DEFINITIONS = {
                     'Is progress being tracked?',
                     'Does Instruction incorporate the simple view of reading?'
                 ],
-                nextNode: 'tier1-screener',
-                buttonText: 'Continue to Literacy Screener'
-            },
-            'tier1-screener': {
-                id: 'tier1-screener',
-                type: 'selection',
-                title: 'Step 2: Literacy Screener',
-                subtitle: '',
-                description: '',
-                options: 'screeners', // Will fetch from tierFlowchartData
                 nextNode: 'tier1-effectiveness',
-                nextHandler: 'selectTier1ScreenerVisual'
+                buttonText: 'Continue to Results'
             },
             'tier1-effectiveness': {
                 id: 'tier1-effectiveness',
                 type: 'decision',
-                title: 'Step 3: Result',
+                title: 'Step 2: Result',
                 subtitle: 'Was instruction effective?',
                 description: '',
                 choices: [
@@ -1695,7 +1905,7 @@ const FLOWCHART_DEFINITIONS = {
             'tier1-percentage': {
                 id: 'tier1-percentage',
                 type: 'decision',
-                title: 'Step 4: Instruction Ineffective',
+                title: 'Step 3: Instruction Ineffective',
                 subtitle: 'What percentage of students are unsuccessful?',
                 description: 'Based on screener results, how many students are below benchmark?',
                 choices: [
@@ -1735,7 +1945,12 @@ const FLOWCHART_DEFINITIONS = {
                 title: 'Step 1: Entry',
                 journeySummary: 'You ruled out impairments and other barriers as a cause of literacy challenges and confirmed Tier 2 supports were set up correctly.',
                 reviewHint: 'Use the process map to reopen this step and review the checklist anytime.',
-                leadText: 'Informed by data (See progress monitoring tools).',
+                checklistLayout: 'grouped',
+                leadText: 'Informed by data (See Progress Monitoring tools).',
+                leadLink: {
+                    text: 'See Progress Monitoring tools',
+                    url: 'https://media.lrsd.net/media/Default/medialib/2024_11_29-literacy_screening_and_progress_monitoring_executive_summary-v07.5b52af52587.pdf'
+                },
                 subtitle: 'Rule out that challenges are not the result of:',
                 items: [
                     'Vision impairments',
@@ -2021,6 +2236,10 @@ function buildTier1GuidanceBlocksHtml(scoresOnclick) {
 
 // Initialize the integrated flowchart (new main interface)
 function initIntegratedFlowchart(tierId) {
+    if (!pathwayContext && !restoringPathway) {
+        startGuidedPathway(tierId);
+        return;
+    }
     const container = document.getElementById('flowchart-container');
     if (!container) return;
     closeFinalSummaryDialog({ immediate: true });
@@ -2063,11 +2282,7 @@ function initIntegratedFlowchart(tierId) {
 
                 <div class="flowchart-glass-header-end">
                     ${showTier1Guidance ? renderTier1GuidanceHtml('flowchart', false, "navigateToPage('scores')") : ''}
-                    <div class="flowchart-screener-indicator" id="flowchart-screener-indicator" hidden>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                        <span class="flowchart-screener-indicator-label">${escapeHtml(t('fc_screener_label'))}</span>
-                        <span class="flowchart-screener-indicator-value" id="flowchart-screener-indicator-value"></span>
-                    </div>
+                    ${renderPathwayContextHtml()}
                 </div>
             </div>
             
@@ -2159,7 +2374,7 @@ function buildGoToTierStepHtml(tierId, flowchartDef) {
             <h2 class="go-to-tier-heading">${escapeHtml(t('go_to_tier'))} ${num}</h2>
             ${subtitle ? `<p class="go-to-tier-sub">${escapeHtml(subtitle)}</p>` : ''}
             <p class="go-to-tier-note">${escapeHtml(t('go_to_tier_note'))}</p>
-            <button class="action-btn action-primary go-to-tier-btn" onclick="switchToTier('${tierId}')">
+            <button class="action-btn action-primary go-to-tier-btn" onclick="switchToTier('${tierId}', true)">
                 ${escapeHtml(t('continue_to_tier'))} ${num}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </button>
@@ -2195,7 +2410,7 @@ function showGoToTierStep(tierId) {
     const stepsContainer = getActiveStepTarget();
     const flowchartDef = getFlowchartDefs()[tierId];
     if (!stepsContainer || !flowchartDef) {
-        switchToTier(tierId);
+        switchToTier(tierId, true);
         return;
     }
 
@@ -2955,6 +3170,7 @@ function openVisualFlowchartModal() {
         drawerOpen: false
     };
     document.body.appendChild(modal);
+    updatePathwaySelections();
     updateVisualFlowchartMobileLayout();
     const viewport = modal.querySelector('#visual-flowchart-viewport');
     appState.visualFlowchartModal.inertElements = Array.from(document.body.children)
@@ -3059,6 +3275,7 @@ function closeVisualFlowchartModal(options = {}) {
     // the freshly created live step into it, destroying it moments later.
     appState.visualFlowchartModal = null;
     modal.removeAttribute('id');
+    updatePathwaySelections();
     modal.querySelector('#visual-flowchart-stage')?.removeAttribute('id');
     modal.querySelector('#visual-flowchart-viewport')?.removeAttribute('id');
     if (modalState?.keyHandler) document.removeEventListener('keydown', modalState.keyHandler);
@@ -3134,7 +3351,9 @@ function updateVisualFlowchartTierBar() {
         <span class="visual-flowchart-tier-bar-chip">${escapeHtml(tierLabel)}</span>
         <span class="visual-flowchart-tier-bar-name">${escapeHtml(tierName)}</span>
         ${renderTierTabsHtml(tierId, 'visual-flowchart-tier-tabs')}
-        ${tierId === 'tier1' ? renderTier1GuidanceHtml('visual-flowchart', guidanceOpen, 'openScoresFromVisualFlowchart()') : ''}`;
+        ${tierId === 'tier1' ? renderTier1GuidanceHtml('visual-flowchart', guidanceOpen, 'openScoresFromVisualFlowchart()') : ''}
+        ${renderPathwayContextHtml()}`;
+    updateScreenerIndicator();
 }
 
 // Tier 1's "How do we determine if instruction is effective…" guidance lives
@@ -3942,14 +4161,7 @@ function createCompletedStepElement(nodeData) {
             </div>`;
         }
     } else if (nodeData.type === 'checklist') {
-        // Show the full checklist with all items checked
-        const items = nodeData.items || [];
-        const itemsHtml = items.map(item => `
-            <li class="completed-checklist-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
-                <span>${formatChecklistItemText(item)}</span>
-            </li>`).join('');
-        html = `<ul class="completed-checklist">${itemsHtml}</ul>`;
+        html = renderChecklistBody(nodeData, true);
     }
     // Info nodes have no meaningful choice to display; leave the slot empty.
 
@@ -4065,15 +4277,24 @@ function formatChecklistItemText(item) {
     return html;
 }
 
-// Create integrated checklist node – every point is visible in one list.
-// The user must tick each point off before the step can be completed; ticked
-// points keep their exact text size and weight and are marked with colour and
-// an accent bar so the selection is obvious without the layout shifting.
-function createIntegratedChecklistNode(nodeData) {
+function formatChecklistLeadText(nodeData) {
+    const text = nodeData.leadText || '';
+    const link = nodeData.leadLink;
+    const index = link?.text ? text.indexOf(link.text) : -1;
+    if (index < 0) return escapeHtml(text);
+    return `${escapeHtml(text.slice(0, index))}<a class="checklist-line-link" href="${escapeAttr(link.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">${escapeHtml(link.text)}</a>${escapeHtml(text.slice(index + link.text.length))}`;
+}
+
+// Share the same grouping and reference links in live, completed and review views.
+function renderChecklistBody(nodeData, readOnly = false) {
     const items = nodeData.items || [];
     const total = items.length;
-
-    const itemsHTML = items.map((item, index) => `
+    const principles = nodeData.checklistLayout === 'principles';
+    const itemsHTML = items.map((item, index) => readOnly ? `
+        <li class="completed-checklist-item">
+            ${principles ? '' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>'}
+            <span>${formatChecklistItemText(item)}</span>
+        </li>` : `
         <li class="checklist-line-item">
             <label class="checklist-line">
                 <input type="checkbox" data-index="${index}" ${appState.visualFlowchart.checklistChecked?.[nodeData.id]?.[index] ? 'checked' : ''}>
@@ -4086,20 +4307,39 @@ function createIntegratedChecklistNode(nodeData) {
     `).join('');
 
     const leadTextHTML = nodeData.leadText
-        ? `<p class="checklist-lead-text">${escapeHtml(nodeData.leadText)}</p>`
+        ? `<p class="checklist-lead-text">${formatChecklistLeadText(nodeData)}</p>`
         : '';
-
+    const checklistHTML = `
+        ${nodeData.subtitle ? `<p class="checklist-intro${readOnly ? ' review-checklist-intro' : ''}">${escapeHtml(nodeData.subtitle)}</p>` : ''}
+        ${readOnly ? '' : `<div class="checklist-meter">
+            <div class="checklist-meter-bar"><span class="checklist-meter-fill" style="width: 0%"></span></div>
+            <span class="checklist-meter-count">0 of ${total} checked</span>
+        </div>`}
+        <ul class="${readOnly ? 'completed-checklist' : 'checklist-lines'}${principles ? ' checklist-feature-list checklist-principles' : ''}">
+            ${itemsHTML}
+        </ul>`;
+    const bodyHTML = nodeData.checklistLayout === 'grouped'
+        ? `<ul class="checklist-feature-list checklist-groups">
+            ${leadTextHTML ? `<li>${leadTextHTML}</li>` : ''}
+            <li><div class="checklist-group-body">${checklistHTML}</div></li>
+        </ul>`
+        : `${leadTextHTML}${checklistHTML}`;
     const postSectionsHTML = nodeData.postSections
         ? nodeData.postSections.map(section => `
             <div class="checklist-post-section">
                 <h4 class="checklist-post-section-title">${escapeHtml(section.title)}</h4>
-                <ul class="checklist-post-section-list">
+                <ul class="checklist-post-section-list checklist-feature-list">
                     ${section.items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}
                 </ul>
             </div>
         `).join('')
         : '';
 
+    return `${bodyHTML}${postSectionsHTML}`;
+}
+
+// Every point stays visible and must be ticked off before continuing.
+function createIntegratedChecklistNode(nodeData) {
     const continueBtnHTML = `<button class="continue-btn checklist-continue-btn" disabled
                onclick="proceedFromIntegratedChecklist('${escapeAttr(nodeData.id)}', '${escapeAttr(nodeData.nextNode)}')">
                ${escapeHtml(nodeData.buttonText || t('guided_continue'))}
@@ -4116,16 +4356,7 @@ function createIntegratedChecklistNode(nodeData) {
             </button>
         </div>
         <div class="step-content checklist-full">
-            ${leadTextHTML}
-            ${nodeData.subtitle ? `<p class="checklist-intro">${escapeHtml(nodeData.subtitle)}</p>` : ''}
-            <div class="checklist-meter">
-                <div class="checklist-meter-bar"><span class="checklist-meter-fill" style="width: 0%"></span></div>
-                <span class="checklist-meter-count">0 of ${total} checked</span>
-            </div>
-            <ul class="checklist-lines">
-                ${itemsHTML}
-            </ul>
-            ${postSectionsHTML}
+            ${renderChecklistBody(nodeData)}
             ${continueBtnHTML}
         </div>
     `;
@@ -4195,9 +4426,7 @@ function createIntegratedSelectionNode(nodeData) {
     const itemType = wizardItemTypes[nodeData.options];
 
     if (itemType) {
-        // Scope this wizard to the tier/program the user is currently in, and
-        // pre-fill pillar/screener from whatever was chosen last (here or in
-        // the standalone Interventions Menu) so context carries over.
+        // Keep the confirmed pathway screener fixed; only the pillar is remembered.
         const tierNum = parseInt(String(appState.visualFlowchart?.tierId || '').replace('tier', ''), 10) || 1;
         const program = appState.selectedProgram || 'English';
         const remembered = appState.rememberedMenuFilters || {};
@@ -4206,7 +4435,8 @@ function createIntegratedSelectionNode(nodeData) {
             program: program,
             resourceType: itemType,
             pillar: remembered.pillar || '',
-            screener: remembered.screener || '',
+            screener: getPathwayScreenerId() || '',
+            grade: pathwayContext?.grade || remembered.grade || '',
             nodeId: nodeData.id,
             handlerName: nodeData.nextHandler
         };
@@ -4214,9 +4444,11 @@ function createIntegratedSelectionNode(nodeData) {
         // opens scoped to this same drilldown if visited right afterwards.
         setRememberedMenuFilters({ tier: tierNum, program: program });
 
-        const baseState = { tier: tierNum, program: program, resourceType: itemType };
-        const pillarOptionsHtml = buildFacetOptionsHtml(distinctTagValues(baseState, 'pillar'), appState.fwState.pillar, translatePillar);
-        const screenerOptionsHtml = buildFacetOptionsHtml(distinctTagValues({ ...baseState, pillar: appState.fwState.pillar }, 'screener'), appState.fwState.screener);
+        const baseState = { tier: tierNum, program: program, resourceType: itemType,
+            grade: appState.fwState.grade, screener: appState.fwState.screener };
+        const pillarValues = distinctTagValues(baseState, 'pillar');
+        if (appState.fwState.pillar && !pillarValues.includes(appState.fwState.pillar)) pillarValues.unshift(appState.fwState.pillar);
+        const pillarOptionsHtml = buildFacetOptionsHtml(pillarValues, appState.fwState.pillar, translatePillar);
 
         return `
             <div class="step-header">
@@ -4246,12 +4478,6 @@ function createIntegratedSelectionNode(nodeData) {
                                 ${pillarOptionsHtml}
                             </select>
                         </div>
-                        <div class="fw-select-group">
-                            <label for="fw-screener-select">${escapeHtml(t('fw_choose_screener_label'))}</label>
-                            <select id="fw-screener-select" class="fw-select" onchange="fwOnScreenerChange(this.value)">
-                                ${screenerOptionsHtml}
-                            </select>
-                        </div>
                     </div>
                     <div id="fw-results" class="fw-results"></div>
                 </div>
@@ -4273,7 +4499,8 @@ function createIntegratedSelectionNode(nodeData) {
             ${option.description ? `<span class="screener-pill-desc">${escapeHtml(option.description)}</span>` : ''}
         </button>
     `).join('')
-        : options.map(option => `
+        : sortFavouriteResources(options).map(option => `
+        <div class="legacy-resource-option">
         <button class="selection-option" onclick="selectIntegratedOption('${escapeJsString(nodeData.id)}', '${escapeJsString(option.id)}', '${escapeJsString(option.name)}', '${escapeJsString(nodeData.nextHandler)}')">
             <div class="option-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -4292,7 +4519,8 @@ function createIntegratedSelectionNode(nodeData) {
                     <path d="M9 18l6-6-6-6"/>
                 </svg>
             </div>
-        </button>
+        </button>${buildFavouriteButtonHtml(option)}
+        </div>
     `).join('');
 
     return `
@@ -4316,33 +4544,11 @@ function createIntegratedSelectionNode(nodeData) {
     `;
 }
 
-// Flowchart embedded intervention wizard: screener change handler
-function fwOnScreenerChange(value) {
-    if (!appState.fwState) return;
-    appState.fwState.screener = value || '';
-    setRememberedMenuFilters({ screener: value || null });
-    if (value) setRememberedScreener(value);
-    fwLoadResults();
-    savePathwayProgress();
-}
-
 // Flowchart embedded intervention wizard: pillar change handler
 function fwOnPillarChange(value) {
     if (!appState.fwState) return;
     appState.fwState.pillar = value || '';
     setRememberedMenuFilters({ pillar: value || null });
-
-    // Re-narrow the screener options to whatever still matches this pillar.
-    const screenerSel = document.getElementById('fw-screener-select');
-    if (screenerSel) {
-        const context = {
-            tier: appState.fwState.tier,
-            program: appState.fwState.program,
-            resourceType: appState.fwState.resourceType,
-            pillar: appState.fwState.pillar
-        };
-        screenerSel.innerHTML = buildFacetOptionsHtml(distinctTagValues(context, 'screener'), appState.fwState.screener);
-    }
 
     fwLoadResults();
     savePathwayProgress();
@@ -4351,19 +4557,19 @@ function fwOnPillarChange(value) {
 // Flowchart embedded intervention wizard: load and display filtered results
 function fwLoadResults() {
     if (!appState.fwState) return;
+    appState.fwState.screener = getPathwayScreenerId() || '';
     const resultsEl = document.getElementById('fw-results');
     if (!resultsEl) return;
 
-    const { tier, program, resourceType, pillar, screener } = appState.fwState;
-    const wizardState = { tier, program, resourceType, pillar, screener };
-    const filtered = getFilteredResources(wizardState, null);
+    const { tier, program, resourceType, pillar, screener, grade } = appState.fwState;
+    const wizardState = { tier, program, resourceType, pillar, screener, grade };
+    const filtered = sortFavouriteResources(getFilteredResources(wizardState, null));
 
     if (filtered.length === 0) {
         resultsEl.innerHTML = `<p class="fw-no-results">${escapeHtml(t('fw_no_results'))}</p>`;
         return;
     }
 
-    const escapeJs = (s) => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     resultsEl.innerHTML = `
         <div class="fw-results-header">${escapeHtml(t('fw_results_label')(filtered.length))}</div>
         <div class="fw-results-list">
@@ -4377,11 +4583,12 @@ function fwLoadResults() {
                     const title = lang ? `${t('filter_view_resource')} (${lang})` : t('filter_view_resource');
                     return `<a class="fw-result-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="${escapeHtml(title)}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
                 }).join('');
-                return `<div class="fw-result-item" role="button" tabindex="0" onclick="fwSelectItem('${escapeJs(item.id)}', '${escapeJs(item.name)}')" onkeydown="if(event.key==='Enter'||event.key===' '){fwSelectItem('${escapeJs(item.id)}', '${escapeJs(item.name)}')}">
+                return `<div class="fw-result-item${getFavouriteIds().has(item.id) ? ' is-favourite' : ''}" role="button" tabindex="0" data-resource-id="${escapeAttr(item.id)}" data-resource-name="${escapeAttr(item.name)}" onclick="fwSelectItem(this.dataset.resourceId, this.dataset.resourceName)" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();fwSelectItem(this.dataset.resourceId, this.dataset.resourceName)}">
                     <div class="fw-result-info">
                         <div class="fw-result-name">${escapeHtml(item.name)}${evidenceBadge}</div>
                         <div class="fw-result-meta">${escapeHtml(pillarText)}${gradeText ? ` • ${escapeHtml(t('fw_grade_prefix'))} ${escapeHtml(gradeText)}` : ''}</div>
                     </div>
+                    ${buildFavouriteButtonHtml(item)}
                     ${linkHtml}
                     <svg class="fw-result-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M9 18l6-6-6-6"/></svg>
                 </div>`;
@@ -4393,12 +4600,8 @@ function fwLoadResults() {
 // Flowchart embedded intervention wizard: select an item and advance the flowchart
 function fwSelectItem(itemId, itemName) {
     if (!appState.fwState) return;
-    const { nodeId, handlerName, resourceType, pillar } = appState.fwState;
+    const { nodeId, handlerName, pillar } = appState.fwState;
     if (nodeId && handlerName) {
-        // Record the drill-down assessment / intervention selection so the teacher
-        // can always keep track of what has been chosen (persisted to localStorage).
-        recordSelection(resourceType, itemId, itemName, appState.visualFlowchart?.tierId);
-
         // Build a file-pathway breadcrumb for the completed view and pre-store it
         // so selectIntegratedOption can preserve it when it writes the choice.
         const pathway = [];
@@ -4853,7 +5056,11 @@ function renderTierTabsHtml(tierId, extraClass = '') {
         </div>`;
 }
 
-function switchToTier(tierId) {
+function switchToTier(tierId, continuing = false) {
+    if (!pathwayContext || !continuing) {
+        startGuidedPathway(tierId);
+        return;
+    }
     // Update tab states
     document.querySelectorAll('.tier-tab').forEach(tab => {
         const isActive = tab.dataset.tier === tierId;
@@ -4997,10 +5204,6 @@ const NODE_SUMMARIES = {
     'tier1-principles': {
         text: 'You confirmed that classroom instruction follows the principles of explicit and systematic teaching — the foundation is solid! 📚',
         variant: 'step1'
-    },
-    'tier1-screener': {
-        text: (choice) => `You administered the ${choice || 'literacy screener'} to measure where students are right now. Time to look at the data! 📊`,
-        variant: 'selection'
     },
     'tier1-effectiveness': {
         effective:   { text: 'The literacy screener came back Blue or Green — this student is on track and instruction is working! 🎉', variant: 'effective' },
@@ -5576,30 +5779,7 @@ function buildStepReviewContent(nodeDef, choice) {
     }
 
     if (type === 'checklist') {
-        if (nodeDef.subtitle) {
-            html += `<p class="checklist-intro review-checklist-intro">${escapeHtml(nodeDef.subtitle)}</p>`;
-        }
-        if (nodeDef.leadText) {
-            html += `<p class="checklist-lead-text">${escapeHtml(nodeDef.leadText)}</p>`;
-        }
-        const items = nodeDef.items || [];
-        const itemsHTML = items.map(item => `
-            <li class="completed-checklist-item">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
-                <span>${formatChecklistItemText(item)}</span>
-            </li>`).join('');
-        html += `<ul class="completed-checklist">${itemsHTML}</ul>`;
-        if (nodeDef.postSections) {
-            nodeDef.postSections.forEach(section => {
-                html += `
-                    <div class="checklist-post-section">
-                        <h4 class="checklist-post-section-title">${escapeHtml(section.title)}</h4>
-                        <ul class="checklist-post-section-list">
-                            ${section.items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}
-                        </ul>
-                    </div>`;
-            });
-        }
+        html += renderChecklistBody(nodeDef, true);
     } else if (type === 'decision') {
         const buttonsHTML = (nodeDef.choices || []).map(c => {
             const taken = choice && c.id === choice.id;
@@ -5645,7 +5825,7 @@ function buildStepReviewContent(nodeDef, choice) {
 
 // Restart current tier
 function restartCurrentTier() {
-    initIntegratedFlowchart('tier1');
+    startGuidedPathway(appState.visualFlowchart?.tierId || 'tier1');
 }
 
 // Close integrated flowchart
@@ -5658,20 +5838,21 @@ function closeIntegratedFlowchart() {
 
 // Integrated tier transition handlers
 function startTier2VisualIntegrated() {
+    if (!pathwayContext) return startGuidedPathway('tier2');
     showGoToTierStep('tier2');
 }
 
 function startTier3VisualIntegrated() {
+    if (!pathwayContext) return startGuidedPathway('tier3');
     showGoToTierStep('tier3');
 }
 
 function restartTier1VisualIntegrated() {
-    appState.fullJourney = [];
-    switchToTier('tier1');
+    startGuidedPathway('tier1');
 }
 
 function restartTier2VisualIntegrated() {
-    switchToTier('tier2');
+    switchToTier('tier2', true);
 }
 
 // Called from the visual pathway's "review before continuing" card. Only at
@@ -5682,7 +5863,7 @@ function confirmVisualFlowchartTierTransition() {
     const tierId = vf?.pendingTierTransition;
     if (!tierId) return;
     vf.pendingTierTransition = null;
-    switchToTier(tierId);
+    switchToTier(tierId, true);
 }
 
 // Handler functions for integrated tier 1
@@ -5737,7 +5918,7 @@ function selectTier3InterventionVisualIntegrated(nodeId, interventionId, interve
 // Initialize the visual flowchart (legacy - kept for backwards compatibility)
 function initVisualFlowchart(tierId) {
     // Redirect to integrated flowchart
-    initIntegratedFlowchart(tierId);
+    startGuidedPathway(tierId);
 }
 
 // Show a flowchart node with animation
@@ -5999,7 +6180,8 @@ function createSelectionNode(nodeData) {
     const tierData = appState.tierFlowchartData?.[tierId];
     const options = tierData?.[nodeData.options] || [];
     
-    const optionsHTML = options.map(option => `
+    const optionsHTML = sortFavouriteResources(options).map(option => `
+        ${nodeData.options === 'screeners' ? '' : '<div class="legacy-resource-option">'}
         <button class="vf-selection-option" onclick="selectFlowchartOption('${nodeData.id}', '${option.id}', '${option.name}', '${nodeData.nextHandler}')">
             <div class="vf-option-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -6018,7 +6200,8 @@ function createSelectionNode(nodeData) {
                     <path d="M9 18l6-6-6-6"/>
                 </svg>
             </div>
-        </button>
+        </button>${nodeData.options === 'screeners' ? '' : buildFavouriteButtonHtml(option)}
+        ${nodeData.options === 'screeners' ? '' : '</div>'}
     `).join('');
     
     const infoBoxHTML = nodeData.infoBox ? `
@@ -6525,31 +6708,22 @@ function selectTier3InterventionVisual(nodeId, interventionId, interventionName)
 
 // Action handlers for endpoint buttons
 function startTier2Visual() {
-    closeVisualFlowchart();
-    setTimeout(() => {
-        initVisualFlowchart('tier2');
-    }, 300);
+    if (pathwayContext) showGoToTierStep('tier2');
+    else startGuidedPathway('tier2');
 }
 
 function startTier3Visual() {
-    closeVisualFlowchart();
-    setTimeout(() => {
-        initVisualFlowchart('tier3');
-    }, 300);
+    if (pathwayContext) showGoToTierStep('tier3');
+    else startGuidedPathway('tier3');
 }
 
 function restartTier1Visual() {
-    closeVisualFlowchart();
-    setTimeout(() => {
-        initVisualFlowchart('tier1');
-    }, 300);
+    startGuidedPathway('tier1');
 }
 
 function restartTier2Visual() {
-    closeVisualFlowchart();
-    setTimeout(() => {
-        initVisualFlowchart('tier2');
-    }, 300);
+    if (pathwayContext) switchToTier('tier2', true);
+    else startGuidedPathway('tier2');
 }
 
 // ============================================
@@ -6943,6 +7117,7 @@ function proceedToTier2Assessment() {
                         
                         <div class="screener-selection-grid">
                             ${flowchartResources.map(assessment => `
+                                <div class="legacy-resource-option">
                                 <button class="screener-option" onclick="selectTier2Assessment('${assessment.id}', '${assessment.name}')">
                                     <div class="screener-icon">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -6955,7 +7130,8 @@ function proceedToTier2Assessment() {
                                     <small style="color: var(--text-secondary); margin-top: 0.5rem; display: block;">
                                         Time: ${assessment.administrationTime}
                                     </small>
-                                </button>
+                                </button>${buildFavouriteButtonHtml(assessment)}
+                                </div>
                             `).join('')}
                         </div>
                         
@@ -7018,6 +7194,7 @@ function proceedToTier2Intervention() {
                         
                         <div class="screener-selection-grid">
                             ${flowchartResources.map(intervention => `
+                                <div class="legacy-resource-option">
                                 <button class="screener-option" onclick="selectTier2Intervention('${intervention.id}', '${intervention.name}')">
                                     <div class="screener-icon">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -7029,7 +7206,8 @@ function proceedToTier2Intervention() {
                                     <small style="color: var(--text-secondary); margin-top: 0.5rem; display: block;">
                                         ${intervention.duration} • ${intervention.frequency}
                                     </small>
-                                </button>
+                                </button>${buildFavouriteButtonHtml(intervention)}
+                                </div>
                             `).join('')}
                         </div>
                         
@@ -7251,6 +7429,7 @@ function proceedToTier3Assessment() {
                         
                         <div class="screener-selection-grid">
                             ${flowchartResources.map(assessment => `
+                                <div class="legacy-resource-option">
                                 <button class="screener-option" onclick="selectTier3Assessment('${assessment.id}', '${assessment.name}')">
                                     <div class="screener-icon">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -7263,7 +7442,8 @@ function proceedToTier3Assessment() {
                                     <small style="color: var(--text-secondary); margin-top: 0.5rem; display: block;">
                                         Time: ${assessment.administrationTime}
                                     </small>
-                                </button>
+                                </button>${buildFavouriteButtonHtml(assessment)}
+                                </div>
                             `).join('')}
                         </div>
                         
@@ -7318,6 +7498,7 @@ function proceedToTier3Intervention() {
                         
                         <div class="screener-selection-grid">
                             ${flowchartResources.map(intervention => `
+                                <div class="legacy-resource-option">
                                 <button class="screener-option" onclick="selectTier3Intervention('${intervention.id}', '${intervention.name}')">
                                     <div class="screener-icon">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -7329,7 +7510,8 @@ function proceedToTier3Intervention() {
                                     <small style="color: var(--text-secondary); margin-top: 0.5rem; display: block;">
                                         ${intervention.duration} • ${intervention.frequency}
                                     </small>
-                                </button>
+                                </button>${buildFavouriteButtonHtml(intervention)}
+                                </div>
                             `).join('')}
                         </div>
                         
@@ -7485,11 +7667,11 @@ function getFlowchartMenuResources(tier, mode) {
     const resourceType = mode === 'assessments'
         ? 'Drill Down Assessment'
         : 'Intervention';
-    return getFilteredResources({
+    return sortFavouriteResources(getFilteredResources({
         tier: String(tier),
         program: appState.selectedProgram || 'English',
         resourceType
-    }, null);
+    }, null));
 }
 
 function openInterventionsMenu(tier, mode = 'interventions') {
@@ -7596,6 +7778,7 @@ function openInterventionsMenu(tier, mode = 'interventions') {
                                 </div>
                                 <div style="flex: 1;">
                                     <h4 style="margin: 0 0 0.5rem 0; color: var(--text-primary); font-size: 1.125rem;">${item.name}</h4>
+                                    ${buildFavouriteButtonHtml(item)}
                                     ${item.targetSkills ? `<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
                                         ${item.targetSkills.map(skill => `
                                             <span style="background: var(--accent-light); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: var(--radius); font-size: 0.75rem; font-weight: 600;">${skill}</span>
@@ -7643,6 +7826,12 @@ function setRememberedScreener(idOrName) {
     const resolved = resolveScreenerId(idOrName);
     if (resolved) {
         appState.selectedScreener = resolved;
+        const screener = (appState.tierFlowchartData?.tier1?.screeners || []).find(item =>
+            resolveScreenerId(item.name) === resolved && isScreenerIdForCurrentProgram(item.id));
+        if (appReady && appState.selectedProgram && screener) {
+            pathwayDefaults[appState.selectedProgram] = { ...getPathwaySetupDefaults(), screener: screener.id };
+            persistProgressStorage();
+        }
     }
     updateScreenerIndicator();
     return resolved;
@@ -7667,37 +7856,33 @@ function getScreenerName(idOrName) {
 
 // Reflect the currently selected screener in the visible flowchart indicator so
 // the user can always see which screener they chose.
+function renderPathwayContextHtml() {
+    return `<details class="pathway-context" hidden>
+        <summary>
+            <span class="material-symbols-rounded" aria-hidden="true" translate="no">tune</span>
+            <span class="pathway-context-summary"></span>
+        </summary>
+        <div class="pathway-context-popover"></div>
+    </details>`;
+}
+
 function updateScreenerIndicator() {
-    const indicator = document.getElementById('flowchart-screener-indicator');
-    if (!indicator) return;
-    const valueEl = document.getElementById('flowchart-screener-indicator-value');
-    const id = getRememberedScreenerId();
-    if (id) {
-        if (valueEl) valueEl.textContent = getScreenerName(id);
-        indicator.hidden = false;
-    } else {
-        if (valueEl) valueEl.textContent = '';
-        indicator.hidden = true;
-    }
+    const screener = (appState.tierFlowchartData?.tier1?.screeners || []).find(item => item.id === pathwayContext?.screener);
+    const text = screener && pathwayContext?.grade
+        ? `${screener.name} · ${translateGrade(pathwayContext.grade)}`
+        : '';
+    document.querySelectorAll('.pathway-context').forEach(indicator => {
+        indicator.hidden = !text;
+        indicator.querySelector('.pathway-context-summary').textContent = text;
+        indicator.querySelector('.pathway-context-popover').textContent = text;
+        const summary = indicator.querySelector('summary');
+        summary.title = text;
+        summary.setAttribute('aria-label', text);
+    });
 }
 
 function openInteractiveFlowchart() {
-    console.log('Opening Interactive Flowchart');
-    if (!ensureProgramSelectionBeforeInteraction()) return;
-    
-    // Show and initialize the flowchart container
-    const flowchartContainer = document.getElementById('flowchart-container');
-    if (flowchartContainer) {
-        flowchartContainer.classList.remove('flowchart-view-hidden');
-        flowchartContainer.style.display = 'block';
-    }
-    
-    initIntegratedFlowchart('tier1');
-    
-    // Scroll to the top of the flowchart
-    if (flowchartContainer) {
-        flowchartContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    startGuidedPathway('tier1');
 }
 
 // Screener ids (as used in data/tier-flowcharts.json) that are only offered
@@ -7745,16 +7930,14 @@ function requestFlowchartProgramChange(program, options = {}) {
             return;
         }
     }
-    savedPathway = null;
+    const setupTier = pendingPathwayTier || appState.visualFlowchart?.tierId || 'tier1';
+    pendingPathwayTier = null;
+    clearPathwayProgress();
     setRememberedMenuFilters({ pillar: '', screener: '' });
-    try {
-        localStorage.removeItem(PATHWAY_PREFERENCE_KEY);
-    } catch (e) {
-        // Program changes also work when storage is disabled.
-    }
     closeVisualFlowchartModal({ immediate: true });
     const lang = program === PROGRAM_FRENCH_IMMERSION ? (appState.language === 'fr' ? 'fr' : 'en') : 'en';
     finalizeProgramSelection(program, lang);
+    if (appState.currentPage === 'flowchart') showPathwaySetup(setupTier);
     refreshVisualFlowchartHeaderControls();
 }
 
@@ -8070,10 +8253,269 @@ function getAllResources() {
     return appState.interventionMenuData?.resources || [];
 }
 
+const FAVOURITES_KEY = `${STORAGE_KEY_PREFIX}-favourites`;
+let favouriteIds = null;
+let favouriteCatalog = null;
+let favouriteFeedbackTimer = null;
+
+function clearFavouriteFeedback() {
+    clearTimeout(favouriteFeedbackTimer);
+    favouriteFeedbackTimer = null;
+    document.querySelectorAll('.favourite-feedback').forEach(host => {
+        host.textContent = '';
+    });
+}
+
+function getFlowchartResourceTools() {
+    const modal = document.getElementById('visual-flowchart-modal');
+    const host = modal?.querySelector('.visual-flowchart-dialog') ||
+        document.querySelector('.flowchart-page-body');
+    if (!host) return null;
+    let tools = document.querySelector('.flowchart-resource-tools');
+    if (!tools) {
+        tools = document.createElement('div');
+        tools.className = 'flowchart-resource-tools';
+    }
+    if (tools.parentElement !== host) {
+        if (modal) host.insertBefore(tools, host.querySelector('.visual-flowchart-viewport'));
+        else host.prepend(tools);
+    }
+    ensureFavouriteFeedback(tools);
+    return tools;
+}
+
+function ensureFavouriteFeedback(host) {
+    let status = host.querySelector(':scope > .favourite-feedback');
+    if (!status) {
+        status = document.createElement('div');
+        status.className = 'favourite-feedback';
+        status.setAttribute('role', 'status');
+        status.setAttribute('aria-live', 'polite');
+        status.setAttribute('aria-atomic', 'true');
+        host.prepend(status);
+    }
+    return status;
+}
+
+function showFavouriteFeedback(selected, anchor, context) {
+    clearFavouriteFeedback();
+    const modal = document.getElementById('visual-flowchart-modal');
+    if (!modal && context?.scope?.isConnected) {
+        const navBottom = document.querySelector('.top-nav')?.getBoundingClientRect().bottom || 0;
+        const visible = Array.from(context.scope.querySelectorAll('[data-favourite-id]'))
+            .filter(button => {
+                const bounds = button.getBoundingClientRect();
+                return bounds.bottom > navBottom && bounds.top < window.innerHeight;
+            })
+            .sort((a, b) => Math.abs(a.getBoundingClientRect().top - context.top) -
+                Math.abs(b.getBoundingClientRect().top - context.top));
+        anchor = visible[0] || anchor;
+    }
+    const card = !modal && anchor?.closest('.resource-card, .fw-result-item, .legacy-resource-option, .intervention-card');
+    const links = card?.querySelector('.resource-card-links');
+    const host = links || card?.parentElement || ((modal || appState.currentPage === 'flowchart')
+        ? getFlowchartResourceTools()
+        : document.querySelector('.content-section.active > :not(.bubble-bg)'));
+    if (!host) return;
+    const status = ensureFavouriteFeedback(host);
+    if (links) links.prepend(status);
+    else if (card) card.before(status);
+    status.textContent = t(selected ? 'favourite_added' : 'favourite_removed');
+    favouriteFeedbackTimer = setTimeout(clearFavouriteFeedback, 3000);
+}
+
+function getFavouriteIds() {
+    if (!favouriteIds) {
+        let stored = [];
+        try { stored = JSON.parse(localStorage.getItem(FAVOURITES_KEY) || '[]'); } catch (e) { /* Storage is optional. */ }
+        favouriteIds = new Set(Array.isArray(stored) ? stored.filter(id => typeof id === 'string') : []);
+    }
+    if (appState.interventionMenuDataLoaded && appState.interventionMenuData && favouriteCatalog !== appState.interventionMenuData) {
+        favouriteCatalog = appState.interventionMenuData;
+        const validIds = new Set(getAllResources().map(item => item.id));
+        favouriteIds = new Set([...favouriteIds].filter(id => validIds.has(id)));
+        try { localStorage.setItem(FAVOURITES_KEY, JSON.stringify([...favouriteIds])); } catch (e) { /* Keep favourites for this visit. */ }
+    }
+    return favouriteIds;
+}
+
+function sortFavouriteResources(items) {
+    const favourites = getFavouriteIds();
+    return items.slice().sort((a, b) => Number(favourites.has(b.id)) - Number(favourites.has(a.id)));
+}
+
+function buildFavouriteButtonHtml(item) {
+    if (!getAllResources().some(resource => resource.id === item.id)) return '';
+    const selected = getFavouriteIds().has(item.id);
+    const label = `${t(selected ? 'favourite_remove' : 'favourite_add')}: ${item.name}`;
+    return `<button type="button" class="favourite-toggle" data-favourite-id="${escapeAttr(item.id)}"
+        aria-pressed="${selected}" aria-label="${escapeAttr(label)}" title="${escapeAttr(label)}">
+        <span class="material-symbols-rounded" aria-hidden="true" translate="no">${selected ? 'star' : 'star_border'}</span>
+    </button>`;
+}
+
+function renderFavourites() {
+    const ids = getFavouriteIds();
+    document.querySelectorAll('[data-page="favourites"] .nav-badge').forEach(badge => {
+        badge.textContent = String(ids.size);
+        badge.classList.toggle('is-empty', ids.size === 0);
+    });
+    const list = document.getElementById('favourites-list');
+    if (!list) return;
+    list.innerHTML = getAllResources().filter(item => ids.has(item.id)).map(item => buildResourceCardHtml(item, {})).join('') ||
+        `<p class="results-empty">${escapeHtml(t('favourites_empty'))}</p>`;
+}
+
+function getCurrentPathwaySelections() {
+    const current = appState.visualFlowchart;
+    const tiers = (appState.fullJourney || []).filter(tier => tier.tierId !== current?.tierId);
+    if (current?.tierId) tiers.push(current);
+    const seen = new Set();
+    const selections = [];
+    tiers.forEach(tier => {
+        const nodes = getFlowchartDefs()[tier.tierId]?.nodes || {};
+        (tier.selectedPath || []).forEach(step => {
+            const node = nodes[step.nodeId];
+            const item = getAllResources().find(resource => resource.id === tier.choices?.[step.nodeId]?.id);
+            const key = `${tier.tierId}:${step.nodeId}`;
+            if (!item || node?.type !== 'selection' || node.options === 'screeners' || seen.has(key)) return;
+            seen.add(key);
+            selections.push({ item, tier: tier.tierId.replace('tier', ''), label: node.title });
+        });
+    });
+    return selections;
+}
+
+function setPathwaySelectionsOpen(open, restoreFocus = false) {
+    const root = document.getElementById('pathway-selections');
+    if (!root) return;
+    const button = root.querySelector('.pathway-selections-tab');
+    if (open && root.hidden) return;
+    root.querySelector('.pathway-selections-panel').hidden = !open;
+    button.setAttribute('aria-expanded', String(open));
+    if (open) root.querySelector('.pathway-selections-close').focus();
+    else if (restoreFocus) button.focus();
+}
+
+function updatePathwaySelections() {
+    let root = document.getElementById('pathway-selections');
+    if (!root) {
+        root = document.createElement('aside');
+        root.id = 'pathway-selections';
+        root.className = 'pathway-selections';
+        root.innerHTML = `<button type="button" class="pathway-selections-tab" aria-expanded="false" aria-controls="pathway-selections-panel"></button>
+            <section id="pathway-selections-panel" class="pathway-selections-panel" hidden aria-labelledby="pathway-selections-title">
+                <header><h2 id="pathway-selections-title"></h2><button type="button" class="pathway-selections-close"><span aria-hidden="true">×</span></button></header>
+                <div class="pathway-selections-list"></div>
+                <section class="pathway-favourites" aria-labelledby="pathway-favourites-title">
+                    <h3 id="pathway-favourites-title"></h3>
+                    <div class="pathway-favourites-list"></div>
+                </section>
+            </section>`;
+        root.querySelector('.pathway-selections-tab').addEventListener('click', event =>
+            setPathwaySelectionsOpen(event.currentTarget.getAttribute('aria-expanded') !== 'true'));
+        root.querySelector('.pathway-selections-close').addEventListener('click', () => setPathwaySelectionsOpen(false, true));
+        root.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !root.querySelector('.pathway-selections-panel').hidden) {
+                event.preventDefault();
+                event.stopPropagation();
+                setPathwaySelectionsOpen(false, true);
+            }
+        });
+    }
+    // Keep the drawer within the modal's focus scope, never behind its inert background.
+    const tools = getFlowchartResourceTools();
+    const host = (document.getElementById('visual-flowchart-modal') || window.matchMedia('(max-width: 768px)').matches)
+        ? tools : document.body;
+    if (!host) return;
+    if (root.parentElement !== host) host.appendChild(root);
+    root.inert = false;
+    const selections = getCurrentPathwaySelections();
+    const favourites = getAllResources().filter(item => getFavouriteIds().has(item.id));
+    root.hidden = appState.currentPage !== 'flowchart' || (!selections.length && !favourites.length);
+    if (root.hidden) setPathwaySelectionsOpen(false);
+    const sections = [
+        selections.length ? `${t('pathway_selections')} (${selections.length})` : '',
+        favourites.length ? `${t('nav_favourites')} (${favourites.length})` : ''
+    ].filter(Boolean).join(' · ');
+    root.querySelector('.pathway-selections-tab').textContent = sections;
+    root.querySelector('#pathway-selections-title').textContent = t('pathway_resources');
+    root.querySelector('.pathway-selections-close').setAttribute('aria-label', t('pathway_resources_close'));
+    root.querySelector('.pathway-selections-list').innerHTML = selections.map(({ item, tier, label }) =>
+        `<div class="pathway-selection-entry"><p>${escapeHtml(t('filter_tier_option')(tier))} · ${escapeHtml(label)}</p>${buildResourceCardHtml(item, { tier })}</div>`).join('');
+    const selectionList = root.querySelector('.pathway-selections-list');
+    if (selections.length) selectionList.insertAdjacentHTML('afterbegin', `<h3>${escapeHtml(t('pathway_selections'))}</h3>`);
+    root.querySelector('.pathway-favourites').hidden = !favourites.length;
+    root.querySelector('#pathway-favourites-title').textContent = t('nav_favourites');
+    root.querySelector('.pathway-favourites-list').innerHTML = favourites.map(item => buildResourceCardHtml(item, {})).join('');
+}
+
+window.matchMedia('(max-width: 768px)').addEventListener('change', updatePathwaySelections);
+
+document.addEventListener('keydown', event => {
+    if (event.target.closest?.('[data-favourite-id]') && (event.key === 'Enter' || event.key === ' ')) {
+        // Native button activation still fires click, but the selectable resource must not receive this key.
+        event.stopPropagation();
+    }
+    const root = document.getElementById('pathway-selections');
+    if (event.key === 'Escape' && root && !root.hidden &&
+        root.querySelector('.pathway-selections-tab').getAttribute('aria-expanded') === 'true') {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        setPathwaySelectionsOpen(false, true);
+    }
+}, true);
+
+document.addEventListener('click', event => {
+    const button = event.target.closest?.('[data-favourite-id]');
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const id = button.dataset.favouriteId;
+    if (!getAllResources().some(item => item.id === id)) return;
+    const scope = button.closest('.fw-results, #favourites-list, #results-list-compact, .pathway-selections-list, .pathway-favourites-list') ||
+        button.parentElement;
+    const hadFocus = document.activeElement === button;
+    const feedbackContext = { scope, top: button.getBoundingClientRect().top };
+    const ids = getFavouriteIds();
+    if (ids.has(id)) ids.delete(id);
+    else ids.add(id);
+    try { localStorage.setItem(FAVOURITES_KEY, JSON.stringify([...ids])); } catch (e) { /* Storage is optional. */ }
+    renderFavourites();
+    renderMenuResults();
+    fwLoadResults();
+    updatePathwaySelections();
+    document.querySelectorAll('[data-favourite-id]').forEach(toggle => {
+        const item = getAllResources().find(resource => resource.id === toggle.dataset.favouriteId);
+        const selected = ids.has(item?.id);
+        const label = `${t(selected ? 'favourite_remove' : 'favourite_add')}: ${item?.name || ''}`;
+        toggle.setAttribute('aria-pressed', String(selected));
+        toggle.setAttribute('aria-label', label);
+        toggle.title = label;
+        toggle.querySelector('.material-symbols-rounded').textContent = selected ? 'star' : 'star_border';
+        toggle.closest('.resource-card, .fw-result-item')?.classList.toggle('is-favourite', selected);
+    });
+    const target = scope?.querySelector(`[data-favourite-id="${CSS.escape(id)}"]`) ||
+        scope?.querySelector('[data-favourite-id]') ||
+        (appState.currentPage === 'flowchart' && !document.getElementById('pathway-selections')?.hidden
+            ? document.querySelector('.pathway-selections-tab')
+            : document.querySelector('#visual-flowchart-modal .visual-flowchart-close') ||
+                Array.from(document.querySelectorAll(appState.currentPage === 'flowchart'
+                    ? '#flowchart-container button:not([disabled]), button[data-page="flowchart"].active'
+                    : `button[data-page="${CSS.escape(appState.currentPage)}"].active`))
+                    .find(control => !control.closest('[hidden], [inert]') && control.getClientRects().length));
+    if (hadFocus) target?.focus({ preventScroll: true });
+    showFavouriteFeedback(ids.has(id), target || (button.isConnected ? button : null), feedbackContext);
+}, true);
+
 // Remember whatever filters were last touched — here or in a flowchart
 // drilldown — so the other one can pre-fill from the same context.
 function setRememberedMenuFilters(partial) {
     appState.rememberedMenuFilters = { ...(appState.rememberedMenuFilters || {}), ...partial };
+    if (appReady && appState.selectedProgram && Object.hasOwn(partial, 'pillar') && typeof partial.pillar === 'string' && partial.pillar) {
+        pathwayDefaults[appState.selectedProgram] = { ...getPathwaySetupDefaults(), pillar: partial.pillar };
+        persistProgressStorage();
+    }
 }
 
 // A single tag matches `state` when every tier/pillar/resourceType/screener/
@@ -8404,13 +8846,13 @@ function buildResourceMetaPillsHtml(matchingTags) {
     return pills.join('');
 }
 
-function buildResourceCardHtml(item) {
-    const matchingTags = getMatchingTags(item, menuState);
+function buildResourceCardHtml(item, state = menuState) {
+    const matchingTags = getMatchingTags(item, state);
     const notes = uniqueSorted(matchingTags.map(tag => tag.notes)).join('; ');
     const evidenceLevel = getResourceEvidenceLevel({ tags: matchingTags });
 
     return `
-        <div class="resource-card">
+        <div class="resource-card${getFavouriteIds().has(item.id) ? ' is-favourite' : ''}">
             <div class="resource-card-main">
                 <div class="resource-card-name">
                     <span class="resource-card-name-text">${escapeHtml(item.name)}</span>
@@ -8419,7 +8861,7 @@ function buildResourceCardHtml(item) {
                 <div class="resource-card-pill-row">${buildResourceMetaPillsHtml(matchingTags)}</div>
                 ${notes ? `<div class="resource-card-note-block"><span class="resource-card-note-label">${escapeHtml(t('filter_notes_label'))}</span><div class="resource-card-meta resource-card-notes">${escapeHtml(notes)}</div></div>` : ''}
             </div>
-            <div class="resource-card-links">${buildResourceLinksHtml(item)}</div>
+            <div class="resource-card-links">${buildFavouriteButtonHtml(item)}${buildResourceLinksHtml(item)}</div>
         </div>
     `;
 }
@@ -8573,10 +9015,10 @@ function renderMenuResults() {
 
     renderMenuCriteriaSummary();
 
-    const filtered = getFilteredResources(menuState, null).filter(matchesMenuSearch);
+    const filtered = sortFavouriteResources(getFilteredResources(menuState, null).filter(matchesMenuSearch));
     countEl.textContent = t('filter_results_label')(filtered.length);
     listEl.innerHTML = filtered.length
-        ? filtered.map(buildResourceCardHtml).join('')
+        ? filtered.map(item => buildResourceCardHtml(item)).join('')
         : `<p class="results-empty">${escapeHtml(t('filter_results_none'))}</p>`;
 }
 
@@ -8772,7 +9214,6 @@ window.proceedFromIntegratedChecklist = proceedFromIntegratedChecklist;
 window.proceedFromIntegratedInfo = proceedFromIntegratedInfo;
 window.selectIntegratedOption = selectIntegratedOption;
 window.makeIntegratedDecision = makeIntegratedDecision;
-window.fwOnScreenerChange = fwOnScreenerChange;
 window.fwOnPillarChange = fwOnPillarChange;
 window.fwSelectItem = fwSelectItem;
 window.showFinalSummary = showFinalSummary;
@@ -9354,299 +9795,6 @@ async function initializeAssessmentSchedules() {
 // Export functions
 window.initializeAssessmentSchedules = initializeAssessmentSchedules;
 
-// ============================================
-// SELECTION HISTORY TRACKER
-// ============================================
-// Records every drill-down assessment and intervention the teacher selects in
-// the flowchart, persists it to localStorage (so it survives navigation and
-// reloads), and surfaces it in an always-accessible side panel. Teachers can
-// add notes to each entry and export the whole history as a CSV file.
-
-const SELECTION_HISTORY_KEY = `${STORAGE_KEY_PREFIX}-selection-history`;
-const LEGACY_SELECTION_HISTORY_KEY = 'litlab_selection_history';
-const SELECTION_HISTORY_SESSION_KEY = `${STORAGE_KEY_PREFIX}-selection-history-session`;
-const LEGACY_SELECTION_HISTORY_SESSION_KEY = 'litlab_selection_history_session';
-
-function createHistoryToken(size = 8) {
-    if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
-        const bytes = new Uint8Array(size);
-        window.crypto.getRandomValues(bytes);
-        return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('').slice(0, size);
-    }
-    const perf = typeof performance !== 'undefined' && typeof performance.now === 'function'
-        ? Math.floor(performance.now()).toString(36)
-        : '0';
-    return `${Date.now().toString(36)}${perf}`.slice(-size);
-}
-
-// Load the saved selection history from localStorage (returns an array).
-function loadSelectionHistory() {
-    try {
-        const raw = getStoredValue(localStorage, SELECTION_HISTORY_KEY, LEGACY_SELECTION_HISTORY_KEY);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
-    } catch (err) {
-        console.error('Could not read selection history:', err);
-        return [];
-    }
-}
-
-// Persist the selection history array to localStorage.
-function saveSelectionHistory(history) {
-    try {
-        setStoredValue(localStorage, SELECTION_HISTORY_KEY, JSON.stringify(history));
-    } catch (err) {
-        console.error('Could not save selection history:', err);
-    }
-}
-
-function createSelectionHistorySession() {
-    return {
-        id: `sess-${Date.now()}-${createHistoryToken(8)}`,
-        startedAt: new Date().toISOString()
-    };
-}
-
-function getCurrentSelectionHistorySession() {
-    try {
-        const raw = getStoredValue(sessionStorage, SELECTION_HISTORY_SESSION_KEY, LEGACY_SELECTION_HISTORY_SESSION_KEY);
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed && parsed.id && parsed.startedAt) return parsed;
-        }
-    } catch (err) {
-        console.error('Could not read selection history session:', err);
-    }
-
-    const session = createSelectionHistorySession();
-    try {
-        setStoredValue(sessionStorage, SELECTION_HISTORY_SESSION_KEY, JSON.stringify(session));
-    } catch (err) {
-        console.error('Could not save selection history session:', err);
-    }
-    return session;
-}
-
-// Turn a tierId such as "tier2" into a friendly label such as "Tier 2".
-function tierLabelFromId(tierId) {
-    const num = String(tierId || '').replace('tier', '');
-    return num ? `Tier ${num}` : '';
-}
-
-// Record a drill-down assessment or intervention selection.
-function recordSelection(type, itemId, itemName, tierId) {
-    if (!itemName) return;
-    const history = loadSelectionHistory();
-    const historySession = getCurrentSelectionHistorySession();
-    // Capture the screener that was active for this selection so entries can be
-    // shown with context in the history panel.
-    const screenerId = appState.fwState?.screener || getRememberedScreenerId() || '';
-    const screenerName = appState.fwState?.screenerData?.screener_name || getScreenerName(screenerId) || '';
-    const entry = {
-        id: `sel-${Date.now()}-${createHistoryToken(8)}`,
-        type: type || 'Selection',
-        itemId: itemId || '',
-        name: itemName,
-        tier: tierLabelFromId(tierId),
-        screener: screenerName,
-        sessionId: historySession.id,
-        sessionStartedAt: historySession.startedAt,
-        date: new Date().toISOString(),
-        notes: ''
-    };
-    history.push(entry);
-    saveSelectionHistory(history);
-    renderHistoryPanel();
-    // Glow the history tab to signal a new entry, leaving it until the user opens
-    // the panel, rather than popping the whole panel open.
-    markHistoryUnseen();
-}
-
-// Format an ISO date string for display.
-function formatHistoryDate(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '';
-    return d.toLocaleString(undefined, {
-        year: 'numeric', month: 'short', day: 'numeric',
-        hour: 'numeric', minute: '2-digit'
-    });
-}
-
-function formatSessionLabel(iso) {
-    const label = formatHistoryDate(iso);
-    return label ? `Session · ${label}` : 'Session';
-}
-
-// Render the history list and count badge inside the static panel shell.
-function renderHistoryPanel() {
-    const list = document.getElementById('selection-tracker-list');
-    const countEl = document.getElementById('selection-tracker-count');
-    const history = loadSelectionHistory();
-
-    if (countEl) {
-        countEl.textContent = String(history.length);
-        countEl.classList.toggle('is-empty', history.length === 0);
-    }
-
-    if (!list) return;
-
-    if (history.length === 0) {
-        list.innerHTML = `
-            <div class="history-empty">
-                <p>No drill-downs or interventions selected yet.</p>
-                <p class="history-empty-hint">Your selections from the flowchart will appear here.</p>
-            </div>`;
-        return;
-    }
-
-    // Newest first, grouped into sections by browser session.
-    const ordered = history.slice().reverse();
-
-    const renderEntry = (entry) => {
-        const tierNum = String(entry.tier || '').replace(/\D/g, '');
-        const tierClass = tierNum ? `history-tier-${tierNum}` : '';
-        const typeLabel = entry.type === 'Assessment' ? 'Drill-Down Assessment' : (entry.type || 'Selection');
-        return `
-            <div class="history-entry ${tierClass}" data-entry-id="${escapeHtml(entry.id)}">
-                <div class="history-entry-top">
-                    <span class="history-entry-type">${escapeHtml(typeLabel)}</span>
-                    ${entry.tier ? `<span class="history-entry-tier">${escapeHtml(entry.tier)}</span>` : ''}
-                    <button class="history-entry-delete" title="Remove this entry" aria-label="Remove this entry" onclick="deleteHistoryEntry('${escapeHtml(entry.id)}')">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                    </button>
-                </div>
-                <div class="history-entry-name">${escapeHtml(entry.name)}</div>
-                <div class="history-entry-date">Selected: ${escapeHtml(formatHistoryDate(entry.date))}</div>
-                <textarea class="history-entry-notes" rows="2" placeholder="Add notes about this selection…" oninput="updateHistoryNote('${escapeHtml(entry.id)}', this.value)">${escapeHtml(entry.notes || '')}</textarea>
-            </div>`;
-    };
-
-    // Preserve the order in which each session group first appears (newest first).
-    const groups = [];
-    const groupIndex = {};
-    ordered.forEach((entry, index) => {
-        const key = entry.sessionId || `legacy-${entry.id || entry.date || index}`;
-        if (!(key in groupIndex)) {
-            groupIndex[key] = groups.length;
-            groups.push({
-                key,
-                label: formatSessionLabel(entry.sessionStartedAt || entry.date),
-                entries: []
-            });
-        }
-        groups[groupIndex[key]].entries.push(entry);
-    });
-
-    list.innerHTML = groups.map(group => `
-        <div class="history-section">
-            <div class="history-section-header">
-                <span class="history-section-title">${escapeHtml(group.label)}</span>
-                <span class="history-section-count">${group.entries.length}</span>
-            </div>
-            <div class="history-section-entries">
-                ${group.entries.map(renderEntry).join('')}
-            </div>
-        </div>`).join('');
-}
-
-// Update the note for a specific entry.
-function updateHistoryNote(entryId, value) {
-    const history = loadSelectionHistory();
-    const entry = history.find(e => e.id === entryId);
-    if (!entry) return;
-    entry.notes = value;
-    saveSelectionHistory(history);
-}
-
-// Delete a single entry.
-function deleteHistoryEntry(entryId) {
-    let history = loadSelectionHistory();
-    history = history.filter(e => e.id !== entryId);
-    saveSelectionHistory(history);
-    renderHistoryPanel();
-}
-
-// Clear the entire history (with confirmation).
-function clearSelectionHistory() {
-    const history = loadSelectionHistory();
-    if (history.length === 0) return;
-    const ok = window.confirm('Clear ALL saved selections and notes? This cannot be undone.');
-    if (!ok) return;
-    saveSelectionHistory([]);
-    renderHistoryPanel();
-}
-
-// Escape a single CSV field.
-function csvEscape(value) {
-    const str = String(value == null ? '' : value);
-    if (/[",\r\n]/.test(str)) {
-        return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-}
-
-// Export the history as a downloadable CSV file.
-function exportHistoryCsv() {
-    const history = loadSelectionHistory();
-    if (history.length === 0) {
-        window.alert('There are no selections to export yet.');
-        return;
-    }
-
-    const headers = ['Session', 'Type', 'Name', 'Tier', 'Date Selected', 'Notes'];
-    const rows = history.map(e => [
-        formatSessionLabel(e.sessionStartedAt || e.date),
-        e.type === 'Assessment' ? 'Drill-Down Assessment' : (e.type || 'Selection'),
-        e.name,
-        e.tier,
-        formatHistoryDate(e.date),
-        e.notes || ''
-    ].map(csvEscape).join(','));
-
-    const csv = [headers.map(csvEscape).join(','), ...rows].join('\r\n');
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const stamp = new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = `literacy-interventions-selection-history-${stamp}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-// Add a badge to the "History" nav links (sidebar + mobile) to signal
-// unchecked new entries, unless the History page is already open.
-function markHistoryUnseen() {
-    if (appState.currentPage === 'history') return;
-    document.querySelectorAll('[data-page="history"] .nav-badge').forEach(badge => {
-        badge.classList.remove('is-empty');
-        badge.classList.add('has-unseen');
-    });
-}
-
-// Remove the badge once the user has opened (checked) the History page.
-function clearHistoryUnseen() {
-    document.querySelectorAll('[data-page="history"] .nav-badge').forEach(badge => {
-        badge.classList.remove('has-unseen');
-    });
-}
-
-// Initialize the panel on load.
-document.addEventListener('DOMContentLoaded', () => {
-    renderHistoryPanel();
-});
-
-// Selection history exports
-window.recordSelection = recordSelection;
-window.renderHistoryPanel = renderHistoryPanel;
-window.updateHistoryNote = updateHistoryNote;
-window.deleteHistoryEntry = deleteHistoryEntry;
-window.clearSelectionHistory = clearSelectionHistory;
-window.exportHistoryCsv = exportHistoryCsv;
 window.showGoToTierStep = showGoToTierStep;
 window.applyTierTheme = applyTierTheme;
 
@@ -9794,11 +9942,11 @@ function rememberInstallBannerDismissed() {
     }
 }
 
-// Reveal (or hide) the Install App button in the top navigation.
+// Reveal (or hide) the desktop and mobile menu install actions.
 function setInstallButtonVisible(visible) {
-    const btn = document.getElementById('install-app-btn');
-    if (!btn) return;
-    btn.hidden = !visible;
+    document.querySelectorAll('#install-app-btn, #mobile-install-app-btn').forEach(btn => {
+        btn.hidden = !visible;
+    });
 }
 
 // Show the first-visit banner, unless it was dismissed or the app is installed.
@@ -9923,12 +10071,17 @@ function handleInstallModalKeydown(event) {
 // ── Wiring ──────────────────────────────────────────────────────────
 function setupPwaInstall() {
     const installBtn = document.getElementById('install-app-btn');
+    const mobileInstallBtn = document.getElementById('mobile-install-app-btn');
     const bannerInstallBtn = document.getElementById('install-banner-install');
     const bannerDismissBtn = document.getElementById('install-banner-dismiss');
     const modalCloseBtn = document.getElementById('install-modal-close');
     const modalDoneBtn = document.getElementById('install-modal-done');
 
     if (installBtn) installBtn.addEventListener('click', triggerInstall);
+    if (mobileInstallBtn) mobileInstallBtn.addEventListener('click', () => {
+        closeMobileMenu();
+        triggerInstall();
+    });
     if (bannerInstallBtn) {
         bannerInstallBtn.addEventListener('click', () => {
             hideInstallBanner(true);

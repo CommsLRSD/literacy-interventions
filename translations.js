@@ -22,7 +22,17 @@ const TRANSLATIONS = {
         nav_about: 'About',
         nav_interventions_mobile: 'Teaching Resources',
         nav_schedule: 'Assessment Schedule',
-        nav_history: 'History',
+        nav_favourites: 'Favourites',
+        favourites_intro: 'Your saved resources, across all programs and filters.',
+        favourites_empty: 'No favourites yet. Use the star beside a resource to save it here.',
+        favourite_add: 'Add to favourites',
+        favourite_remove: 'Remove from favourites',
+        favourite_added: 'Resource added to favourites.',
+        favourite_removed: 'Resource removed from favourites.',
+        pathway_resources: 'Your resources',
+        pathway_resources_close: 'Close your resources',
+        pathway_selections: 'Selected resources',
+        pathway_selections_close: 'Close selected resources',
         nav_guided_process: 'Guided process',
         nav_reference_resources: 'Reference resources',
         nav_lang_toggle_label: 'Switch to French',
@@ -67,7 +77,13 @@ const TRANSLATIONS = {
         guided_continue: 'Continue',
         guided_restart: 'Start again',
         guided_resume: 'Continue my guided process',
-        guided_progress_privacy: 'Your catalog choices and checklist progress are saved on this device. No student details are saved.',
+        guided_progress_privacy: 'Your catalog choices and checklist progress are saved in this app’s browser cache on this device (for this visit only if cache storage is unavailable). Clearing browser caches clears guided progress. Reloading or hard-refreshing does not clear saved device choices. Reset saved data clears all app-owned choices and caches. No student details are saved in guided progress.',
+        guided_setup_title: 'Confirm your screener and teaching grade',
+        guided_setup_hint: 'Check these settings before starting any tier. Your saved defaults are preselected; confirm them again for every fresh start.',
+        guided_teaching_grade: 'Teaching grade',
+        guided_setup_confirm: 'Confirm settings and start',
+        guided_hard_reset: 'Reset saved data (hard reset)',
+        guided_hard_reset_confirm: 'Clear all saved app progress, defaults, favourites, and app caches on this device? This cannot be undone. Other websites’ data will not be touched.',
         guided_return: 'Return to my next step',
         guided_home: 'Back to overview',
         guided_return_hint: 'Your guided process is still available.',
@@ -137,7 +153,7 @@ const TRANSLATIONS = {
         filter_advanced_label: 'Advanced filters',
         filter_advanced_description: 'Contains optional Subtest, Grade Level, Evidence Classification, and Keyword search filters.',
         filter_tier_label: 'Tier',
-        filter_grade_label: 'Grade Level',
+        filter_grade_label: 'Grade',
         filter_required_hint: 'Select Tier, a Screener when available, Resource Type, and Literacy Pillar to view resources.',
         filter_active_none: 'No filters applied yet.',
         filter_next_label: 'Next:',
@@ -287,13 +303,6 @@ const TRANSLATIONS = {
         // ── Footer ──
         footer_text: '© 2025–2026 Literacy Interventions · Louis Riel School Division · Supporting educators in literacy intervention',
 
-        // ── Selection history / tracker ──
-        history_label: 'History',
-        history_panel_label: 'Selection History',
-        history_panel_intro: 'A running record of every drill-down assessment and intervention you select in the flowchart, grouped by session with the date you chose each item.',
-        history_panel_warning: 'This history is saved only in this browser. Clearing your browser cache or site data will permanently erase it. Export to CSV to keep a copy.',
-        history_export_csv: 'Export CSV',
-        history_clear_all: 'Clear All',
 
         // ── Flowchart UI (dynamic) ──
         fc_back: 'Restart',
@@ -424,7 +433,17 @@ const TRANSLATIONS = {
         nav_about: 'À propos',
         nav_interventions_mobile: 'Ressources pédagogiques',
         nav_schedule: 'Calendrier d\'évaluation',
-        nav_history: 'Historique',
+        nav_favourites: 'Favoris',
+        favourites_intro: 'Vos ressources sauvegardées, pour tous les programmes et filtres.',
+        favourites_empty: 'Aucun favori pour le moment. Utilisez l’étoile à côté d’une ressource pour la sauvegarder ici.',
+        favourite_add: 'Ajouter aux favoris',
+        favourite_remove: 'Retirer des favoris',
+        favourite_added: 'Ressource ajoutée aux favoris.',
+        favourite_removed: 'Ressource retirée des favoris.',
+        pathway_resources: 'Vos ressources',
+        pathway_resources_close: 'Fermer vos ressources',
+        pathway_selections: 'Ressources sélectionnées',
+        pathway_selections_close: 'Fermer les ressources sélectionnées',
         nav_guided_process: 'Démarche guidée',
         nav_reference_resources: 'Ressources de référence',
         nav_lang_toggle_label: 'Passer à l\'anglais',
@@ -469,7 +488,13 @@ const TRANSLATIONS = {
         guided_continue: 'Continuer',
         guided_restart: 'Recommencer',
         guided_resume: 'Poursuivre ma démarche guidée',
-        guided_progress_privacy: 'Vos choix dans le catalogue et votre progression dans les listes de contrôle sont enregistrés sur cet appareil. Aucun renseignement sur les élèves n’est enregistré.',
+        guided_progress_privacy: 'Vos choix et votre progression sont enregistrés dans le cache de cette application sur cet appareil (pour cette visite seulement si le cache est indisponible). Effacer le cache du navigateur efface la progression. Recharger la page, même en forçant l’actualisation, n’efface pas les choix enregistrés sur cet appareil. Effacer les données enregistrées supprime tous les choix et caches de cette application. Aucun renseignement sur les élèves n’est enregistré dans la démarche guidée.',
+        guided_setup_title: 'Confirmez votre outil de dépistage et votre niveau scolaire',
+        guided_setup_hint: 'Vérifiez ces réglages avant de commencer un palier. Vos valeurs enregistrées sont présélectionnées; confirmez-les à chaque nouvelle démarche.',
+        guided_teaching_grade: 'Niveau scolaire enseigné',
+        guided_setup_confirm: 'Confirmer et commencer',
+        guided_hard_reset: 'Effacer les données enregistrées (réinitialisation complète)',
+        guided_hard_reset_confirm: 'Effacer la progression, les valeurs par défaut, les favoris et les caches de cette application sur cet appareil? Cette action est irréversible. Les données des autres sites ne seront pas modifiées.',
         guided_return: 'Revenir à ma prochaine étape',
         guided_home: 'Retour à l’aperçu',
         guided_return_hint: 'Votre démarche guidée est toujours disponible.',
@@ -689,13 +714,6 @@ const TRANSLATIONS = {
         // ── Footer ──
         footer_text: '© 2025–2026 Literacy Interventions · Division scolaire Louis-Riel · Soutenir les éducateurs dans les interventions en littératie',
 
-        // ── Selection history / tracker ──
-        history_label: 'Historique',
-        history_panel_label: 'Historique des sélections',
-        history_panel_intro: 'Un registre continu de chaque évaluation approfondie et intervention que vous sélectionnez dans l\'organigramme, regroupé par session avec la date à laquelle vous avez choisi chaque élément.',
-        history_panel_warning: 'Cet historique est sauvegardé uniquement dans ce navigateur. Vider le cache de votre navigateur ou les données du site effacera définitivement cet historique. Exportez en CSV pour en conserver une copie.',
-        history_export_csv: 'Exporter en CSV',
-        history_clear_all: 'Tout effacer',
 
         // ── Flowchart UI (dynamic) ──
         fc_back: 'Recommencer',
@@ -824,6 +842,7 @@ const FLOWCHART_DEFINITIONS_FR = {
                 type: 'checklist',
                 title: '\u00c9tape 1\u00a0: Principes de l\u2019enseignement explicite et syst\u00e9matique',
                 description: 'Examinez les principes suivants avant de continuer.',
+                checklistLayout: 'principles',
                 items: [
                     'Les objectifs de la le\u00e7on sont-ils clairement \u00e9nonc\u00e9s\u00a0?',
                     'Le contenu est-il pr\u00e9sent\u00e9 en \u00e9tapes compr\u00e9hensibles et logiquement ordonn\u00e9es, guid\u00e9 par la Progression des apprentissages de la DSLR\u00a0?',
@@ -834,23 +853,13 @@ const FLOWCHART_DEFINITIONS_FR = {
                     'Les progr\u00e8s sont-ils suivis\u00a0?',
                     'L\u2019enseignement int\u00e8gre-t-il la conception simple de la lecture\u00a0?'
                 ],
-                nextNode: 'tier1-screener',
-                buttonText: 'Continuer vers le d\u00e9pistage en litt\u00e9ratie'
-            },
-            'tier1-screener': {
-                id: 'tier1-screener',
-                type: 'selection',
-                title: '\u00c9tape 2\u00a0: D\u00e9pistage en litt\u00e9ratie',
-                subtitle: '',
-                description: '',
-                options: 'screeners',
                 nextNode: 'tier1-effectiveness',
-                nextHandler: 'selectTier1ScreenerVisual'
+                buttonText: 'Continuer vers les résultats'
             },
             'tier1-effectiveness': {
                 id: 'tier1-effectiveness',
                 type: 'decision',
-                title: '\u00c9tape 3\u00a0: R\u00e9sultat',
+                title: '\u00c9tape 2\u00a0: R\u00e9sultat',
                 subtitle: 'L\u2019enseignement \u00e9tait-il efficace\u00a0?',
                 description: '',
                 choices: [
@@ -868,7 +877,7 @@ const FLOWCHART_DEFINITIONS_FR = {
             'tier1-percentage': {
                 id: 'tier1-percentage',
                 type: 'decision',
-                title: 'Voie B\u00a0: Enseignement inefficace',
+                title: '\u00c9tape 3\u00a0: Enseignement inefficace',
                 subtitle: 'Quel pourcentage d\u2019\u00e9l\u00e8ves est en difficult\u00e9\u00a0?',
                 description: 'D\u2019apr\u00e8s les r\u00e9sultats du d\u00e9pistage, combien d\u2019\u00e9l\u00e8ves sont en dessous du niveau de r\u00e9f\u00e9rence\u00a0?',
                 choices: [
@@ -904,7 +913,12 @@ const FLOWCHART_DEFINITIONS_FR = {
                 title: '\u00c9tape 1\u00a0: Entr\u00e9e',
                 journeySummary: 'Vous avez \u00e9cart\u00e9 les d\u00e9ficiences et autres obstacles comme cause des difficult\u00e9s en litt\u00e9ratie et confirm\u00e9 que les soutiens du palier 2 ont \u00e9t\u00e9 mis en place correctement.',
                 reviewHint: 'Utilisez la carte du processus pour rouvrir cette \u00e9tape et revoir la liste en tout temps.',
+                checklistLayout: 'grouped',
                 leadText: 'Inform\u00e9 par des donn\u00e9es (voir les outils de suivi des progr\u00e8s).',
+                leadLink: {
+                    text: 'voir les outils de suivi des progr\u00e8s',
+                    url: 'https://media.lrsd.net/media/Default/medialib/2024_11_29-literacy_screening_and_progress_monitoring_executive_summary-v07.5b52af52587.pdf'
+                },
                 subtitle: '\u00c9carter que les d\u00e9fis ne sont pas le r\u00e9sultat de\u00a0:',
                 items: [
                     'D\u00e9ficiences visuelles',
@@ -1144,10 +1158,6 @@ const NODE_SUMMARIES_FR = {
     'tier1-principles': {
         text: 'Vous avez confirm\u00e9 que l\u2019enseignement en classe respecte les principes de l\u2019enseignement explicite et syst\u00e9matique\u00a0\u2014 les bases sont solides\u00a0! 📚',
         variant: 'step1'
-    },
-    'tier1-screener': {
-        text: (choice) => `Vous avez administr\u00e9 ${choice || 'l\u2019outil de d\u00e9pistage en litt\u00e9ratie'} pour mesurer o\u00f9 en sont les \u00e9l\u00e8ves. Place aux donn\u00e9es\u00a0! 📊`,
-        variant: 'selection'
     },
     'tier1-effectiveness': {
         effective:   { text: 'L\u2019outil de d\u00e9pistage indique Bleu ou Vert\u00a0\u2014 cet \u00e9l\u00e8ve est sur la bonne voie et l\u2019enseignement fonctionne\u00a0! 🎉', variant: 'effective' },
