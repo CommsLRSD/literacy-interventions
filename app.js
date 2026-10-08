@@ -5746,6 +5746,18 @@ function showFinalSummary(endpointNodeData) {
         stepsContainer.innerHTML = summaryContentHTML;
     }
 
+    renderRoot.querySelectorAll('.anim-journey-item').forEach(item => {
+        const icon = item.querySelector('.anim-step-bubble-icon svg, .anim-endpoint-icon svg');
+        if (!icon) return;
+        const intro = document.createElement('div');
+        intro.className = 'anim-card-intro';
+        intro.setAttribute('aria-hidden', 'true');
+        intro.style.color = getComputedStyle(icon.parentElement).color;
+        intro.appendChild(icon.cloneNode(true));
+        item.appendChild(intro);
+        item.classList.add('anim-has-intro');
+    });
+
     const prevBtn = document.getElementById('carousel-prev-btn');
     if (prevBtn) prevBtn.style.display = 'none';
     completeJourneyMap();
@@ -5769,8 +5781,9 @@ function showFinalSummary(endpointNodeData) {
 
     allItems.forEach((el, i) => {
         const isConnector = el.querySelector('.anim-connector') !== null;
-        const delay = isConnector ? CONN_DELAY : STEP_DELAY;
+        const delay = isConnector ? CONN_DELAY : el.classList.contains('anim-has-intro') ? 1150 : STEP_DELAY;
         setTimeout(() => {
+            if (!el.isConnected || el.closest('.anim-summary-skipped')) return;
             el.classList.add('anim-visible');
             // Also trigger the inner connector line animation
             const line = el.querySelector('.anim-connector-line');
@@ -5780,6 +5793,7 @@ function showFinalSummary(endpointNodeData) {
             // If this is the last item, reveal actions
             if (i === allItems.length - 1) {
                 setTimeout(() => {
+                    if (!el.isConnected || el.closest('.anim-summary-skipped')) return;
                     const actions = renderRoot.querySelector('#anim-journey-actions');
                     if (actions) {
                         actions.style.display = '';
@@ -5790,7 +5804,7 @@ function showFinalSummary(endpointNodeData) {
                     // Hide skip button once done
                     const skipBtn = renderRoot.querySelector('.anim-skip-btn');
                     if (skipBtn) skipBtn.style.display = 'none';
-                }, 350);
+                }, el.classList.contains('anim-has-intro') ? 1150 : 350);
             }
         }, timeout);
         timeout += delay;
@@ -5801,6 +5815,7 @@ function showFinalSummary(endpointNodeData) {
 function revealAllAnimJourneyItems(btn) {
     const container = btn?.closest('.journey-review');
     if (!container) return;
+    container.classList.add('anim-summary-skipped');
     btn.style.display = 'none';
     container.querySelectorAll('.anim-journey-item').forEach(el => {
         el.classList.add('anim-visible');

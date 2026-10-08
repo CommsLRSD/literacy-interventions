@@ -5483,15 +5483,75 @@ details > p {
 
 /* Each item starts invisible; .anim-visible triggers the pop */
 .anim-journey-item {
+  position: relative;
   width: 100%;
   opacity: 0;
+  visibility: hidden;
   transform: translateY(18px) scale(0.96);
 }
 
 .anim-journey-item.anim-visible {
   animation: anim-pop-in 0.45s cubic-bezier(0.34, 1.2, 0.64, 1) both;
   opacity: 1;
+  visibility: visible;
   transform: none;
+}
+
+@keyframes anim-card-intro {
+  0% { opacity: 0; transform: scale(0.55) rotate(-8deg); }
+  25% { opacity: 1; transform: scale(1.12) rotate(3deg); }
+  50% { opacity: 1; transform: scale(1) rotate(0); }
+  70% { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+
+.anim-card-intro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.anim-card-intro svg {
+  width: 88px;
+  height: 88px;
+  filter: drop-shadow(0 5px 10px rgba(14, 28, 45, 0.16));
+}
+
+.anim-journey-item.anim-visible.anim-has-intro {
+  animation: none;
+}
+
+.anim-has-intro > .anim-step-bubble,
+.anim-has-intro > .anim-endpoint-card {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.anim-has-intro.anim-visible > .anim-card-intro {
+  animation: anim-card-intro 1s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+.anim-has-intro.anim-visible > .anim-step-bubble,
+.anim-has-intro.anim-visible > .anim-endpoint-card {
+  visibility: visible;
+  animation: anim-pop-in 0.45s cubic-bezier(0.34, 1.2, 0.64, 1) 0.65s both;
+}
+
+.anim-summary-skipped .anim-journey-item,
+.anim-summary-skipped .anim-journey-item > .anim-step-bubble,
+.anim-summary-skipped .anim-journey-item > .anim-endpoint-card {
+  animation: none;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
+.anim-summary-skipped .anim-journey-item > .anim-card-intro {
+  display: none;
 }
 
 .anim-summary-modal-overlay {
@@ -5764,12 +5824,31 @@ body.final-summary-modal-open {
   animation: anim-outcome-down 0.55s ease-out 0.15s both;
 }
 
+.anim-summary-skipped .anim-journey-item.anim-visible,
+.anim-summary-skipped .anim-journey-item.anim-visible .anim-outcome-icon,
+.anim-summary-skipped .anim-journey-item.anim-visible .anim-outcome-icon path,
+.anim-summary-skipped .anim-journey-item .anim-connector-line.anim-visible {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .anim-journey-item.anim-visible,
+  .anim-has-intro.anim-visible > .anim-step-bubble,
+  .anim-has-intro.anim-visible > .anim-endpoint-card,
   .anim-journey-item.anim-visible .anim-outcome-icon,
   .anim-journey-item.anim-visible .anim-outcome-icon path,
   .anim-journey-summary .anim-connector-line.anim-visible {
     animation: none;
+  }
+
+  .anim-has-intro.anim-visible > .anim-step-bubble,
+  .anim-has-intro.anim-visible > .anim-endpoint-card {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .anim-has-intro.anim-visible > .anim-card-intro {
+    display: none;
   }
 
   .journey-review,
