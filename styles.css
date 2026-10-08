@@ -5768,10 +5768,11 @@ body.final-summary-modal-open {
   .anim-journey-item.anim-visible,
   .anim-journey-item.anim-visible .anim-outcome-icon,
   .anim-journey-item.anim-visible .anim-outcome-icon path,
-  .anim-connector-line.anim-visible {
+  .anim-journey-summary .anim-connector-line.anim-visible {
     animation: none;
   }
 
+  .journey-review,
   .anim-summary-modal-overlay,
   .anim-connector-arrow {
     transition: none;
