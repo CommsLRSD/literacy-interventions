@@ -8217,6 +8217,7 @@ body.step-review-modal-open { overflow: hidden; }
   }
 
   .visual-flowchart-viewport {
+    grid-row: 4;
     position: relative;
     min-width: 0;
     min-height: 0;
