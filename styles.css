@@ -11457,3 +11457,132 @@ body.program-prompt-open { overflow: hidden; }
   .home-program-controls { flex-direction: column; }
   .guided-primary-btn { width: 100%; }
 }
+
+/* ── Home: screener + grade setup ── */
+.home-program-controls select:disabled { opacity: 0.65; cursor: not-allowed; }
+
+/* ── Home as a drawer over the flowchart ── */
+.home-drawer-bar { display: none; }
+.home-drawer-scrim[hidden] { display: none; }
+body.home-drawer-open #home-section,
+body.home-drawer-closing[data-page="flowchart"] #home-section {
+  display: block;
+  position: fixed;
+  top: var(--nav-height);
+  bottom: 0;
+  left: var(--side-nav-width);
+  z-index: 860;
+  width: calc((100vw - var(--side-nav-width)) * 0.9);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-height: 0;
+  background: var(--bg);
+  box-shadow: 12px 0 40px rgba(5, 20, 37, 0.28);
+  animation: homeDrawerIn 0.3s var(--ease) both;
+}
+body.home-drawer-closing[data-page="flowchart"] #home-section {
+  animation: homeDrawerOut 0.25s var(--ease) both;
+  pointer-events: none;
+}
+body.home-drawer-open.side-nav-collapsed #home-section,
+body.home-drawer-closing.side-nav-collapsed[data-page="flowchart"] #home-section {
+  left: var(--side-nav-collapsed-width);
+  width: calc((100vw - var(--side-nav-collapsed-width)) * 0.9);
+}
+body.home-drawer-open .home-drawer-bar,
+body.home-drawer-closing[data-page="flowchart"] .home-drawer-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.5rem 1rem;
+  background: var(--primary);
+}
+.home-drawer-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 40px;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: var(--radius-pill);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.home-drawer-close:hover { background: rgba(255, 255, 255, 0.14); }
+.home-drawer-close:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.home-drawer-scrim {
+  position: fixed;
+  inset: var(--nav-height) 0 0 0;
+  z-index: 850;
+  background: rgba(8, 23, 40, 0.45);
+  animation: homeDrawerScrimIn 0.3s var(--ease) both;
+}
+@keyframes homeDrawerIn {
+  from { transform: translateX(-100%); }
+  to   { transform: none; }
+}
+@keyframes homeDrawerOut {
+  from { transform: none; }
+  to   { transform: translateX(-100%); }
+}
+@keyframes homeDrawerScrimIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@media (max-width: 768px) {
+  body.home-drawer-open #home-section,
+  body.home-drawer-open.side-nav-collapsed #home-section,
+  body.home-drawer-closing[data-page="flowchart"] #home-section {
+    left: 0;
+    width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.home-drawer-open #home-section,
+  .home-drawer-scrim { animation: none; }
+  body.home-drawer-closing[data-page="flowchart"] #home-section { display: none; }
+}
+
+/* ── Home: icon-only reset button ── */
+.guided-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+  color: #fff;
+  transition: background var(--duration) var(--ease), transform var(--duration) var(--ease);
+}
+.guided-icon-btn:hover { background: rgba(255, 255, 255, 0.14); }
+.guided-icon-btn:hover .material-symbols-rounded { transform: rotate(-90deg); }
+.guided-icon-btn .material-symbols-rounded { font-size: 22px; transition: transform var(--duration-slow) var(--ease); }
+
+/* ── Visual pathway as a full screen beside the top bar and side menu ── */
+.visual-flowchart-modal {
+  inset: var(--nav-height) 0 0 var(--side-nav-width);
+  z-index: 800;
+  background: var(--bg);
+  transition: opacity 0.18s ease, left var(--duration-slow) var(--ease);
+}
+body.side-nav-collapsed .visual-flowchart-modal { left: var(--side-nav-collapsed-width); }
+.visual-flowchart-modal:fullscreen { inset: 0; }
+.visual-flowchart-modal .visual-flowchart-dialog {
+  width: 100%;
+  height: 100%;
+  box-shadow: none;
+}
+.visual-flowchart-modal .visual-flowchart-dialog:fullscreen {
+  width: 100vw;
+  height: 100vh;
+}
+.visual-flowchart-header .visual-flowchart-home-btn { flex: 0 0 auto; }
+.home-drawer-toggle .material-symbols-rounded { font-size: 18px; }
+.home-drawer-toggle[aria-expanded="true"] {
+  background: var(--primary);
+  color: #fff;
+}

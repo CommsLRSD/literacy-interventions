@@ -56,7 +56,6 @@ const PATHWAY_CACHE_URL = new URL('./.literacy-interventions-progress.json', win
 const PATHWAY_SESSION_KEY = `${STORAGE_KEY_PREFIX}-progress-session`;
 let pathwayDefaults = {};
 let pathwayContext = null;
-let pendingPathwayTier = null;
 let progressStorageQueue = Promise.resolve();
 let progressStorageEpoch = 0;
 
@@ -140,76 +139,155 @@ function getPathwayScreenerId() {
     return resolveScreenerId(screener?.name) || resolveScreenerId(pathwayContext?.screener);
 }
 
+// Grades are kept as a de-duplicated list in school order; a legacy single
+// grade string becomes a one-item list.
+function normalizeGradeList(value) {
+    const list = Array.isArray(value) ? value : (value ? [value] : []);
+    const order = grade => {
+        const index = GRADE_SORT_ORDER.indexOf(grade);
+        return index === -1 ? GRADE_SORT_ORDER.length : index;
+    };
+    return Array.from(new Set(list.filter(grade => typeof grade === 'string' && grade)))
+        .sort((a, b) => order(a) - order(b) || a.localeCompare(b));
+}
+
+function formatGradeList(grades) {
+    return normalizeGradeList(grades).map(translateGrade).join(', ');
+}
+
+function getValidPathwayGrades(program, grades) {
+    const allowed = getPathwayGrades(program);
+    // The guided pathway screens one grade at a time.
+    return normalizeGradeList(grades).filter(grade => allowed.includes(grade)).slice(0, 1);
+}
+
+function getProgramScreeners() {
+    return (appState.tierFlowchartData?.tier1?.screeners || []).filter(item => isScreenerIdForCurrentProgram(item.id));
+}
+
 function getPathwaySetupDefaults() {
     const stored = pathwayDefaults[appState.selectedProgram] || {};
-    const screeners = (appState.tierFlowchartData?.tier1?.screeners || []).filter(item => isScreenerIdForCurrentProgram(item.id));
-    const screener = screeners.find(item => item.id === stored.screener);
-    return { screener: screener?.id || '', grade: getPathwayGrades(appState.selectedProgram).includes(stored.grade) ? stored.grade : '',
+    const screener = getProgramScreeners().find(item => item.id === stored.screener);
+    return { screener: screener?.id || '', grades: getValidPathwayGrades(appState.selectedProgram, stored.grades ?? stored.grade),
         pillar: typeof stored.pillar === 'string' ? stored.pillar : 'Phonics' };
 }
 
-function showPathwaySetup(tierId) {
-    pendingPathwayTier = tierId;
+// Home is the first page of the guided process: its program, screener and
+// grade choices describe the active pathway (or the next one to start).
+// While the user is editing them, an unfinished choice (e.g. no grade
+// chosen) is kept as a draft so the active pathway is never left invalid.
+let homeSetupDraft = null;
+let homeSetupRenderKey = '';
+
+function getHomeSetup() {
+    const program = appState.selectedProgram;
+    if (homeSetupDraft && homeSetupDraft.program === program) {
+        return { screener: homeSetupDraft.screener, grades: homeSetupDraft.grades.slice() };
+    }
+    const context = pathwayContext?.program === program ? pathwayContext
+        : (savedPathway?.program === program ? savedPathway.context : null);
+    if (context) return { screener: context.screener, grades: getValidPathwayGrades(program, context.grades) };
     const defaults = getPathwaySetupDefaults();
-    const screeners = (appState.tierFlowchartData?.tier1?.screeners || []).filter(item => isScreenerIdForCurrentProgram(item.id));
-    const container = document.getElementById('flowchart-container');
-    if (!container) return;
-    container.classList.remove('flowchart-hidden', 'flowchart-view-hidden');
-    container.style.display = 'block';
-    delete container.dataset.initialized;
-    container.innerHTML = `
-        <section class="integrated-flowchart pathway-setup" aria-labelledby="pathway-setup-title">
-            <div class="step-content">
-                <h2 id="pathway-setup-title" tabindex="-1">${escapeHtml(t('guided_setup_title'))}</h2>
-                <p>${escapeHtml(t('guided_setup_hint'))}</p>
-                <form id="pathway-setup-form" class="fw-wizard-selects">
-                    <div class="fw-select-group">
-                        <label for="pathway-setup-screener">${escapeHtml(t('fc_screener_label'))}</label>
-                        <select id="pathway-setup-screener" class="fw-select" required>
-                            <option value=""${defaults.screener ? '' : ' selected'}>${escapeHtml(t('wizard_select_placeholder'))}</option>
-                            ${screeners.map(item => `<option value="${escapeAttr(item.id)}"${item.id === defaults.screener ? ' selected' : ''}>${escapeHtml(item.name)}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="fw-select-group">
-                        <label for="pathway-setup-grade">${escapeHtml(t('filter_grade_label'))}</label>
-                        <select id="pathway-setup-grade" class="fw-select" required>
-                            <option value=""${defaults.grade ? '' : ' selected'}>${escapeHtml(t('wizard_select_placeholder'))}</option>
-                            ${getPathwayGrades(appState.selectedProgram).map(grade => `<option value="${grade}"${grade === defaults.grade ? ' selected' : ''}>${escapeHtml(translateGrade(grade))}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="pathway-setup-actions">
-                        <button type="submit" class="action-btn action-primary"${screeners.length ? '' : ' disabled'}>${escapeHtml(t('guided_setup_confirm'))}</button>
-                        <button type="button" class="action-btn action-secondary" onclick="navigateToPage('home')">${escapeHtml(t('guided_home'))}</button>
-                    </div>
-                </form>
-            </div>
-        </section>`;
-    container.querySelector('form').addEventListener('submit', event => {
-        event.preventDefault();
-        confirmPathwaySetup();
-    });
-    navigateToPage('flowchart');
-    document.getElementById('pathway-setup-title')?.focus();
+    return { screener: defaults.screener, grades: defaults.grades };
 }
 
-function confirmPathwaySetup() {
-    if (!pendingPathwayTier) return;
-    const screener = (appState.tierFlowchartData?.tier1?.screeners || []).find(item =>
-        item.id === document.getElementById('pathway-setup-screener')?.value && isScreenerIdForCurrentProgram(item.id));
-    const grade = document.getElementById('pathway-setup-grade')?.value;
-    if (!screener || !getPathwayGrades(appState.selectedProgram).includes(grade)) return;
-    pathwayContext = Object.freeze({ program: appState.selectedProgram, screener: screener.id, grade });
-    pathwayDefaults[appState.selectedProgram] = { ...getPathwaySetupDefaults(), screener: screener.id, grade };
-    pendingScheduleTeachingGrades[getScheduleProgramIdForSelection(appState.selectedProgram)] = grade;
+function isHomeSetupComplete(setup = getHomeSetup()) {
+    return !!appState.selectedProgram && getProgramScreeners().some(item => item.id === setup.screener) &&
+        getValidPathwayGrades(appState.selectedProgram, setup.grades).length > 0;
+}
+
+function renderHomeSetupControls() {
+    const select = document.getElementById('home-screener-select');
+    const gradeSelect = document.getElementById('home-grade-select');
+    if (!select || !gradeSelect) return;
+    const program = appState.selectedProgram;
+    const screeners = program ? getProgramScreeners() : [];
+    const grades = getPathwayGrades(program);
+    const key = [program, appState.language, screeners.map(item => item.id).join(',')].join('|');
+    if (key !== homeSetupRenderKey) {
+        homeSetupRenderKey = key;
+        select.innerHTML = `<option value="">${escapeHtml(t('guided_choose_screener'))}</option>` +
+            screeners.map(item => `<option value="${escapeAttr(item.id)}">${escapeHtml(item.name)}</option>`).join('');
+        gradeSelect.innerHTML = `<option value="">${escapeHtml(t('guided_choose_grade'))}</option>` +
+            grades.map(grade => `<option value="${escapeAttr(grade)}">${escapeHtml(translateGrade(grade))}</option>`).join('');
+    }
+    const setup = getHomeSetup();
+    select.disabled = !program || !screeners.length;
+    select.value = screeners.some(item => item.id === setup.screener) ? setup.screener : '';
+    gradeSelect.disabled = !program;
+    gradeSelect.value = grades.includes(setup.grades[0]) ? setup.grades[0] : '';
+}
+
+// Share the pathway's screener and grades with the Teaching Resources filters
+// and the Assessment Schedule so other content is scoped the same way.
+function applyPathwaySetupToFilters(setup) {
+    const screener = getProgramScreeners().find(item => item.id === setup.screener);
+    if (screener) setRememberedScreener(screener.name);
+    const grades = getValidPathwayGrades(appState.selectedProgram, setup.grades);
+    setRememberedMenuFilters({ screener: appState.selectedScreener, grade: grades });
+    pendingScheduleTeachingGrades[getScheduleProgramIdForSelection(appState.selectedProgram)] = grades;
     if (schedulesData) renderScheduleCalendar(schedulesData);
-    setRememberedScreener(screener.name);
-    setRememberedMenuFilters({ program: appState.selectedProgram, screener: appState.selectedScreener, grade,
-        pillar: pathwayDefaults[appState.selectedProgram].pillar });
-    appState.currentTierFlow = { screener: screener.id, screenerName: screener.name, grade };
-    const tierId = pendingPathwayTier;
-    pendingPathwayTier = null;
+}
+
+function updateHomeSetup(partial) {
+    if (!appState.selectedProgram || !partial) return;
+    const program = appState.selectedProgram;
+    const current = getHomeSetup();
+    const next = {
+        screener: Object.hasOwn(partial, 'screener')
+            ? (getProgramScreeners().some(item => item.id === partial.screener) ? partial.screener : '')
+            : current.screener,
+        grades: Object.hasOwn(partial, 'grades') ? getValidPathwayGrades(program, partial.grades) : current.grades
+    };
+    homeSetupDraft = { program, ...next };
+    pathwayDefaults[program] = { ...getPathwaySetupDefaults(), screener: next.screener, grades: next.grades };
+    if (isHomeSetupComplete(next)) {
+        if (pathwayContext?.program === program) {
+            pathwayContext = Object.freeze({ ...pathwayContext, screener: next.screener, grades: next.grades });
+            const screener = getProgramScreeners().find(item => item.id === next.screener);
+            appState.currentTierFlow = { ...(appState.currentTierFlow || {}), screener: screener.id, screenerName: screener.name, grades: next.grades };
+        }
+        if (savedPathway?.program === program) {
+            savedPathway = { ...savedPathway, context: { ...savedPathway.context, screener: next.screener, grades: next.grades } };
+        }
+        applyPathwaySetupToFilters(next);
+        if (appState.fwState) {
+            appState.fwState.grade = next.grades;
+            fwLoadResults();
+        }
+        updateScreenerIndicator();
+    }
+    persistProgressStorage();
+    updateGuidedHome();
+}
+
+// Send the user to the Home setup (as a drawer while in the flowchart) and
+// focus the first choice that still needs an answer.
+function showHomeSetupRequired() {
+    if (appState.currentPage === 'flowchart') setHomeDrawerOpen(true);
+    else if (appState.currentPage !== 'home') navigateToPage('home');
+    updateGuidedHome();
+    const setup = getHomeSetup();
+    const target = !appState.selectedProgram ? document.getElementById('home-program-select')
+        : !getProgramScreeners().some(item => item.id === setup.screener) ? document.getElementById('home-screener-select')
+            : document.getElementById('home-grade-select');
+    target?.focus();
+}
+
+function beginPathway(tierId, setup) {
+    const program = appState.selectedProgram;
+    const screener = getProgramScreeners().find(item => item.id === setup.screener);
+    const grades = getValidPathwayGrades(program, setup.grades);
+    if (!screener || !grades.length) return;
+    pathwayContext = Object.freeze({ program, screener: screener.id, grades });
+    homeSetupDraft = null;
+    pathwayDefaults[program] = { ...getPathwaySetupDefaults(), screener: screener.id, grades };
+    applyPathwaySetupToFilters({ screener: screener.id, grades });
+    setRememberedMenuFilters({ program, pillar: pathwayDefaults[program].pillar });
+    appState.currentTierFlow = { screener: screener.id, screenerName: screener.name, grades };
     initIntegratedFlowchart(tierId);
     document.getElementById('flowchart-container').dataset.initialized = 'true';
+    setHomeDrawerOpen(false);
     navigateToPage('flowchart');
     requestAnimationFrame(focusActivePathwayStep);
 }
@@ -219,8 +297,9 @@ async function hardResetApp() {
     if (!window.confirm(t('guided_hard_reset_confirm'))) return;
     closeMobileMenu();
     appReady = false;
-    pendingPathwayTier = null;
     pathwayDefaults = {};
+    homeSetupDraft = null;
+    setHomeDrawerOpen(false);
     clearPathwayProgress();
     closeVisualFlowchartModal({ immediate: true });
     closeFinalSummaryDialog({ immediate: true });
@@ -249,7 +328,8 @@ async function hardResetApp() {
         screener: '', subtest: '', grade: '', evidence: '', search: '' });
     menuUiState.view = 'search';
     menuUiState.editingField = '';
-    activeScheduleGradeId = 'all';
+    activeScheduleGradeIds = [];
+    activeScheduleGradeSelections = {};
     pendingScheduleTeachingGrades = {};
     favouriteIds = new Set();
     clearFavouriteFeedback();
@@ -387,14 +467,16 @@ function readSavedPathway(saved) {
     try {
         if (![PROGRAM_ENGLISH, PROGRAM_FRENCH_IMMERSION].includes(appState.selectedProgram)) return null;
         if (!saved || saved.version !== 2 || saved.program !== appState.selectedProgram) return null;
-        if (saved.context?.program !== saved.program || !getPathwayGrades(saved.program).includes(saved.context?.grade) ||
-            !(appState.tierFlowchartData?.tier1?.screeners || []).some(item =>
-                item.id === saved.context?.screener && isScreenerIdForCurrentProgram(item.id))) return null;
+        // Pathways saved before multi-grade support stored a single `grade`.
+        const grades = getValidPathwayGrades(saved.program, saved.context?.grades ?? saved.context?.grade);
+        if (saved.context?.program !== saved.program || !grades.length ||
+            !getProgramScreeners().some(item => item.id === saved.context?.screener)) return null;
         const current = validateTierPathway(saved.current);
         if (!current) return null;
         const fullJourney = (Array.isArray(saved.fullJourney) ? saved.fullJourney.slice(0, 3) : []).map(validateTierPathway);
         if (fullJourney.some(tier => !tier)) return null;
-        return { version: 2, program: saved.program, context: saved.context, current, fullJourney, filters: validatePathwayFilters(saved.filters) };
+        return { version: 2, program: saved.program, context: { program: saved.program, screener: saved.context.screener, grades },
+            current, fullJourney, filters: validatePathwayFilters(saved.filters) };
     } catch (e) {
         return null;
     }
@@ -402,15 +484,18 @@ function readSavedPathway(saved) {
 
 function validatePathwayFilters(filters) {
     const context = { program: appState.selectedProgram };
-    return Object.fromEntries(['pillar', 'screener', 'grade'].map(field => [
+    const validated = Object.fromEntries(['pillar', 'screener'].map(field => [
         field, distinctTagValues(context, field).includes(filters?.[field]) ? filters[field] : ''
     ]));
+    const grades = distinctTagValues(context, 'grade');
+    validated.grade = normalizeGradeList(filters?.grade).filter(grade => grades.includes(grade));
+    return validated;
 }
 
 function savePathwayProgress() {
     updatePathwaySelections();
     const vf = appState.visualFlowchart;
-    if (restoringPathway || !pathwayContext || pendingPathwayTier || !appState.selectedProgram || !vf?.tierId || !vf.selectedPath.length) return;
+    if (restoringPathway || !pathwayContext || !appState.selectedProgram || !vf?.tierId || !vf.selectedPath.length) return;
     savedPathway = {
         version: 2, program: appState.selectedProgram, context: { ...pathwayContext }, current: serializeTierPathway(vf),
         fullJourney: (appState.fullJourney || []).map(serializeTierPathway),
@@ -424,6 +509,8 @@ function updateGuidedHome() {
     updatePathwaySelections();
     renderFavourites();
     const hasPath = !!savedPathway && savedPathway.program === appState.selectedProgram;
+    const resetHint = document.getElementById('home-reset-hint');
+    if (resetHint) resetHint.hidden = !hasPath;
     for (const id of ['home-resume-btn', 'home-restart-btn']) {
         const button = document.getElementById(id);
         if (button) {
@@ -439,19 +526,43 @@ function updateGuidedHome() {
     document.querySelectorAll('.menu-hard-reset').forEach(reset => {
         reset.disabled = !appReady;
     });
+    renderHomeSetupControls();
     const status = document.getElementById('home-program-status');
-    if (status) status.textContent = appState.selectedProgram ? '' : t('guided_choose_program_hint');
+    if (status) {
+        status.textContent = !appState.selectedProgram ? t('guided_choose_program_hint')
+            : (isHomeSetupComplete() ? '' : t('guided_setup_missing'));
+    }
     const banner = document.getElementById('pathway-return-banner');
     if (banner) banner.hidden = appState.currentPage === 'home' || appState.currentPage === 'flowchart' || !hasPath;
 }
 
 function startGuidedPathway(tierId = 'tier1') {
-    if (!appReady || !['tier1', 'tier2', 'tier3'].includes(tierId) || !ensureProgramSelectionBeforeInteraction()) return;
+    if (!appReady || !['tier1', 'tier2', 'tier3'].includes(tierId)) return;
+    const setup = getHomeSetup();
+    if (!isHomeSetupComplete(setup)) {
+        showHomeSetupRequired();
+        return;
+    }
     if (savedPathway && !window.confirm(t('guided_restart_confirm'))) return;
     closeVisualFlowchartModal({ immediate: true });
     appState.visualFlowchartDismissed = false;
     clearPathwayProgress();
-    showPathwaySetup(tierId);
+    beginPathway(tierId, setup);
+}
+
+// Reset the flowchart: clear guided progress plus the screener and grade
+// choices, keeping only the selected program.
+function resetGuidedPathway() {
+    if (!appReady || !savedPathway || !window.confirm(t('guided_reset_confirm'))) return;
+    const program = appState.selectedProgram;
+    closeVisualFlowchartModal({ immediate: true });
+    appState.visualFlowchartDismissed = false;
+    homeSetupDraft = null;
+    if (program) pathwayDefaults[program] = { ...getPathwaySetupDefaults(), screener: '', grades: [] };
+    clearPathwayProgress();
+    if (appState.currentPage !== 'home') navigateToPage('home');
+    updateGuidedHome();
+    document.getElementById(program ? 'home-screener-select' : 'home-program-select')?.focus();
 }
 
 function restorePathway(saved) {
@@ -459,8 +570,9 @@ function restorePathway(saved) {
     if (!current) return false;
     restoringPathway = true;
     try {
+        const grades = getValidPathwayGrades(saved.context.program, saved.context.grades ?? saved.context.grade);
         pathwayContext = Object.freeze({
-            program: saved.context.program, screener: saved.context.screener, grade: saved.context.grade
+            program: saved.context.program, screener: saved.context.screener, grades
         });
         initIntegratedFlowchart(current.tierId);
         setRememberedMenuFilters(validatePathwayFilters(saved.filters));
@@ -470,8 +582,8 @@ function restorePathway(saved) {
         appState.fullJourney = (saved.fullJourney || []).map(validateTierPathway).filter(Boolean);
         const screener = appState.tierFlowchartData.tier1.screeners.find(item => item.id === pathwayContext.screener);
         setRememberedScreener(saved.filters?.screener || screener.name);
-        appState.currentTierFlow = { screener: screener.id, screenerName: screener.name, grade: pathwayContext.grade };
-        setRememberedMenuFilters({ screener: appState.selectedScreener, grade: pathwayContext.grade });
+        appState.currentTierFlow = { screener: screener.id, screenerName: screener.name, grades };
+        setRememberedMenuFilters({ screener: appState.selectedScreener, grade: grades });
         const node = getFlowchartDefs()[current.tierId].nodes[appState.visualFlowchart.currentNodeId];
         renderJourney();
         updateCarouselNav();
@@ -523,15 +635,22 @@ function getStoredScheduleGradePreferences() {
     }
 }
 
-function getStoredScheduleGradePreference(programId) {
-    const stored = getStoredScheduleGradePreferences();
-    return typeof stored?.[programId] === 'string' ? stored[programId] : 'all';
+// Schedule grade preferences are a list of grade-category ids per program; an
+// empty list means "All grades" (older saves stored one id, or 'all').
+function normalizeScheduleGradeIds(value) {
+    const list = Array.isArray(value) ? value : (typeof value === 'string' && value !== 'all' ? [value] : []);
+    return Array.from(new Set(list.filter(id => typeof id === 'string' && id && id !== 'all')));
 }
 
-function storeScheduleGradePreference(programId, gradeId) {
+function getStoredScheduleGradePreference(programId) {
+    const stored = getStoredScheduleGradePreferences();
+    return normalizeScheduleGradeIds(stored?.[programId]);
+}
+
+function storeScheduleGradePreference(programId, gradeIds) {
     if (!programId) return;
     const stored = getStoredScheduleGradePreferences();
-    stored[programId] = gradeId || 'all';
+    stored[programId] = normalizeScheduleGradeIds(gradeIds);
     try {
         setStoredValue(localStorage, SCHEDULE_GRADE_PREFERENCE_KEY, JSON.stringify(stored));
     } catch (e) {
@@ -610,6 +729,11 @@ function applyTranslations() {
         const val = t(key);
         if (typeof val === 'string') el.textContent = val;
     });
+    // title attribute
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const val = t(el.dataset.i18nTitle);
+        if (typeof val === 'string') el.setAttribute('title', val);
+    });
     // placeholder attribute
     document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
         const key = el.dataset.i18nPlaceholder;
@@ -657,7 +781,6 @@ function updateTopProgramLangControls() {
 // Intervention Names are rendered from JSON data and are intentionally kept
 // in their original form regardless of the UI language.
 function rerenderForLanguage() {
-    if (pendingPathwayTier) showPathwaySetup(pendingPathwayTier);
     // Flowchart: re-initialise at the same tier if one is open
     const fc = document.getElementById('flowchart-container');
     if (fc && fc.dataset.initialized) {
@@ -733,7 +856,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     savedPathway = readSavedPathway(await readProgressStorage());
     if (!savedPathway && appState.selectedProgram) {
         const defaults = getPathwaySetupDefaults();
-        setRememberedMenuFilters({ pillar: defaults.pillar, grade: defaults.grade });
+        setRememberedMenuFilters({ pillar: defaults.pillar, grade: defaults.grades });
     }
     appReady = true;
     updateGuidedHome();
@@ -836,13 +959,13 @@ function updateMobilePageTitle() {
 }
 
 function navigateToPage(pageName) {
-    if (pageName === 'flowchart' && (!appReady || !ensureProgramSelectionBeforeInteraction())) return;
-    if (pageName === 'flowchart' && !pathwayContext && !pendingPathwayTier) {
-        if (!savedPathway || !restorePathway(savedPathway)) {
-            startGuidedPathway('tier1');
-            return;
-        }
+    if (pageName === 'flowchart' && !appReady) return;
+    // Home is the flowchart's first step: until a pathway has been started
+    // (or can be resumed), the Flowchart menu item shows the Home setup.
+    if (pageName === 'flowchart' && !pathwayContext && (!savedPathway || !restorePathway(savedPathway))) {
+        pageName = 'home';
     }
+    setHomeDrawerOpen(false);
 
     // Update state
     appState.currentPage = pageName;
@@ -852,15 +975,16 @@ function navigateToPage(pageName) {
     updateMobilePageTitle();
     
     // Update active states in desktop nav
+    const navPage = pageName === 'home' ? 'flowchart' : pageName;
     document.querySelectorAll('.nav-link').forEach(link => {
-        const isActive = link.dataset.page === pageName;
+        const isActive = link.dataset.page === navPage;
         link.classList.toggle('active', isActive);
         link.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
     
     // Update active states in mobile nav
     document.querySelectorAll('.mobile-nav-item').forEach(link => {
-        link.classList.toggle('active', link.dataset.page === pageName);
+        link.classList.toggle('active', link.dataset.page === navPage);
     });
     
     // Show/hide the main sections
@@ -872,11 +996,11 @@ function navigateToPage(pageName) {
     // Lazy-initialize sections on first visit
     if (pageName === 'flowchart') {
         const fc = document.getElementById('flowchart-container');
-        if (fc && !fc.dataset.initialized && !pendingPathwayTier) {
+        if (fc && !fc.dataset.initialized) {
             if (!savedPathway || !restorePathway(savedPathway)) openInteractiveFlowchart();
             fc.dataset.initialized = 'true';
         }
-        if (!pendingPathwayTier) openDefaultVisualFlowchart();
+        openDefaultVisualFlowchart();
     } else if (pageName === 'interventions') {
         // Every visit re-syncs the filters to whatever was chosen last —
         // here or during a flowchart drilldown — so context always carries over.
@@ -1143,7 +1267,9 @@ function setupSideNavTooltips(sideNav) {
     sideNav.addEventListener('scroll', hideTooltip);
 }
 
-function setSidebarCollapsed(collapsed) {
+// options.persist = false collapses for the current view only (e.g. when the
+// visual pathway opens) without changing the user's saved preference.
+function setSidebarCollapsed(collapsed, options = {}) {
     const sideNav = document.getElementById('side-nav');
     const toggleBtn = document.getElementById('sidebar-toggle-btn');
     if (!sideNav || !toggleBtn) return;
@@ -1152,8 +1278,93 @@ function setSidebarCollapsed(collapsed) {
     toggleBtn.setAttribute('aria-expanded', String(!collapsed));
     toggleBtn.setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Collapse navigation');
     document.getElementById('side-nav-tooltip')?.classList.remove('is-visible');
-    setStoredValue(localStorage, SIDE_NAV_COLLAPSED_KEY, String(collapsed));
+    if (options.persist !== false) setStoredValue(localStorage, SIDE_NAV_COLLAPSED_KEY, String(collapsed));
 }
+
+// ============================================
+// Home drawer (Home shown over the flowchart)
+// ============================================
+let homeDrawerReturnFocus = null;
+
+let homeDrawerCloseTimer = null;
+
+function isHomeDrawerOpen() {
+    return document.body.classList.contains('home-drawer-open');
+}
+
+function renderHomeDrawerToggleHtml(extraClass) {
+    const open = isHomeDrawerOpen();
+    const label = t(open ? 'guided_home_hide' : 'guided_home_show');
+    return `<button class="flowchart-back-btn home-drawer-toggle ${extraClass}" type="button" onclick="toggleHomeDrawer()"
+                aria-expanded="${open ? 'true' : 'false'}" aria-controls="home-section" aria-label="${escapeAttr(label)}" title="${escapeAttr(label)}">
+                <span class="material-symbols-rounded" aria-hidden="true" translate="no">home</span>
+                <span class="flowchart-back-btn-label">${escapeHtml(t('nav_home'))}</span>
+            </button>`;
+}
+
+// While working through the flowchart, Home (the pathway's first page, with
+// its program / screener / grade choices) slides in as a drawer that can be
+// shown and hidden again without leaving the flowchart.
+function setHomeDrawerOpen(open, options = {}) {
+    const shouldOpen = !!open && appState.currentPage === 'flowchart';
+    if (shouldOpen === isHomeDrawerOpen()) return;
+    const section = document.getElementById('home-section');
+    const scrim = document.getElementById('home-drawer-scrim');
+    document.body.classList.toggle('home-drawer-open', shouldOpen);
+    // Slide the drawer back out instead of letting it vanish.
+    clearTimeout(homeDrawerCloseTimer);
+    document.body.classList.toggle('home-drawer-closing', !shouldOpen);
+    if (!shouldOpen) homeDrawerCloseTimer = setTimeout(() => document.body.classList.remove('home-drawer-closing'), 260);
+    if (scrim) scrim.hidden = !shouldOpen;
+    if (section) {
+        if (shouldOpen) {
+            section.setAttribute('role', 'region');
+            section.setAttribute('aria-label', t('nav_home'));
+        } else {
+            section.removeAttribute('role');
+            section.removeAttribute('aria-label');
+        }
+    }
+    const label = t(shouldOpen ? 'guided_home_hide' : 'guided_home_show');
+    document.querySelectorAll('.home-drawer-toggle').forEach(button => {
+        button.setAttribute('aria-expanded', String(shouldOpen));
+        button.setAttribute('aria-label', label);
+        button.title = label;
+    });
+    // The flowchart behind the drawer is covered, so keep focus out of it.
+    const flowchartSection = document.getElementById('flowchart-section');
+    const pathwayScreen = document.getElementById('visual-flowchart-modal');
+    if (flowchartSection) flowchartSection.inert = shouldOpen || !!appState.visualFlowchartModal;
+    if (pathwayScreen) pathwayScreen.inert = shouldOpen;
+    if (shouldOpen) {
+        homeDrawerReturnFocus = document.activeElement;
+        updateGuidedHome();
+        if (section) section.scrollTop = 0;
+        document.getElementById('home-drawer-close')?.focus();
+    } else if (options.restoreFocus) {
+        const target = homeDrawerReturnFocus?.isConnected && !homeDrawerReturnFocus.closest('[inert]')
+            ? homeDrawerReturnFocus
+            : Array.from(document.querySelectorAll('.home-drawer-toggle')).find(button => button.getClientRects().length && !button.closest('[inert]'));
+        target?.focus();
+    }
+    if (!shouldOpen) homeDrawerReturnFocus = null;
+}
+
+function toggleHomeDrawer() {
+    setHomeDrawerOpen(!isHomeDrawerOpen(), { restoreFocus: true });
+}
+
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && isHomeDrawerOpen()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        setHomeDrawerOpen(false, { restoreFocus: true });
+    }
+}, true);
+
+window.setHomeDrawerOpen = setHomeDrawerOpen;
+window.toggleHomeDrawer = toggleHomeDrawer;
+window.updateHomeSetup = updateHomeSetup;
 
 // ============================================
 // Home Menu Cards (removed - no longer in design)
@@ -2288,12 +2499,7 @@ function initIntegratedFlowchart(tierId) {
                 <span class="flowchart-tier-name-value" id="flowchart-tier-name-value">${escapeHtml(getTierName(flowchartDef.title))}</span>
             </div>
             <div class="flowchart-glass-header">
-                <button class="flowchart-back-btn" type="button" onclick="closeIntegratedFlowchart()" aria-label="${escapeHtml(t('guided_home'))}" title="${escapeHtml(t('guided_home'))}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <path d="M19 12H5M12 19l-7-7 7-7"/>
-                    </svg>
-                    <span class="flowchart-back-btn-label">${escapeHtml(t('guided_home'))}</span>
-                </button>
+                ${renderHomeDrawerToggleHtml('flowchart-back-btn')}
                 
                 ${renderTierTabsHtml(tierId)}
 
@@ -3127,11 +3333,12 @@ function openVisualFlowchartModal() {
     // Drop any earlier modal still fading out so it cannot overlap the new one.
     document.querySelectorAll('.visual-flowchart-modal').forEach(element => element.remove());
 
+    // The visual pathway is a full screen of its own beside the top bar and
+    // side menu (not a modal), so the header and side menu stay usable.
     const modal = document.createElement('div');
     modal.id = 'visual-flowchart-modal';
     modal.className = 'visual-flowchart-modal';
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('role', 'region');
     modal.setAttribute('aria-labelledby', 'visual-flowchart-modal-title');
     modal.innerHTML = `
         <div class="visual-flowchart-dialog">
@@ -3143,6 +3350,7 @@ function openVisualFlowchartModal() {
             <div class="visual-flowchart-drawer-scrim" onclick="setVisualFlowchartDrawerOpen(false)" aria-hidden="true"></div>
             <div class="visual-flowchart-chrome" id="visual-flowchart-chrome">
             <header class="visual-flowchart-header">
+                ${renderHomeDrawerToggleHtml('visual-flowchart-home-btn')}
                 <div class="visual-flowchart-header-text">
                     <h2 id="visual-flowchart-modal-title">${escapeHtml(t('fc_visual_title'))}</h2>
                     <p>${escapeHtml(t('fc_visual_desc'))}</p>
@@ -3151,9 +3359,6 @@ function openVisualFlowchartModal() {
                 <div class="visual-flowchart-header-actions">
                     <button class="visual-flowchart-fullscreen-btn" id="visual-flowchart-fullscreen-btn" type="button" onclick="toggleVisualFlowchartFullscreen()" aria-label="${escapeHtml(t('fc_visual_fullscreen'))}" title="${escapeHtml(t('fc_visual_fullscreen'))}">
                         <span class="material-symbols-rounded" aria-hidden="true" translate="no">fullscreen</span>
-                    </button>
-                    <button class="visual-flowchart-close" type="button" onclick="dismissVisualFlowchartModal()" aria-label="${escapeHtml(t('fc_visual_close'))}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>
                 </div>
             </header>
@@ -3186,18 +3391,20 @@ function openVisualFlowchartModal() {
         guidanceOpen: false,
         drawerOpen: false
     };
+    if (isHomeDrawerOpen()) modal.inert = true;
     document.body.appendChild(modal);
+    // Give the pathway as much room as possible: collapse the side menu to icons.
+    setSidebarCollapsed(true, { persist: false });
     updatePathwaySelections();
     updateVisualFlowchartMobileLayout();
     const viewport = modal.querySelector('#visual-flowchart-viewport');
-    appState.visualFlowchartModal.inertElements = Array.from(document.body.children)
-        .filter(element => element !== modal && element instanceof HTMLElement)
+    // Only the flowchart page underneath (and the footer) is covered by the
+    // pathway; the top bar and side menu stay interactive.
+    appState.visualFlowchartModal.inertElements = [document.getElementById('flowchart-section'), document.querySelector('.site-footer')]
+        .filter(element => element instanceof HTMLElement)
         .map(element => ({ element, wasInert: element.inert }));
     appState.visualFlowchartModal.inertElements.forEach(({ element }) => { element.inert = true; });
     document.body.classList.add('visual-flowchart-modal-open');
-    modal.addEventListener('click', event => {
-        if (event.target === modal) closeVisualFlowchartModal();
-    });
     // Clicking anywhere outside the Tier 1 guidance popup closes it.
     modal.addEventListener('pointerdown', event => {
         if (appState.visualFlowchartModal?.guidanceOpen && !event.target.closest('.tier1-guidance')) {
@@ -3212,27 +3419,8 @@ function openVisualFlowchartModal() {
             }
             if (appState.visualFlowchartModal?.drawerOpen) {
                 setVisualFlowchartDrawerOpen(false, { restoreFocus: true });
-                return;
             }
-            dismissVisualFlowchartModal();
             return;
-        }
-        if (event.key === 'Tab') {
-            const focusable = Array.from(modal.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
-                .filter(element => !element.closest('[inert]') && element.getClientRects().length);
-            if (!focusable.length) return;
-            const first = focusable[0];
-            const last = focusable[focusable.length - 1];
-            if (!modal.contains(document.activeElement)) {
-                event.preventDefault();
-                first.focus();
-            } else if (event.shiftKey && document.activeElement === first) {
-                event.preventDefault();
-                last.focus();
-            } else if (!event.shiftKey && document.activeElement === last) {
-                event.preventDefault();
-                first.focus();
-            }
         }
         if (document.activeElement === viewport && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
             event.preventDefault();
@@ -3263,10 +3451,12 @@ function openVisualFlowchartModal() {
     refreshVisualFlowchartModal();
     requestAnimationFrame(() => {
         modal.classList.add('visual-flowchart-modal-visible');
-        const focusTarget = appState.visualFlowchartModal?.mobile
-            ? modal.querySelector('.visual-flowchart-drawer-toggle')
-            : modal.querySelector('.visual-flowchart-close');
-        focusTarget?.focus();
+        // Focus that was on the (now covered) flowchart page moves into the pathway.
+        const active = document.activeElement;
+        if (!active || active === document.body || active.closest('#flowchart-section')) {
+            if (appState.visualFlowchartModal?.mobile) modal.querySelector('.visual-flowchart-drawer-toggle')?.focus();
+            else focusActivePathwayStep();
+        }
     });
 }
 
@@ -3306,11 +3496,16 @@ function closeVisualFlowchartModal(options = {}) {
     if (modalState?.fullscreenHandler) document.removeEventListener('fullscreenchange', modalState.fullscreenHandler);
     if (document.fullscreenElement && modal.contains(document.fullscreenElement)) document.exitFullscreen?.();
     modalState?.inertElements?.forEach(({ element, wasInert }) => { element.inert = wasInert; });
+    const flowchartSection = document.getElementById('flowchart-section');
+    if (flowchartSection) flowchartSection.inert = isHomeDrawerOpen();
     document.body.classList.remove('visual-flowchart-modal-open');
     modal.classList.remove('visual-flowchart-modal-visible');
     const remove = () => {
+        // Only restore focus if it was inside the pathway (not e.g. in the Home drawer or side menu).
+        const active = document.activeElement;
+        const focusWasInside = !active || active === document.body || modal.contains(active);
         modal.remove();
-        modalState?.previousFocus?.focus?.();
+        if (focusWasInside) modalState?.previousFocus?.focus?.();
     };
     if (options.immediate) remove();
     else setTimeout(remove, 180);
@@ -4462,7 +4657,7 @@ function createIntegratedSelectionNode(nodeData) {
             resourceType: itemType,
             pillar: remembered.pillar || '',
             screener: getPathwayScreenerId() || '',
-            grade: pathwayContext?.grade || remembered.grade || '',
+            grade: pathwayContext?.grades?.length ? pathwayContext.grades : normalizeGradeList(remembered.grade),
             nodeId: nodeData.id,
             handlerName: nodeData.nextHandler
         };
@@ -7897,8 +8092,8 @@ function renderPathwayContextHtml() {
 
 function updateScreenerIndicator() {
     const screener = (appState.tierFlowchartData?.tier1?.screeners || []).find(item => item.id === pathwayContext?.screener);
-    const text = screener && pathwayContext?.grade
-        ? `${screener.name} · ${translateGrade(pathwayContext.grade)}`
+    const text = screener && pathwayContext?.grades?.length
+        ? `${screener.name} · ${formatGradeList(pathwayContext.grades)}`
         : '';
     document.querySelectorAll('.pathway-context').forEach(indicator => {
         indicator.hidden = !text;
@@ -7959,14 +8154,14 @@ function requestFlowchartProgramChange(program, options = {}) {
             return;
         }
     }
-    const setupTier = pendingPathwayTier || appState.visualFlowchart?.tierId || 'tier1';
-    pendingPathwayTier = null;
     clearPathwayProgress();
     setRememberedMenuFilters({ pillar: '', screener: '' });
     closeVisualFlowchartModal({ immediate: true });
     const lang = program === PROGRAM_FRENCH_IMMERSION ? (appState.language === 'fr' ? 'fr' : 'en') : 'en';
     finalizeProgramSelection(program, lang);
-    if (appState.currentPage === 'flowchart') showPathwaySetup(setupTier);
+    const setup = getHomeSetup();
+    if (isHomeSetupComplete(setup)) applyPathwaySetupToFilters(setup);
+    if (appState.currentPage === 'flowchart') navigateToPage('home');
     refreshVisualFlowchartHeaderControls();
 }
 
@@ -7983,6 +8178,7 @@ function requestFlowchartLanguageChange(lang) {
     rerenderForLanguage();
     applyProgramAcrossApp();
     refreshVisualFlowchartHeaderControls();
+    openDefaultVisualFlowchart();
 }
 
 // Re-render just the visual pathway modal's header controls (program +
@@ -8528,7 +8724,7 @@ document.addEventListener('click', event => {
         scope?.querySelector('[data-favourite-id]') ||
         (appState.currentPage === 'flowchart' && !document.getElementById('pathway-selections')?.hidden
             ? document.querySelector('.pathway-selections-tab')
-            : document.querySelector('#visual-flowchart-modal .visual-flowchart-close') ||
+            : document.querySelector('#visual-flowchart-modal .visual-flowchart-home-btn') ||
                 Array.from(document.querySelectorAll(appState.currentPage === 'flowchart'
                     ? '#flowchart-container button:not([disabled]), button[data-page="flowchart"].active'
                     : `button[data-page="${CSS.escape(appState.currentPage)}"].active`))
@@ -8565,7 +8761,11 @@ function tagMatches(tag, state, excludeField) {
     }
     if (excludeField !== 'subtest' && state.subtest && !(tag.subtests || []).includes(state.subtest)) return false;
     if (excludeField !== 'evidence' && state.evidence && (tag.evidence || '') !== state.evidence) return false;
-    if (excludeField !== 'grade' && state.grade && !(tag.gradeFilter || []).includes(state.grade)) return false;
+    if (excludeField !== 'grade') {
+        // Several grades may be chosen at once; a tag matches if it covers any of them.
+        const grades = normalizeGradeList(state.grade);
+        if (grades.length && !grades.some(grade => (tag.gradeFilter || []).includes(grade))) return false;
+    }
     return true;
 }
 
@@ -8769,12 +8969,19 @@ function getAvailableMenuFieldValues(field) {
     return field === 'tier' ? values.map(String) : values;
 }
 
+// Grade is the one multi-select menu filter (an array of grades); every
+// other filter holds a single value.
+function isMenuValueSelected(field, value, selected = menuState[field]) {
+    if (field === 'grade') return normalizeGradeList(selected).includes(String(value));
+    return String(value) === String(selected);
+}
+
 function renderMenuChoiceButtons(containerId, field, selected, translate) {
     const el = document.getElementById(containerId);
     if (!el) return;
     const availableValues = new Set(getAvailableMenuFieldValues(field).map(String));
     el.innerHTML = getAllMenuFieldValues(field).map(value => {
-        const isSelected = String(value) === String(selected);
+        const isSelected = isMenuValueSelected(field, value, selected);
         const isAvailable = availableValues.has(String(value));
         const label = translate ? translate(value) : value;
         return `
@@ -8799,6 +9006,14 @@ function updateMenuChipSeparators() {
 function sanitizeMenuStateSelections() {
     MENU_CHIP_FIELDS.forEach(field => {
         const value = menuState[field];
+        if (field === 'grade') {
+            const selected = normalizeGradeList(value);
+            const available = getAvailableMenuFieldValues('grade');
+            const kept = selected.filter(grade => available.includes(grade));
+            menuState.grade = kept;
+            if (kept.length !== selected.length) setRememberedMenuFilters({ grade: kept.length ? kept : null });
+            return;
+        }
         if (value && !getAvailableMenuFieldValues(field).includes(String(value))) {
             menuState[field] = '';
             setRememberedMenuFilters({ [field]: null });
@@ -8903,7 +9118,7 @@ const MENU_FILTER_CHIP_FIELDS = [
     { field: 'resourceType', labelKey: 'filter_type_label', format: (v) => translateResourceType(v) },
     { field: 'pillar', labelKey: 'filter_pillar_label', format: (v) => translatePillar(v) },
     { field: 'subtest', labelKey: 'filter_subtest_label' },
-    { field: 'grade', labelKey: 'filter_grade_label', format: (v) => translateGrade(v) },
+    { field: 'grade', labelKey: 'filter_grade_label', format: (v) => formatGradeList(v) },
     { field: 'evidence', labelKey: 'filter_evidence_label', format: (v) => translateEvidence(v) },
     { field: 'search', labelKey: 'filter_search_label', format: (v) => `"${v}"` }
 ];
@@ -8951,7 +9166,7 @@ function renderMenuCriteriaEditor() {
             <p class="menu-criteria-editor-label">${escapeHtml(label)}</p>
             <div class="menu-chip-group" role="group" aria-label="${escapeAttr(label)}">
                 ${choices.map(choice => {
-                    const selected = String(choice.value) === String(menuState[field]);
+                    const selected = isMenuValueSelected(field, choice.value);
                     return `<button type="button" class="menu-chip-btn${selected ? ' menu-chip-btn-selected' : ''}" data-menu-criteria-option="${escapeAttr(field)}" data-value="${escapeAttr(choice.value)}" aria-pressed="${selected ? 'true' : 'false'}"${choice.available ? '' : ' disabled'}>${escapeHtml(choice.label)}</button>`;
                 }).join('')}
             </div>
@@ -9057,8 +9272,9 @@ function onMenuFilterChange(field, value) {
         menuState.program = appState.selectedProgram || MENU_LANGUAGE_DEFAULT;
         setRememberedMenuFilters({ program: menuState.program });
     } else {
-        menuState[field] = value;
-        if (field !== 'search') setRememberedMenuFilters({ [field]: value || null });
+        menuState[field] = field === 'grade' ? normalizeGradeList(value) : value;
+        const remembered = field === 'grade' ? (menuState.grade.length ? menuState.grade : null) : (value || null);
+        if (field !== 'search') setRememberedMenuFilters({ [field]: remembered });
     }
     sanitizeMenuStateSelections();
     if (menuUiState.view === 'results' && !hasAllRequiredMenuFilters()) {
@@ -9075,6 +9291,11 @@ function onMenuSearchInput(value) {
 
 function toggleMenuFilterChip(field, value) {
     if (!MENU_CHIP_FIELDS.includes(field)) return;
+    if (field === 'grade') {
+        const grades = normalizeGradeList(menuState.grade);
+        onMenuFilterChange(field, grades.includes(value) ? grades.filter(grade => grade !== value) : [...grades, value]);
+        return;
+    }
     onMenuFilterChange(field, String(menuState[field] || '') === String(value) ? '' : value);
 }
 
@@ -9113,7 +9334,7 @@ function applyRememberedFiltersToMenu() {
     menuState.screener = remembered.screener || '';
     menuState.subtest = remembered.subtest || '';
     menuState.tier = remembered.tier ? String(remembered.tier) : '';
-    menuState.grade = remembered.grade || '';
+    menuState.grade = normalizeGradeList(remembered.grade);
     menuState.evidence = remembered.evidence || '';
     menuState.search = '';
 
@@ -9148,8 +9369,14 @@ function initializeInterventionsFilterMenu() {
 
             const optionBtn = event.target.closest('[data-menu-criteria-option]');
             if (optionBtn) {
+                const field = optionBtn.dataset.menuCriteriaOption;
+                if (field === 'grade') {
+                    // Keep the multi-select grade editor open while choosing grades.
+                    toggleMenuFilterChip(field, optionBtn.dataset.value);
+                    return;
+                }
                 menuUiState.editingField = '';
-                onMenuFilterChange(optionBtn.dataset.menuCriteriaOption, optionBtn.dataset.value);
+                onMenuFilterChange(field, optionBtn.dataset.value);
                 return;
             }
 
@@ -9319,9 +9546,17 @@ const SCHEDULE_SLOT_COUNT = SCHEDULE_MONTHS.length * SCHEDULE_HALVES_PER_MONTH;
 
 // Program the single calendar is currently filtered to (null = first program).
 let activeScheduleProgramId = null;
-let activeScheduleGradeId = 'all';
+// Grade-category ids shown in the calendar ([] = all grades).
+let activeScheduleGradeIds = [];
 let activeScheduleGradeSelections = {};
 let pendingScheduleTeachingGrades = {};
+
+// Teaching grades (e.g. K, 2, 6) can fall into several schedule categories
+// (e.g. "Kindergarten" and "Grades 2-8"), so map each one and keep them all.
+function getScheduleGradesForTeachingGrades(program, teachingGrades) {
+    return normalizeScheduleGradeIds(normalizeGradeList(teachingGrades)
+        .map(grade => getScheduleGradeForTeachingGrade(program, grade)));
+}
 
 function getScheduleGradeForTeachingGrade(program, teachingGrade) {
     const gradeNumber = Number(teachingGrade);
@@ -9401,8 +9636,8 @@ function getScheduleProgramShortName(program) {
 
 function getActiveScheduleGrades(program) {
     const grades = Array.isArray(program.grades) ? program.grades : [];
-    if (activeScheduleGradeId === 'all') return grades;
-    return grades.filter(grade => grade.id === activeScheduleGradeId);
+    if (!activeScheduleGradeIds.length) return grades;
+    return grades.filter(grade => activeScheduleGradeIds.includes(grade.id));
 }
 
 // Pack bars into lanes so overlapping items never sit on top of each other.
@@ -9587,32 +9822,34 @@ function renderScheduleCalendar(data) {
     const forcedProgramId = getScheduleProgramIdForSelection(appState.selectedProgram || PROGRAM_ENGLISH);
     const program = data.programs.find(p => p.id === forcedProgramId) || data.programs[0];
     if (Object.prototype.hasOwnProperty.call(pendingScheduleTeachingGrades, program.id)) {
-        const gradeId = getScheduleGradeForTeachingGrade(program, pendingScheduleTeachingGrades[program.id]);
-        activeScheduleGradeSelections[program.id] = gradeId;
-        storeScheduleGradePreference(program.id, gradeId);
+        const gradeIds = getScheduleGradesForTeachingGrades(program, pendingScheduleTeachingGrades[program.id]);
+        activeScheduleGradeSelections[program.id] = gradeIds;
+        storeScheduleGradePreference(program.id, gradeIds);
         delete pendingScheduleTeachingGrades[program.id];
     }
-    const rememberedGrade = Object.prototype.hasOwnProperty.call(activeScheduleGradeSelections, program.id)
+    const rememberedGrades = Object.prototype.hasOwnProperty.call(activeScheduleGradeSelections, program.id)
         ? activeScheduleGradeSelections[program.id]
         : getStoredScheduleGradePreference(program.id);
-    activeScheduleGradeId = rememberedGrade;
     activeScheduleProgramId = program.id;
-    if (activeScheduleGradeId !== 'all' && !program.grades.some(grade => grade.id === activeScheduleGradeId)) {
-        activeScheduleGradeId = 'all';
-        activeScheduleGradeSelections[program.id] = activeScheduleGradeId;
-        storeScheduleGradePreference(program.id, activeScheduleGradeId);
+    activeScheduleGradeIds = normalizeScheduleGradeIds(rememberedGrades)
+        .filter(id => program.grades.some(grade => grade.id === id));
+    if (activeScheduleGradeIds.length === program.grades.length) activeScheduleGradeIds = [];
+    if (activeScheduleGradeIds.length !== normalizeScheduleGradeIds(rememberedGrades).length) {
+        storeScheduleGradePreference(program.id, activeScheduleGradeIds);
     }
-    activeScheduleGradeSelections[program.id] = activeScheduleGradeId;
+    activeScheduleGradeSelections[program.id] = activeScheduleGradeIds;
     const activeGrades = getActiveScheduleGrades(program);
 
     const gradeFilterHtml = [
         { id: 'all', label: t('schedule_grade_all') },
         ...program.grades.map(grade => ({ id: grade.id, label: grade.label }))
-    ].map(grade => `
-        <option value="${safeText(grade.id)}"${grade.id === activeScheduleGradeId ? ' selected' : ''}>
+    ].map(grade => {
+        const pressed = grade.id === 'all' ? !activeScheduleGradeIds.length : activeScheduleGradeIds.includes(grade.id);
+        return `
+        <button type="button" class="cal-filter-btn${pressed ? ' active' : ''}" data-schedule-grade="${safeText(grade.id)}" aria-pressed="${pressed ? 'true' : 'false'}">
             ${safeText(grade.label)}
-        </option>
-    `).join('');
+        </button>`;
+    }).join('');
 
     const monthsHtml = SCHEDULE_MONTHS.map(m => `
         <div class="cal-month-head" style="grid-column: span ${SCHEDULE_HALVES_PER_MONTH};">
@@ -9629,10 +9866,10 @@ function renderScheduleCalendar(data) {
                 </div>
                 <div class="cal-filters-wrap">
                     <div class="cal-filter-group">
-                        <label class="cal-filter-label" for="schedule-grade-filter">${t('schedule_grade_filter_label')}</label>
-                        <select id="schedule-grade-filter" class="cal-grade-filter">
+                        <span class="cal-filter-label" id="schedule-grade-filter-label">${t('schedule_grade_filter_label')}</span>
+                        <div id="schedule-grade-filter" class="cal-filter cal-grade-chips" role="group" aria-labelledby="schedule-grade-filter-label">
                             ${gradeFilterHtml}
-                        </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -9651,12 +9888,22 @@ function renderScheduleCalendar(data) {
         </div>
     `;
 
-    container.querySelector('#schedule-grade-filter')?.addEventListener('change', event => {
-            activeScheduleGradeId = event.target.value || 'all';
-            activeScheduleGradeSelections[program.id] = activeScheduleGradeId;
-            storeScheduleGradePreference(program.id, activeScheduleGradeId);
-            hideScheduleTooltip();
-            renderScheduleCalendar(data);
+    // Grades are multi-select: "All grades" clears the selection, and each
+    // grade category toggles on or off independently.
+    container.querySelector('#schedule-grade-filter')?.addEventListener('click', event => {
+        const button = event.target.closest('[data-schedule-grade]');
+        if (!button) return;
+        const id = button.dataset.scheduleGrade;
+        const next = id === 'all' ? []
+            : (activeScheduleGradeIds.includes(id)
+                ? activeScheduleGradeIds.filter(gradeId => gradeId !== id)
+                : [...activeScheduleGradeIds, id]);
+        activeScheduleGradeIds = program.grades.map(grade => grade.id).filter(gradeId => next.includes(gradeId));
+        activeScheduleGradeSelections[program.id] = activeScheduleGradeIds;
+        storeScheduleGradePreference(program.id, activeScheduleGradeIds);
+        hideScheduleTooltip();
+        renderScheduleCalendar(data);
+        container.querySelector(`#schedule-grade-filter [data-schedule-grade="${CSS.escape(id)}"]`)?.focus();
     });
 
     setupScheduleTooltips(container);
