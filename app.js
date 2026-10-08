@@ -5517,66 +5517,67 @@ function getStepSummaryVariant(nodeDef, choice) {
     return '';
 }
 
-// Build a plain-language sentence for each step in the journey animation
+function getJourneySummaryIcon(kind) {
+    const paths = {
+        effective: 'M20 6L9 17l-5-5',
+        ineffective: 'M18 6L6 18M6 6l12 12',
+        up: 'M12 20V4M5 11l7-7 7 7',
+        down: 'M12 4v16M5 13l7 7 7-7'
+    };
+    return `<svg class="anim-outcome-icon anim-outcome-${kind}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${paths[kind]}"/></svg>`;
+}
+
+function getCompactJourneySummary(nodeDef, choice) {
+    const chosenName = stripEmoji((choice?.name || choice?.label || '').replace(/^Option\s+[A-Z0-9]+\s*:\s*/i, '').trim());
+    const endpointKeys = {
+        'tier1-success': 'summary_monitor',
+        'tier1-reteach': 'summary_reteach',
+        'tier1-move-tier2': 'summary_tier2',
+        'tier2-success': 'summary_fade',
+        'tier2-cycle2-success': 'summary_fade',
+        'tier2-move-tier3': 'summary_tier3',
+        'tier3-success': 'summary_fade',
+        'tier3-specialist': 'summary_specialist'
+    };
+    if (nodeDef.type === 'endpoint') {
+        const direction = nodeDef.id.includes('move-tier') ? 'up'
+            : ['tier2-success', 'tier2-cycle2-success', 'tier3-success'].includes(nodeDef.id) ? 'down' : '';
+        const kind = direction || (nodeDef.status === 'success' ? 'effective' : 'ineffective');
+        return { mainText: endpointKeys[nodeDef.id] ? t(endpointKeys[nodeDef.id]) : stripEmoji(nodeDef.title), icon: getJourneySummaryIcon(kind), direction };
+    }
+    if (nodeDef.id === 'tier1-percentage' && choice) {
+        const isMore = choice.id === 'more-20';
+        return { label: t('summary_below_benchmark'), mainText: t(isMore ? 'summary_more20' : 'summary_less20'), icon: getJourneySummaryIcon(isMore ? 'up' : 'down') };
+    }
+    if (nodeDef.type === 'decision' && choice) {
+        const outcome = resolveChoiceOutcomeKey(choice);
+        if (outcome === 'effective' || outcome === 'ineffective') {
+            return { label: t(nodeDef.id === 'tier1-effectiveness' ? 'summary_instruction' : 'summary_progress'), mainText: t(`summary_${outcome}`), icon: getJourneySummaryIcon(outcome) };
+        }
+    }
+    if (nodeDef.type === 'selection') {
+        const isAssessment = nodeDef.options === 'drillDownAssessments';
+        let label = t(isAssessment ? 'summary_assessment' : 'summary_intervention');
+        if (nodeDef.id.includes('cycle2')) label += ` · ${t('summary_cycle2')}`;
+        return { label, mainText: chosenName || t('summary_selected'), icon: getStepTypeIcon(nodeDef.type) };
+    }
+    if (nodeDef.type === 'checklist' || nodeDef.type === 'info') {
+        return {
+            label: t(nodeDef.id === 'tier1-principles' ? 'summary_principles' : 'summary_entry'),
+            mainText: t(nodeDef.id === 'tier1-principles' ? 'summary_reviewed' : 'summary_confirmed'),
+            icon: getStepTypeIcon(nodeDef.type)
+        };
+    }
+    return { label: stripEmoji(nodeDef.title), mainText: chosenName || t('summary_completed'), icon: getStepTypeIcon(nodeDef.type) };
+}
+
+// Keep the overview brief; the original step remains available for review.
 function buildAnimStepBubble(nodeDef, choice, tierId) {
     const type = nodeDef.type;
     const nodeId = nodeDef.id || '';
-    let label = nodeDef.title || 'Step summary';
-    let mainText = '';
-    let subText = '';
-    let iconSVG = getStepTypeIcon(type);
+    const { label, mainText, icon: iconSVG } = getCompactJourneySummary(nodeDef, choice);
     const variant = getStepSummaryVariant(nodeDef, choice);
     const typeClass = type ? ` anim-step-type-${type}` : '';
-    const normalizeChoiceName = (raw) => (raw || '').replace(/^Option\s+[A-Z0-9]+\s*:\s*/i, '').trim();
-    const chosenName = normalizeChoiceName(choice?.name || choice?.label || '');
-
-    // Look up rich summary for this specific node
-    const nodeSummary = getNodeSummaries()[nodeId];
-
-    if (nodeSummary) {
-        if (type === 'decision' && choice) {
-            // Decision nodes have per-outcome sub-objects
-            const outcomeKey = resolveChoiceOutcomeKey(choice);
-            const outcomeSummary = nodeSummary[outcomeKey] || nodeSummary[choice.id] || null;
-            if (outcomeSummary) {
-                mainText = outcomeSummary.text;
-            }
-        } else if (typeof nodeSummary.text === 'function') {
-            mainText = nodeSummary.text(chosenName);
-        } else if (nodeSummary.text) {
-            mainText = nodeSummary.text;
-        }
-    }
-
-    // Fall back to journeySummary / generic text if no lookup hit
-    if (!mainText) {
-        if (type === 'checklist') {
-            mainText = nodeDef.journeySummary || `You completed the checklist "${nodeDef.subtitle || nodeDef.title}" and confirmed everything is in order.`;
-            subText = nodeDef.reviewHint || 'You can reopen this step from the process map to review details.';
-        } else if (type === 'info') {
-            mainText = nodeDef.journeySummary || `You reviewed the entry information for this stage and are ready to proceed.`;
-            subText = nodeDef.reviewHint || 'You can reopen this step from the process map to review details.';
-        } else if (type === 'selection') {
-            mainText = nodeDef.journeySummary
-                ? nodeDef.journeySummary.replace('{choice}', chosenName || 'your selected option')
-                : `You selected ${chosenName || 'an option'} — a great choice to guide the next steps!`;
-        } else if (type === 'decision') {
-            if (choice) {
-                mainText = nodeDef.journeySummary
-                    ? nodeDef.journeySummary.replace('{choice}', chosenName || 'your decision')
-                    : `Based on the results, you determined: ${chosenName || 'the next action'}.`;
-            } else {
-                mainText = nodeDef.journeySummary || `You completed this decision step: ${nodeDef.title}.`;
-            }
-            subText = nodeDef.reviewHint || '';
-        } else {
-            mainText = nodeDef.journeySummary || `You completed this step: ${nodeDef.title}.`;
-        }
-    }
-
-    // Strip emojis from summary text
-    mainText = stripEmoji(mainText);
-    subText = stripEmoji(subText);
 
     // Build the "Review this step" button if tierId is available
     const reviewBtnHTML = tierId ? `
@@ -5587,11 +5588,10 @@ function buildAnimStepBubble(nodeDef, choice, tierId) {
 
     return `
         <div class="anim-step-bubble${typeClass}${variant ? ' anim-bubble-' + variant : ''}">
-            <div class="anim-step-bubble-icon">${iconSVG}</div>
+            <div class="anim-step-bubble-icon" aria-hidden="true">${iconSVG}</div>
             <div class="anim-step-bubble-text">
                 <div class="anim-step-bubble-label">${escapeHtml(label)}</div>
                 <div class="anim-step-bubble-main">${escapeHtml(mainText)}</div>
-                ${subText && subText !== mainText ? `<div class="anim-step-bubble-sub">${escapeHtml(subText)}</div>` : ''}
                 ${reviewBtnHTML}
             </div>
         </div>`;
@@ -5656,12 +5656,12 @@ function showFinalSummary(endpointNodeData) {
 
             if (isEndpoint) {
                 const isNeg = nodeDef.status === 'warning' || nodeDef.status === 'danger';
-                const endIcon = isNeg ? ICONS.warning : ICONS.success;
+                const summary = getCompactJourneySummary(nodeDef);
                 items.push({
-                    html: `<div class="anim-endpoint-card${isNeg ? ' anim-endpoint-ineffective' : ''}">
-                        <div class="anim-endpoint-icon">${endIcon}</div>
-                        <div class="anim-endpoint-title">${escapeHtml(nodeDef.title)}</div>
-                        <div class="anim-endpoint-desc">${escapeHtml(nodeDef.description || '')}</div>
+                    html: `<div class="anim-endpoint-card${isNeg ? ' anim-endpoint-ineffective' : ''}${nodeDef.status === 'info' ? ' anim-endpoint-transition' : ''}">
+                        <div class="anim-endpoint-icon" aria-hidden="true">${summary.icon}</div>
+                        <div class="anim-step-bubble-label">${escapeHtml(t('summary_next'))}</div>
+                        <div class="anim-endpoint-title">${escapeHtml(summary.mainText)}</div>
                     </div>`,
                     kind: 'endpoint'
                 });
@@ -5756,6 +5756,10 @@ function showFinalSummary(endpointNodeData) {
         if (useSummaryModal) normalizeFinalSummaryCardHeights(renderRoot);
     });
     if (!useSummaryModal) scrollToActiveStep();
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        revealAllAnimJourneyItems(renderRoot.querySelector('.anim-skip-btn'));
+        return;
+    }
 
     // ── Staggered reveal ──
     const STEP_DELAY = 420;    // ms between each non-connector item

@@ -5537,7 +5537,7 @@ body.final-summary-modal-open {
 
 @media (min-width: 769px) {
   .journey-review.journey-review-modal {
-    width: min(1680px, calc(100vw - clamp(24px, 4vw, 56px)));
+    width: min(1840px, calc(100vw - clamp(24px, 4vw, 56px)));
     padding: clamp(20px, 2.4vw, 32px);
   }
 
@@ -5733,6 +5733,49 @@ body.final-summary-modal-open {
   font-weight: 600;
   color: var(--text);
   line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+@keyframes anim-outcome-draw {
+  from { stroke-dashoffset: 48; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes anim-outcome-up {
+  from { transform: translateY(6px); }
+  to { transform: translateY(0); }
+}
+
+@keyframes anim-outcome-down {
+  from { transform: translateY(-6px); }
+  to { transform: translateY(0); }
+}
+
+.anim-journey-item.anim-visible .anim-outcome-icon path {
+  stroke-dasharray: 48;
+  animation: anim-outcome-draw 0.55s ease-out 0.15s both;
+}
+
+.anim-journey-item.anim-visible .anim-outcome-up {
+  animation: anim-outcome-up 0.55s ease-out 0.15s both;
+}
+
+.anim-journey-item.anim-visible .anim-outcome-down {
+  animation: anim-outcome-down 0.55s ease-out 0.15s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-journey-item.anim-visible,
+  .anim-journey-item.anim-visible .anim-outcome-icon,
+  .anim-journey-item.anim-visible .anim-outcome-icon path,
+  .anim-connector-line.anim-visible {
+    animation: none;
+  }
+
+  .anim-summary-modal-overlay,
+  .anim-connector-arrow {
+    transition: none;
+  }
 }
 
 .anim-step-bubble-sub {
@@ -5880,6 +5923,16 @@ body.final-summary-modal-open {
 .anim-endpoint-card.anim-endpoint-ineffective {
   border-color: var(--ineffective);
   background: var(--ineffective-bg);
+}
+
+.anim-endpoint-card.anim-endpoint-transition {
+  border-color: var(--info);
+  background: var(--info-light);
+}
+
+.anim-endpoint-card.anim-endpoint-transition .anim-endpoint-icon,
+.anim-endpoint-card.anim-endpoint-transition .anim-endpoint-title {
+  color: var(--info-text);
 }
 
 .anim-endpoint-icon {
