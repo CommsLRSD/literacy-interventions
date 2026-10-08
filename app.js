@@ -169,7 +169,7 @@ function getPathwaySetupDefaults() {
     const stored = pathwayDefaults[appState.selectedProgram] || {};
     const screener = getProgramScreeners().find(item => item.id === stored.screener);
     return { screener: screener?.id || '', grades: getValidPathwayGrades(appState.selectedProgram, stored.grades ?? stored.grade),
-        pillar: typeof stored.pillar === 'string' ? stored.pillar : 'Phonics' };
+        pillar: typeof stored.pillar === 'string' && stored.pillar ? stored.pillar : 'Phonics' };
 }
 
 // Home is the first page of the guided process: its program, screener and
@@ -4654,7 +4654,7 @@ function createIntegratedSelectionNode(nodeData) {
             tier: tierNum,
             program: program,
             resourceType: itemType,
-            pillar: remembered.pillar || '',
+            pillar: remembered.pillar || 'Phonics',
             screener: getPathwayScreenerId() || '',
             grade: pathwayContext?.grades?.length ? pathwayContext.grades : normalizeGradeList(remembered.grade),
             nodeId: nodeData.id,
@@ -7811,7 +7811,7 @@ function getFlowchartResourceState(tier, mode) {
         tier: String(tier).replace(/^tier/, ''),
         program: appState.selectedProgram || 'English',
         resourceType: mode === 'assessments' ? 'Drill Down Assessment' : 'Intervention',
-        pillar: appState.rememberedMenuFilters?.pillar || '',
+        pillar: appState.rememberedMenuFilters?.pillar || 'Phonics',
         screener: getPathwayScreenerId() || '',
         grade: pathwayContext?.grades?.length ? pathwayContext.grades : normalizeGradeList(appState.rememberedMenuFilters?.grade)
     };
