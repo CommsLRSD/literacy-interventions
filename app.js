@@ -169,7 +169,7 @@ function getPathwaySetupDefaults() {
     const stored = pathwayDefaults[appState.selectedProgram] || {};
     const screener = getProgramScreeners().find(item => item.id === stored.screener);
     return { screener: screener?.id || '', grades: getValidPathwayGrades(appState.selectedProgram, stored.grades ?? stored.grade),
-        pillar: typeof stored.pillar === 'string' ? stored.pillar : 'Phonics' };
+        pillar: typeof stored.pillar === 'string' && stored.pillar ? stored.pillar : 'Phonics' };
 }
 
 // Home is the first page of the guided process: its program, screener and
@@ -333,7 +333,6 @@ async function hardResetApp() {
     pendingScheduleTeachingGrades = {};
     favouriteIds = new Set();
     clearFavouriteFeedback();
-    setPathwaySelectionsOpen(false);
     renderFavourites();
     document.getElementById('flowchart-container').innerHTML = '';
     applyTranslations();
@@ -4151,7 +4150,7 @@ function wireVisualFlowchartPanZoom(viewport) {
         // sit inside the card's scroll container) must also be excluded, or
         // capturing the pointer here for panning hijacks their click event
         // and the selection never registers.
-        if (event.target.closest('button, input, select, textarea, a, label, [role="button"]')) return;
+        if (event.target.closest('button, input, select, textarea, a, label, summary, [role="button"]')) return;
         // Let a card that has overflowed its max height be dragged/scrolled
         // internally instead of starting a canvas pan.
         const overflowingCard = event.target.closest('.visual-flowchart-card');
@@ -4655,7 +4654,7 @@ function createIntegratedSelectionNode(nodeData) {
             tier: tierNum,
             program: program,
             resourceType: itemType,
-            pillar: remembered.pillar || '',
+            pillar: remembered.pillar || 'Phonics',
             screener: getPathwayScreenerId() || '',
             grade: pathwayContext?.grades?.length ? pathwayContext.grades : normalizeGradeList(remembered.grade),
             nodeId: nodeData.id,
@@ -4709,9 +4708,10 @@ function createIntegratedSelectionNode(nodeData) {
     // Default: flat list of options (used for screener selection in Tier 1)
     const isScreenerNode = nodeData.options === 'screeners';
     const rawOptions = tierData?.[nodeData.options] || [];
+    const resourceState = getFlowchartResourceState(tierId, nodeData.options === 'drillDownAssessments' ? 'assessments' : 'interventions');
     const options = isScreenerNode
         ? rawOptions.filter(opt => isScreenerIdForCurrentProgram(opt.id))
-        : rawOptions;
+        : getFilteredResources(resourceState);
 
     const optionsHTML = isScreenerNode
         ? options.map(option => `
@@ -4720,29 +4720,9 @@ function createIntegratedSelectionNode(nodeData) {
             ${option.description ? `<span class="screener-pill-desc">${escapeHtml(option.description)}</span>` : ''}
         </button>
     `).join('')
-        : sortFavouriteResources(options).map(option => `
-        <div class="legacy-resource-option">
-        <button class="selection-option" onclick="selectIntegratedOption('${escapeJsString(nodeData.id)}', '${escapeJsString(option.id)}', '${escapeJsString(option.name)}', '${escapeJsString(nodeData.nextHandler)}')">
-            <div class="option-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                    <path d="M9 12l2 2 4-4"/>
-                </svg>
-            </div>
-            <div class="option-details">
-                <h4>${option.name}</h4>
-                <p>${option.description}</p>
-                ${option.administrationTime ? `<span class="option-meta">Time: ${option.administrationTime}</span>` : ''}
-                ${option.duration ? `<span class="option-meta">${option.duration} • ${option.frequency}</span>` : ''}
-            </div>
-            <div class="option-arrow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 18l6-6-6-6"/>
-                </svg>
-            </div>
-        </button>${buildFavouriteButtonHtml(option)}
-        </div>
-    `).join('');
+        : buildResourceGroupsHtml(options, resourceState,
+            option => buildLegacyResourceOptionHtml(option, resourceState, 'selectIntegratedOption', nodeData, 'selection-option'),
+            'selection-grid');
 
     return `
         <div class="step-header">
@@ -4758,7 +4738,7 @@ function createIntegratedSelectionNode(nodeData) {
             <p>${nodeData.description}</p>
             ${infoBoxHTML}
             ${warningBoxHTML}
-            <div class="${isScreenerNode ? 'screener-pill-grid' : 'selection-grid'}">
+            <div${isScreenerNode ? ' class="screener-pill-grid"' : ''}>
                 ${optionsHTML}
             </div>
         </div>
@@ -4784,7 +4764,7 @@ function fwLoadResults() {
 
     const { tier, program, resourceType, pillar, screener, grade } = appState.fwState;
     const wizardState = { tier, program, resourceType, pillar, screener, grade };
-    const filtered = sortFavouriteResources(getFilteredResources(wizardState, null));
+    const filtered = getFilteredResources(wizardState, null);
 
     if (filtered.length === 0) {
         resultsEl.innerHTML = `<p class="fw-no-results">${escapeHtml(t('fw_no_results'))}</p>`;
@@ -4793,28 +4773,28 @@ function fwLoadResults() {
 
     resultsEl.innerHTML = `
         <div class="fw-results-header">${escapeHtml(t('fw_results_label')(filtered.length))}</div>
-        <div class="fw-results-list">
-            ${filtered.map(item => {
-                const gradeText = item.gradeRangeText || (item.gradeFilter || []).join(', ');
-                const matchingPillars = uniqueSorted(getMatchingTags(item, wizardState, null).map(tg => tg.pillar));
+        ${buildResourceGroupsHtml(filtered, wizardState, item => {
+                const matchingTags = getMatchingTags(item, wizardState);
+                const gradeText = uniqueSorted(matchingTags.map(tag => tag.gradeRangeText)).join('; ') ||
+                    uniqueSorted(matchingTags.flatMap(tag => tag.gradeFilter || [])).join(', ');
+                const matchingPillars = uniqueSorted(matchingTags.map(tag => tag.pillar));
                 const pillarText = matchingPillars.map(translatePillar).join(', ');
-                const evidenceBadge = getEvidenceBadgeHtml(getResourceEvidenceLevel(item));
-                const linkHtml = getResourceUrls(item).map(url => {
+                const evidenceBadge = getEvidenceBadgeHtml(getResourceEvidenceLevel({ tags: matchingTags }));
+                const linkHtml = getResourceUrls(item, wizardState).map(url => {
                     const lang = getResourceUrlLang(item, url);
                     const title = lang ? `${t('filter_view_resource')} (${lang})` : t('filter_view_resource');
                     return `<a class="fw-result-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="${escapeHtml(title)}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
                 }).join('');
-                return `<div class="fw-result-item${getFavouriteIds().has(item.id) ? ' is-favourite' : ''}" role="button" tabindex="0" data-resource-id="${escapeAttr(item.id)}" data-resource-name="${escapeAttr(item.name)}" onclick="fwSelectItem(this.dataset.resourceId, this.dataset.resourceName)" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();fwSelectItem(this.dataset.resourceId, this.dataset.resourceName)}">
+                return `<div class="fw-result-item${isRecommendedResource(item, wizardState) ? ' is-recommended' : ''}" role="button" tabindex="0" data-resource-id="${escapeAttr(item.id)}" data-resource-name="${escapeAttr(item.name)}" onclick="fwSelectItem(this.dataset.resourceId, this.dataset.resourceName)" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();fwSelectItem(this.dataset.resourceId, this.dataset.resourceName)}">
                     <div class="fw-result-info">
-                        <div class="fw-result-name">${escapeHtml(item.name)}${evidenceBadge}</div>
+                        <div class="fw-result-name">${escapeHtml(item.name)}${buildResourceRecommendationBadgeHtml(item, wizardState)}${evidenceBadge}</div>
                         <div class="fw-result-meta">${escapeHtml(pillarText)}${gradeText ? ` • ${escapeHtml(t('fw_grade_prefix'))} ${escapeHtml(gradeText)}` : ''}</div>
                     </div>
                     ${buildFavouriteButtonHtml(item)}
                     ${linkHtml}
                     <svg class="fw-result-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M9 18l6-6-6-6"/></svg>
                 </div>`;
-            }).join('')}
-        </div>
+            }, 'fw-results-list')}
     `;
 }
 
@@ -5132,7 +5112,8 @@ function selectIntegratedOption(nodeId, optionId, optionName, handlerName) {
         node.querySelectorAll('.selection-option').forEach(opt => {
             opt.classList.add('option-disabled');
         });
-        const selectedOption = node.querySelector(`.selection-option[onclick*="${CSS.escape(optionId)}"]`);
+        const selectedOption = Array.from(node.querySelectorAll('.selection-option'))
+            .find(option => option.dataset.resourceId === optionId);
         if (selectedOption) {
             selectedOption.classList.add('option-selected');
             selectedOption.classList.remove('option-disabled');
@@ -6402,10 +6383,11 @@ function createChecklistNode(nodeData) {
 function createSelectionNode(nodeData) {
     const tierId = appState.visualFlowchart.tierId;
     const tierData = appState.tierFlowchartData?.[tierId];
-    const options = tierData?.[nodeData.options] || [];
+    const isScreenerNode = nodeData.options === 'screeners';
+    const resourceState = getFlowchartResourceState(tierId, nodeData.options === 'drillDownAssessments' ? 'assessments' : 'interventions');
+    const options = isScreenerNode ? (tierData?.[nodeData.options] || []) : getFilteredResources(resourceState);
     
-    const optionsHTML = sortFavouriteResources(options).map(option => `
-        ${nodeData.options === 'screeners' ? '' : '<div class="legacy-resource-option">'}
+    const optionsHTML = isScreenerNode ? options.map(option => `
         <button class="vf-selection-option" onclick="selectFlowchartOption('${nodeData.id}', '${option.id}', '${option.name}', '${nodeData.nextHandler}')">
             <div class="vf-option-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -6424,9 +6406,10 @@ function createSelectionNode(nodeData) {
                     <path d="M9 18l6-6-6-6"/>
                 </svg>
             </div>
-        </button>${nodeData.options === 'screeners' ? '' : buildFavouriteButtonHtml(option)}
-        ${nodeData.options === 'screeners' ? '' : '</div>'}
-    `).join('');
+        </button>
+    `).join('') : buildResourceGroupsHtml(options, resourceState,
+        option => buildLegacyResourceOptionHtml(option, resourceState, 'selectFlowchartOption', nodeData, 'vf-selection-option'),
+        'vf-selection-grid');
     
     const infoBoxHTML = nodeData.infoBox ? `
         <div class="vf-info-box">
@@ -6458,7 +6441,7 @@ function createSelectionNode(nodeData) {
             <p>${nodeData.description}</p>
             ${infoBoxHTML}
             ${warningBoxHTML}
-            <div class="vf-selection-grid">
+            <div${isScreenerNode ? ' class="vf-selection-grid"' : ''}>
                 ${optionsHTML}
             </div>
         </div>
@@ -6685,7 +6668,9 @@ function selectFlowchartOption(nodeId, optionId, optionName, handlerName) {
         options.forEach(opt => {
             opt.classList.add('vf-option-disabled');
         });
-        const selectedOption = node.querySelector(`.vf-selection-option[onclick*="${optionId}"]`);
+        const selectedOption = Array.from(options).find(option =>
+            option.dataset.resourceId === optionId || (!option.dataset.resourceId &&
+                option.getAttribute('onclick')?.includes(`'${optionId}'`)));
         if (selectedOption) {
             selectedOption.classList.add('vf-option-selected');
             selectedOption.classList.remove('vf-option-disabled');
@@ -7339,25 +7324,7 @@ function proceedToTier2Assessment() {
                             </div>
                         </div>
                         
-                        <div class="screener-selection-grid">
-                            ${flowchartResources.map(assessment => `
-                                <div class="legacy-resource-option">
-                                <button class="screener-option" onclick="selectTier2Assessment('${assessment.id}', '${assessment.name}')">
-                                    <div class="screener-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                            <path d="M9 12h6m-6 4h6"/>
-                                        </svg>
-                                    </div>
-                                    <h4>${assessment.name}</h4>
-                                    <p>${assessment.description}</p>
-                                    <small style="color: var(--text-secondary); margin-top: 0.5rem; display: block;">
-                                        Time: ${assessment.administrationTime}
-                                    </small>
-                                </button>${buildFavouriteButtonHtml(assessment)}
-                                </div>
-                            `).join('')}
-                        </div>
+                        ${buildFlowchartResourceOptionsHtml(2, 'assessments', 'selectTier2Assessment')}
                         
                         <button class="btn-secondary" onclick="openInterventionsMenu('tier2', 'assessments')" style="margin-top: 1.5rem;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; margin-right: 0.5rem;">
@@ -7416,24 +7383,7 @@ function proceedToTier2Intervention() {
                             </div>
                         </div>
                         
-                        <div class="screener-selection-grid">
-                            ${flowchartResources.map(intervention => `
-                                <div class="legacy-resource-option">
-                                <button class="screener-option" onclick="selectTier2Intervention('${intervention.id}', '${intervention.name}')">
-                                    <div class="screener-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                                        </svg>
-                                    </div>
-                                    <h4>${intervention.name}</h4>
-                                    <p>${intervention.description}</p>
-                                    <small style="color: var(--text-secondary); margin-top: 0.5rem; display: block;">
-                                        ${intervention.duration} • ${intervention.frequency}
-                                    </small>
-                                </button>${buildFavouriteButtonHtml(intervention)}
-                                </div>
-                            `).join('')}
-                        </div>
+                        ${buildFlowchartResourceOptionsHtml(2, 'interventions', 'selectTier2Intervention')}
                         
                         <button class="btn-secondary" onclick="openInterventionsMenu('tier2', 'interventions')" style="margin-top: 1.5rem;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; margin-right: 0.5rem;">
@@ -7651,25 +7601,7 @@ function proceedToTier3Assessment() {
                         <h3>Administer a drill down assessment.</h3>
                         <p>Use the menu below to find and administer a drill down assessment that aligns with the needs of your students, as determined by the literacy screener.</p>
                         
-                        <div class="screener-selection-grid">
-                            ${flowchartResources.map(assessment => `
-                                <div class="legacy-resource-option">
-                                <button class="screener-option" onclick="selectTier3Assessment('${assessment.id}', '${assessment.name}')">
-                                    <div class="screener-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                            <path d="M9 12h6m-6 4h6"/>
-                                        </svg>
-                                    </div>
-                                    <h4>${assessment.name}</h4>
-                                    <p>${assessment.description}</p>
-                                    <small style="color: var(--text-secondary); margin-top: 0.5rem; display: block;">
-                                        Time: ${assessment.administrationTime}
-                                    </small>
-                                </button>${buildFavouriteButtonHtml(assessment)}
-                                </div>
-                            `).join('')}
-                        </div>
+                        ${buildFlowchartResourceOptionsHtml(3, 'assessments', 'selectTier3Assessment')}
                         
                         <button class="btn-secondary" onclick="openInterventionsMenu('tier3', 'assessments')" style="margin-top: 1.5rem;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; margin-right: 0.5rem;">
@@ -7720,24 +7652,7 @@ function proceedToTier3Intervention() {
                         <h3>Select and administer an 8-week intervention.</h3>
                         <p>Use the menu below to find an appropriate intervention, and administer for an 8-week period. Monitor student response to intervention weekly.</p>
                         
-                        <div class="screener-selection-grid">
-                            ${flowchartResources.map(intervention => `
-                                <div class="legacy-resource-option">
-                                <button class="screener-option" onclick="selectTier3Intervention('${intervention.id}', '${intervention.name}')">
-                                    <div class="screener-icon">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                                        </svg>
-                                    </div>
-                                    <h4>${intervention.name}</h4>
-                                    <p>${intervention.description}</p>
-                                    <small style="color: var(--text-secondary); margin-top: 0.5rem; display: block;">
-                                        ${intervention.duration} • ${intervention.frequency}
-                                    </small>
-                                </button>${buildFavouriteButtonHtml(intervention)}
-                                </div>
-                            `).join('')}
-                        </div>
+                        ${buildFlowchartResourceOptionsHtml(3, 'interventions', 'selectTier3Intervention')}
                         
                         <button class="btn-secondary" onclick="openInterventionsMenu('tier3', 'interventions')" style="margin-top: 1.5rem;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; margin-right: 0.5rem;">
@@ -7888,25 +7803,56 @@ function closeTierFlowchart() {
 // Keep the legacy flowchart entry points on the same resource source as the
 // standalone Teaching Resources menu and the embedded flowchart wizard.
 function getFlowchartMenuResources(tier, mode) {
-    const resourceType = mode === 'assessments'
-        ? 'Drill Down Assessment'
-        : 'Intervention';
-    return sortFavouriteResources(getFilteredResources({
-        tier: String(tier),
+    return getFilteredResources(getFlowchartResourceState(tier, mode), null);
+}
+
+function getFlowchartResourceState(tier, mode) {
+    return {
+        tier: String(tier).replace(/^tier/, ''),
         program: appState.selectedProgram || 'English',
-        resourceType
-    }, null));
+        resourceType: mode === 'assessments' ? 'Drill Down Assessment' : 'Intervention',
+        pillar: appState.rememberedMenuFilters?.pillar || 'Phonics',
+        screener: getPathwayScreenerId() || '',
+        grade: pathwayContext?.grades?.length ? pathwayContext.grades : normalizeGradeList(appState.rememberedMenuFilters?.grade)
+    };
+}
+
+function buildLegacyResourceOptionHtml(item, state, handler, nodeData = null, buttonClass = 'screener-option') {
+    const matchingTags = getMatchingTags(item, state);
+    const notes = uniqueSorted(matchingTags.map(tag => tag.notes)).join('; ');
+    const contentClass = buttonClass === 'vf-selection-option' ? 'vf-option-content' : 'option-details';
+    const args = nodeData
+        ? 'this.dataset.nodeId, this.dataset.resourceId, this.dataset.resourceName, this.dataset.handler'
+        : 'this.dataset.resourceId, this.dataset.resourceName';
+    return `<div class="legacy-resource-option${isRecommendedResource(item, state) ? ' is-recommended' : ''}">
+        <button type="button" class="${escapeAttr(buttonClass)}" data-resource-id="${escapeAttr(item.id)}"
+            data-resource-name="${escapeAttr(item.name)}"${nodeData ? ` data-node-id="${escapeAttr(nodeData.id)}" data-handler="${escapeAttr(nodeData.nextHandler)}"` : ''}
+            onclick="${escapeAttr(handler)}(${args})">
+            <div class="${contentClass}">
+                <h4>${escapeHtml(item.name)}${buildResourceRecommendationBadgeHtml(item, state)}${getEvidenceBadgeHtml(getResourceEvidenceLevel({ tags: matchingTags }))}</h4>
+                ${notes ? `<p>${escapeHtml(notes)}</p>` : ''}
+                <div class="resource-card-pill-row">${buildResourceMetaPillsHtml(matchingTags)}</div>
+            </div>
+        </button>
+        <div class="resource-card-links">${buildFavouriteButtonHtml(item)}${buildResourceLinksHtml(item, state)}</div>
+    </div>`;
+}
+
+function buildFlowchartResourceOptionsHtml(tier, mode, handler) {
+    const state = getFlowchartResourceState(tier, mode);
+    return buildResourceGroupsHtml(getFilteredResources(state), state,
+        item => buildLegacyResourceOptionHtml(item, state, handler), 'screener-selection-grid');
 }
 
 function openInterventionsMenu(tier, mode = 'interventions') {
+    tier = String(tier).replace(/^tier/, '');
+    if (!['1', '2', '3'].includes(tier)) return;
+    mode = mode === 'assessments' ? 'assessments' : 'interventions';
     console.log(`Opening Interventions Menu for Tier ${tier}, Mode: ${mode}`);
     
     const resourceMode = mode === 'assessments' ? 'assessments' : 'interventions';
+    const resourceState = getFlowchartResourceState(tier, resourceMode);
     const items = getFlowchartMenuResources(tier, resourceMode);
-    if (!items.length) {
-        console.error(`No ${resourceMode} resources loaded for Tier ${tier}`);
-        return;
-    }
     
     const tierNames = {
         '1': 'Tier 1 - Universal/Core Instruction',
@@ -7988,42 +7934,7 @@ function openInterventionsMenu(tier, mode = 'interventions') {
                     ${mode === 'assessments' ? 'Available Assessments' : 'Available Interventions'}
                 </h3>
                 
-                <div class="interventions-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
-                    ${items.map(item => `
-                        <div class="intervention-card" style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; transition: var(--transition);">
-                            <div style="display: flex; align-items: start; gap: 1rem; margin-bottom: 1rem;">
-                                <div style="width: 48px; height: 48px; padding: 0.75rem; background: var(--accent-light); border-radius: 50%; flex-shrink: 0;">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 100%; height: 100%; color: var(--primary);">
-                                        ${mode === 'assessments' 
-                                            ? '<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path d="M9 12h6m-6 4h6"/>'
-                                            : '<path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>'
-                                        }
-                                    </svg>
-                                </div>
-                                <div style="flex: 1;">
-                                    <h4 style="margin: 0 0 0.5rem 0; color: var(--text-primary); font-size: 1.125rem;">${item.name}</h4>
-                                    ${buildFavouriteButtonHtml(item)}
-                                    ${item.targetSkills ? `<div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
-                                        ${item.targetSkills.map(skill => `
-                                            <span style="background: var(--accent-light); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: var(--radius); font-size: 0.75rem; font-weight: 600;">${skill}</span>
-                                        `).join('')}
-                                    </div>` : ''}
-                                </div>
-                            </div>
-                            <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1rem;">${item.description}</p>
-                            ${mode === 'assessments' 
-                                ? `<div style="color: var(--text-secondary); font-size: 0.875rem;">
-                                    <strong>Administration Time:</strong> ${item.administrationTime}
-                                   </div>`
-                                : `<div style="color: var(--text-secondary); font-size: 0.875rem;">
-                                    <div><strong>Duration:</strong> ${item.duration}</div>
-                                    <div><strong>Frequency:</strong> ${item.frequency}</div>
-                                    ${item.groupSize ? `<div><strong>Group Size:</strong> ${item.groupSize}</div>` : ''}
-                                   </div>`
-                            }
-                        </div>
-                    `).join('')}
-                </div>
+                ${buildResourceGroupsHtml(items, resourceState, item => buildResourceCardHtml(item, resourceState), 'interventions-grid')}
             </div>
         </div>
     `;
@@ -8564,18 +8475,13 @@ function getFavouriteIds() {
     return favouriteIds;
 }
 
-function sortFavouriteResources(items) {
-    const favourites = getFavouriteIds();
-    return items.slice().sort((a, b) => Number(favourites.has(b.id)) - Number(favourites.has(a.id)));
-}
-
 function buildFavouriteButtonHtml(item) {
     if (!getAllResources().some(resource => resource.id === item.id)) return '';
     const selected = getFavouriteIds().has(item.id);
     const label = `${t(selected ? 'favourite_remove' : 'favourite_add')}: ${item.name}`;
     return `<button type="button" class="favourite-toggle" data-favourite-id="${escapeAttr(item.id)}"
         aria-pressed="${selected}" aria-label="${escapeAttr(label)}" title="${escapeAttr(label)}">
-        <span class="material-symbols-rounded" aria-hidden="true" translate="no">${selected ? 'star' : 'star_border'}</span>
+        <span class="material-symbols-rounded" aria-hidden="true" translate="no">${selected ? 'bookmark' : 'bookmark_border'}</span>
     </button>`;
 }
 
@@ -8591,103 +8497,12 @@ function renderFavourites() {
         `<p class="results-empty">${escapeHtml(t('favourites_empty'))}</p>`;
 }
 
-function getCurrentPathwaySelections() {
-    const current = appState.visualFlowchart;
-    const tiers = (appState.fullJourney || []).filter(tier => tier.tierId !== current?.tierId);
-    if (current?.tierId) tiers.push(current);
-    const seen = new Set();
-    const selections = [];
-    tiers.forEach(tier => {
-        const nodes = getFlowchartDefs()[tier.tierId]?.nodes || {};
-        (tier.selectedPath || []).forEach(step => {
-            const node = nodes[step.nodeId];
-            const item = getAllResources().find(resource => resource.id === tier.choices?.[step.nodeId]?.id);
-            const key = `${tier.tierId}:${step.nodeId}`;
-            if (!item || node?.type !== 'selection' || node.options === 'screeners' || seen.has(key)) return;
-            seen.add(key);
-            selections.push({ item, tier: tier.tierId.replace('tier', ''), label: node.title });
-        });
-    });
-    return selections;
-}
-
-function setPathwaySelectionsOpen(open, restoreFocus = false) {
-    const root = document.getElementById('pathway-selections');
-    if (!root) return;
-    const button = root.querySelector('.pathway-selections-tab');
-    if (open && root.hidden) return;
-    root.querySelector('.pathway-selections-panel').hidden = !open;
-    button.setAttribute('aria-expanded', String(open));
-    if (open) root.querySelector('.pathway-selections-close').focus();
-    else if (restoreFocus) button.focus();
-}
-
-function updatePathwaySelections() {
-    let root = document.getElementById('pathway-selections');
-    if (!root) {
-        root = document.createElement('aside');
-        root.id = 'pathway-selections';
-        root.className = 'pathway-selections';
-        root.innerHTML = `<button type="button" class="pathway-selections-tab" aria-expanded="false" aria-controls="pathway-selections-panel"></button>
-            <section id="pathway-selections-panel" class="pathway-selections-panel" hidden aria-labelledby="pathway-selections-title">
-                <header><h2 id="pathway-selections-title"></h2><button type="button" class="pathway-selections-close"><span aria-hidden="true">×</span></button></header>
-                <div class="pathway-selections-list"></div>
-                <section class="pathway-favourites" aria-labelledby="pathway-favourites-title">
-                    <h3 id="pathway-favourites-title"></h3>
-                    <div class="pathway-favourites-list"></div>
-                </section>
-            </section>`;
-        root.querySelector('.pathway-selections-tab').addEventListener('click', event =>
-            setPathwaySelectionsOpen(event.currentTarget.getAttribute('aria-expanded') !== 'true'));
-        root.querySelector('.pathway-selections-close').addEventListener('click', () => setPathwaySelectionsOpen(false, true));
-        root.addEventListener('keydown', event => {
-            if (event.key === 'Escape' && !root.querySelector('.pathway-selections-panel').hidden) {
-                event.preventDefault();
-                event.stopPropagation();
-                setPathwaySelectionsOpen(false, true);
-            }
-        });
-    }
-    // Keep the drawer within the modal's focus scope, never behind its inert background.
-    const tools = getFlowchartResourceTools();
-    const host = (document.getElementById('visual-flowchart-modal') || window.matchMedia('(max-width: 768px)').matches)
-        ? tools : document.body;
-    if (!host) return;
-    if (root.parentElement !== host) host.appendChild(root);
-    root.inert = false;
-    const selections = getCurrentPathwaySelections();
-    const favourites = getAllResources().filter(item => getFavouriteIds().has(item.id));
-    root.hidden = appState.currentPage !== 'flowchart' || (!selections.length && !favourites.length);
-    if (root.hidden) setPathwaySelectionsOpen(false);
-    const sections = [
-        selections.length ? `${t('pathway_selections')} (${selections.length})` : '',
-        favourites.length ? `${t('nav_favourites')} (${favourites.length})` : ''
-    ].filter(Boolean).join(' · ');
-    root.querySelector('.pathway-selections-tab').textContent = sections;
-    root.querySelector('#pathway-selections-title').textContent = t('pathway_resources');
-    root.querySelector('.pathway-selections-close').setAttribute('aria-label', t('pathway_resources_close'));
-    root.querySelector('.pathway-selections-list').innerHTML = selections.map(({ item, tier, label }) =>
-        `<div class="pathway-selection-entry"><p>${escapeHtml(t('filter_tier_option')(tier))} · ${escapeHtml(label)}</p>${buildResourceCardHtml(item, { tier })}</div>`).join('');
-    const selectionList = root.querySelector('.pathway-selections-list');
-    if (selections.length) selectionList.insertAdjacentHTML('afterbegin', `<h3>${escapeHtml(t('pathway_selections'))}</h3>`);
-    root.querySelector('.pathway-favourites').hidden = !favourites.length;
-    root.querySelector('#pathway-favourites-title').textContent = t('nav_favourites');
-    root.querySelector('.pathway-favourites-list').innerHTML = favourites.map(item => buildResourceCardHtml(item, {})).join('');
-}
-
-window.matchMedia('(max-width: 768px)').addEventListener('change', updatePathwaySelections);
+function updatePathwaySelections() {}
 
 document.addEventListener('keydown', event => {
     if (event.target.closest?.('[data-favourite-id]') && (event.key === 'Enter' || event.key === ' ')) {
         // Native button activation still fires click, but the selectable resource must not receive this key.
         event.stopPropagation();
-    }
-    const root = document.getElementById('pathway-selections');
-    if (event.key === 'Escape' && root && !root.hidden &&
-        root.querySelector('.pathway-selections-tab').getAttribute('aria-expanded') === 'true') {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        setPathwaySelectionsOpen(false, true);
     }
 }, true);
 
@@ -8698,7 +8513,7 @@ document.addEventListener('click', event => {
     event.stopPropagation();
     const id = button.dataset.favouriteId;
     if (!getAllResources().some(item => item.id === id)) return;
-    const scope = button.closest('.fw-results, #favourites-list, #results-list-compact, .pathway-selections-list, .pathway-favourites-list') ||
+    const scope = button.closest('.fw-results, #favourites-list, #results-list-compact, .selection-grid, .vf-selection-grid, .screener-selection-grid') ||
         button.parentElement;
     const hadFocus = document.activeElement === button;
     const feedbackContext = { scope, top: button.getBoundingClientRect().top };
@@ -8707,9 +8522,6 @@ document.addEventListener('click', event => {
     else ids.add(id);
     try { localStorage.setItem(FAVOURITES_KEY, JSON.stringify([...ids])); } catch (e) { /* Storage is optional. */ }
     renderFavourites();
-    renderMenuResults();
-    fwLoadResults();
-    updatePathwaySelections();
     document.querySelectorAll('[data-favourite-id]').forEach(toggle => {
         const item = getAllResources().find(resource => resource.id === toggle.dataset.favouriteId);
         const selected = ids.has(item?.id);
@@ -8717,14 +8529,12 @@ document.addEventListener('click', event => {
         toggle.setAttribute('aria-pressed', String(selected));
         toggle.setAttribute('aria-label', label);
         toggle.title = label;
-        toggle.querySelector('.material-symbols-rounded').textContent = selected ? 'star' : 'star_border';
-        toggle.closest('.resource-card, .fw-result-item')?.classList.toggle('is-favourite', selected);
+        toggle.querySelector('.material-symbols-rounded').textContent = selected ? 'bookmark' : 'bookmark_border';
     });
-    const target = scope?.querySelector(`[data-favourite-id="${CSS.escape(id)}"]`) ||
+    const target = (button.isConnected ? button : null) ||
+        scope?.querySelector(`[data-favourite-id="${CSS.escape(id)}"]`) ||
         scope?.querySelector('[data-favourite-id]') ||
-        (appState.currentPage === 'flowchart' && !document.getElementById('pathway-selections')?.hidden
-            ? document.querySelector('.pathway-selections-tab')
-            : document.querySelector('#visual-flowchart-modal .visual-flowchart-home-btn') ||
+        (document.querySelector('#visual-flowchart-modal .visual-flowchart-home-btn') ||
                 Array.from(document.querySelectorAll(appState.currentPage === 'flowchart'
                     ? '#flowchart-container button:not([disabled]), button[data-page="flowchart"].active'
                     : `button[data-page="${CSS.escape(appState.currentPage)}"].active`))
@@ -8772,6 +8582,29 @@ function tagMatches(tag, state, excludeField) {
 // The subset of a resource's tags that satisfy the current filters.
 function getMatchingTags(item, state, excludeField) {
     return (item.tags || []).filter(tag => tagMatches(tag, state, excludeField));
+}
+
+function isRecommendedResource(item, state) {
+    return getMatchingTags(item, state).some(tag => tag.recommended === true);
+}
+
+function buildResourceRecommendationBadgeHtml(item, state) {
+    return isRecommendedResource(item, state)
+        ? `<span class="resource-recommended-badge">${escapeHtml(t('resource_recommended'))}</span>`
+        : '';
+}
+
+function buildResourceGroupsHtml(items, state, renderItem, listClass = '') {
+    const recommended = [];
+    const other = [];
+    items.forEach(item => (isRecommendedResource(item, state) ? recommended : other).push(item));
+    const renderList = resources => listClass
+        ? `<div class="${escapeAttr(listClass)}">${resources.map(renderItem).join('')}</div>`
+        : resources.map(renderItem).join('');
+    return (recommended.length ? renderList(recommended) : '') +
+        (other.length ? `<details class="more-resources"${recommended.length ? '' : ' open'}>
+            <summary>${escapeHtml(t('resource_more'))}</summary>${renderList(other)}
+        </details>` : '');
 }
 
 // Filter the full resource list by every field in `state` except the one
@@ -8918,18 +8751,26 @@ function translateEvidence(level) {
     return level || '';
 }
 
-// Every URL a resource has (most have one; a few have an English + French
-// version). Falls back to the legacy single `url` field.
-function getResourceUrls(item) {
+// Row URLs stay scoped to the matching tags; old catalogs retain their
+// resource-level URL fallback.
+function getResourceUrls(item, state) {
+    const tags = state ? getMatchingTags(item, state) : (item.tags || []);
+    if (tags.some(tag => Array.isArray(tag.urls))) {
+        return [...new Set(tags.flatMap(tag => Array.isArray(tag.urls) ? tag.urls : []))];
+    }
+    if (state && !tags.length && (item.tags || []).some(tag => Array.isArray(tag.urls))) return [];
     return Array.isArray(item.urls) && item.urls.length ? item.urls : (item.url ? [item.url] : []);
 }
 
-// Label a resource URL as English or French when there is more than one.
+// A URL may serve either program or both, independently of its position.
 function getResourceUrlLang(item, url) {
     const all = getResourceUrls(item);
     if (all.length < 2) return '';
-    const idx = all.indexOf(url);
-    return idx === 0 ? 'EN' : (idx === 1 ? 'FR' : '');
+    const programs = new Set((item.tags || [])
+        .filter(tag => Array.isArray(tag.urls) && tag.urls.includes(url))
+        .map(tag => tag.program));
+    return [programs.has('English') ? 'EN' : '', programs.has('French') ? 'FR' : '']
+        .filter(Boolean).join(' / ');
 }
 
 function getMenuBaselineState() {
@@ -9068,8 +8909,8 @@ function refreshMenuUI() {
     renderMenuResults();
 }
 
-function buildResourceLinksHtml(item) {
-    const urls = getResourceUrls(item);
+function buildResourceLinksHtml(item, state) {
+    const urls = getResourceUrls(item, state);
     if (!urls.length) {
         return `<span class="resource-link-btn resource-link-btn-disabled">${escapeHtml(t('filter_no_link'))}</span>`;
     }
@@ -9096,16 +8937,17 @@ function buildResourceCardHtml(item, state = menuState) {
     const evidenceLevel = getResourceEvidenceLevel({ tags: matchingTags });
 
     return `
-        <div class="resource-card${getFavouriteIds().has(item.id) ? ' is-favourite' : ''}">
+        <div class="resource-card${isRecommendedResource(item, state) ? ' is-recommended' : ''}">
             <div class="resource-card-main">
                 <div class="resource-card-name">
                     <span class="resource-card-name-text">${escapeHtml(item.name)}</span>
+                    ${buildResourceRecommendationBadgeHtml(item, state)}
                     ${getEvidenceBadgeHtml(evidenceLevel)}
                 </div>
                 <div class="resource-card-pill-row">${buildResourceMetaPillsHtml(matchingTags)}</div>
                 ${notes ? `<div class="resource-card-note-block"><span class="resource-card-note-label">${escapeHtml(t('filter_notes_label'))}</span><div class="resource-card-meta resource-card-notes">${escapeHtml(notes)}</div></div>` : ''}
             </div>
-            <div class="resource-card-links">${buildFavouriteButtonHtml(item)}${buildResourceLinksHtml(item)}</div>
+            <div class="resource-card-links">${buildFavouriteButtonHtml(item)}${buildResourceLinksHtml(item, state)}</div>
         </div>
     `;
 }
@@ -9259,10 +9101,10 @@ function renderMenuResults() {
 
     renderMenuCriteriaSummary();
 
-    const filtered = sortFavouriteResources(getFilteredResources(menuState, null).filter(matchesMenuSearch));
+    const filtered = getFilteredResources(menuState, null).filter(matchesMenuSearch);
     countEl.textContent = t('filter_results_label')(filtered.length);
     listEl.innerHTML = filtered.length
-        ? filtered.map(item => buildResourceCardHtml(item)).join('')
+        ? buildResourceGroupsHtml(filtered, menuState, item => buildResourceCardHtml(item), 'results-list-compact')
         : `<p class="results-empty">${escapeHtml(t('filter_results_none'))}</p>`;
 }
 
@@ -9846,10 +9688,14 @@ function renderScheduleCalendar(data) {
     ].map(grade => {
         const pressed = grade.id === 'all' ? !activeScheduleGradeIds.length : activeScheduleGradeIds.includes(grade.id);
         return `
-        <button type="button" class="cal-filter-btn${pressed ? ' active' : ''}" data-schedule-grade="${safeText(grade.id)}" aria-pressed="${pressed ? 'true' : 'false'}">
-            ${safeText(grade.label)}
-        </button>`;
+        <label class="cal-grade-option">
+            <input type="checkbox" data-schedule-grade="${safeText(grade.id)}"${pressed ? ' checked' : ''}>
+            <span>${safeText(grade.label)}</span>
+        </label>`;
     }).join('');
+    const gradeFilterSummary = activeScheduleGradeIds.length
+        ? activeGrades.map(grade => grade.label).join(', ')
+        : t('schedule_grade_all');
 
     const monthsHtml = SCHEDULE_MONTHS.map(m => `
         <div class="cal-month-head" style="grid-column: span ${SCHEDULE_HALVES_PER_MONTH};">
@@ -9867,9 +9713,10 @@ function renderScheduleCalendar(data) {
                 <div class="cal-filters-wrap">
                     <div class="cal-filter-group">
                         <span class="cal-filter-label" id="schedule-grade-filter-label">${t('schedule_grade_filter_label')}</span>
-                        <div id="schedule-grade-filter" class="cal-filter cal-grade-chips" role="group" aria-labelledby="schedule-grade-filter-label">
-                            ${gradeFilterHtml}
-                        </div>
+                        <details id="schedule-grade-filter" class="cal-grade-dropdown">
+                            <summary aria-labelledby="schedule-grade-filter-label schedule-grade-filter-value"><span id="schedule-grade-filter-value">${safeText(gradeFilterSummary)}</span></summary>
+                            <div class="cal-grade-options" role="group" aria-labelledby="schedule-grade-filter-label">${gradeFilterHtml}</div>
+                        </details>
                     </div>
                 </div>
             </div>
@@ -9890,7 +9737,7 @@ function renderScheduleCalendar(data) {
 
     // Grades are multi-select: "All grades" clears the selection, and each
     // grade category toggles on or off independently.
-    container.querySelector('#schedule-grade-filter')?.addEventListener('click', event => {
+    container.querySelector('#schedule-grade-filter')?.addEventListener('change', event => {
         const button = event.target.closest('[data-schedule-grade]');
         if (!button) return;
         const id = button.dataset.scheduleGrade;
@@ -9903,7 +9750,14 @@ function renderScheduleCalendar(data) {
         storeScheduleGradePreference(program.id, activeScheduleGradeIds);
         hideScheduleTooltip();
         renderScheduleCalendar(data);
+        container.querySelector('#schedule-grade-filter').open = true;
         container.querySelector(`#schedule-grade-filter [data-schedule-grade="${CSS.escape(id)}"]`)?.focus();
+    });
+    container.querySelector('#schedule-grade-filter')?.addEventListener('keydown', event => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        event.currentTarget.open = false;
+        event.currentTarget.querySelector('summary').focus();
     });
 
     setupScheduleTooltips(container);
