@@ -5489,7 +5489,7 @@ details > p {
 }
 
 .anim-journey-item.anim-visible {
-  animation: anim-pop-in 0.45s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+  animation: anim-pop-in 0.65s cubic-bezier(0.34, 1.2, 0.64, 1) both;
   opacity: 1;
   transform: none;
 }
@@ -5733,6 +5733,76 @@ body.final-summary-modal-open {
   font-weight: 600;
   color: var(--text);
   line-height: 1.35;
+}
+
+.anim-decision-options {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.anim-decision-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: background-color 0.8s ease, border-color 0.8s ease, color 0.8s ease, opacity 0.8s ease;
+}
+
+.anim-choice-marker {
+  visibility: hidden;
+  opacity: 0;
+  font-size: 0.75rem;
+  transition: opacity 0.8s ease;
+}
+
+.anim-choice-revealed .anim-option-chosen {
+  background: var(--step-bg);
+  border-color: var(--step);
+  color: var(--step-text);
+}
+
+.anim-choice-revealed .anim-option-chosen.anim-option-effective {
+  background: var(--effective-bg);
+  border-color: var(--effective);
+  color: var(--effective-text);
+}
+
+.anim-choice-revealed .anim-option-chosen.anim-option-ineffective {
+  background: var(--ineffective-bg);
+  border-color: var(--ineffective);
+  color: var(--ineffective-text);
+}
+
+.anim-choice-revealed .anim-decision-option:not(.anim-option-chosen) {
+  background: var(--bg-alt);
+  border-color: var(--border);
+  color: var(--text-light);
+  opacity: 0.55;
+}
+
+.anim-choice-revealed .anim-choice-marker {
+  visibility: visible;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-journey-item.anim-visible {
+    animation: none;
+  }
+
+  .anim-decision-option,
+  .anim-choice-marker {
+    transition: none;
+  }
 }
 
 .anim-step-bubble-sub {
