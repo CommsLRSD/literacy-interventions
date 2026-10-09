@@ -435,74 +435,63 @@
                 </div>
 
                 <div class="scores-page-body">
-                    <div class="scores-quick-facts" aria-label="Quick reference highlights">
-                        <div class="scores-fact-card">
-                            <span class="material-symbols-rounded" aria-hidden="true" translate="no">percent</span>
-                            <div>
-                                <h3 data-i18n="scores_avg_percentile_title">Average Percentile Range</h3>
-                                <p data-i18n="scores_avg_percentile_value">16th to 84th percentile</p>
-                            </div>
-                        </div>
-                        <div class="scores-fact-card">
-                            <span class="material-symbols-rounded" aria-hidden="true" translate="no">equalizer</span>
-                            <div>
-                                <h3 data-i18n="scores_avg_standard_title">Average Standard Score Range</h3>
-                                <p data-i18n="scores_avg_standard_value">85 to 115 standard score</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="scores-accordion" aria-label="Score interpretation details">
-                        <details class="scores-accordion-item" open>
-                            <summary>
-                                <span class="material-symbols-rounded" aria-hidden="true" translate="no">leaderboard</span>
-                                <span data-i18n="scores_acc_percentile_title">What percentile ranks mean</span>
-                            </summary>
-                            <div class="scores-accordion-content">
-                                <p data-i18n="scores_acc_percentile_p1">Percentile ranks compare a student to same-age peers. A percentile of 16 means the student scored as well as or better than 16% of peers; a percentile of 75 means as well as or better than 75% of peers.</p>
-                                <p data-i18n="scores_acc_percentile_p2">Percentiles are not the same as percent correct. They show relative standing, not the number of test items answered correctly.</p>
-                            </div>
-                        </details>
-
-                        <details class="scores-accordion-item">
-                            <summary>
-                                <span class="material-symbols-rounded" aria-hidden="true" translate="no">insights</span>
-                                <span data-i18n="scores_acc_standard_title">What standard scores mean</span>
-                            </summary>
-                            <div class="scores-accordion-content">
-                                <p data-i18n="scores_acc_standard_p1">Standard scores make it easier to compare results across measures. Most tests use 100 as the average score and 15-point intervals to describe score ranges.</p>
-                                <p data-i18n="scores_acc_standard_p2">A standard score from 85 to 115 is typically considered average.</p>
-                            </div>
-                        </details>
-
-                        <details class="scores-accordion-item">
-                            <summary>
+                    <section class="scores-topic" aria-labelledby="scores-understanding-heading">
+                        <h3 class="scores-topic-title" id="scores-understanding-heading" data-i18n="scores_understanding_title">Understanding Scores</h3>
+                        <div class="scores-reference-card">
+                            <h4>
                                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">category</span>
-                                <span data-i18n="scores_acc_dibels_title">DIBELS risk categories</span>
-                            </summary>
-                            <div class="scores-accordion-content">
-                                <p data-i18n="scores_acc_dibels_intro">DIBELS categories indicate the likelihood of meeting end-of-year grade-level reading goals.</p>
+                                <span data-i18n="scores_acc_dibels_title">What are Risk Categories?</span>
+                            </h4>
+                            <div class="scores-reference-content">
+                                <p data-i18n="scores_acc_dibels_intro">Results of DIBELS subtests are categorized according to the risk, or likelihood, that students will meet end-of-year grade-level goals in reading.</p>
                                 <div class="scores-risk-list">
                                     <div class="scores-risk-item scores-risk-blue">
-                                        <strong data-i18n="scores_dibels_blue">Blue — Above Benchmark</strong>
-                                        <span data-i18n="scores_dibels_blue_desc">Core support; negligible risk.</span>
+                                        <h5 data-i18n="scores_dibels_blue">Blue - Above Benchmark:</h5>
+                                        <p data-i18n="scores_dibels_blue_desc">Students above the benchmark are on track for reading success and should continue to receive the instruction they are getting – sometimes called “Core Support.” We might call these students “Negligible Risk.”</p>
                                     </div>
                                     <div class="scores-risk-item scores-risk-green">
-                                        <strong data-i18n="scores_dibels_green">Green — At Benchmark</strong>
-                                        <span data-i18n="scores_dibels_green_desc">Core support; minimal risk.</span>
+                                        <h5 data-i18n="scores_dibels_green">Green - At Benchmark:</h5>
+                                        <p data-i18n="scores_dibels_green_desc">Students at the benchmark are on track for reading success and should continue receiving the instruction that they are getting – sometimes called “Core Support.” We might call these students “Minimal Risk.”</p>
                                     </div>
                                     <div class="scores-risk-item scores-risk-yellow">
-                                        <strong data-i18n="scores_dibels_yellow">Yellow — Some Risk</strong>
-                                        <span data-i18n="scores_dibels_yellow_desc">Strategic small-group support and progress monitoring.</span>
+                                        <h5 data-i18n="scores_dibels_yellow">Yellow - Some risk:</h5>
+                                        <p data-i18n="scores_dibels_yellow_desc">Students with some risk may be struggling with one or more components of reading. They need additional instruction, usually in a small group setting. Their progress should be monitored in the area in which they are struggling. In other words, these students need “Strategic Support.”</p>
                                     </div>
                                     <div class="scores-risk-item scores-risk-red">
-                                        <strong data-i18n="scores_dibels_red">Red — At Risk</strong>
-                                        <span data-i18n="scores_dibels_red_desc">Intensive support with close progress monitoring.</span>
+                                        <h5 data-i18n="scores_dibels_red">Red - At risk:</h5>
+                                        <p data-i18n="scores_dibels_red_desc">Students at risk are struggling with reading, either scoring well below the benchmark or struggling with more than one component of reading. They need extra instruction in a small group or one-on-one setting. Their progress should be monitored in the areas in which they are struggling. In other words, these students need “Intensive Support.”</p>
                                     </div>
                                 </div>
                             </div>
-                        </details>
-                    </div>
+                        </div>
+                    </section>
+
+                    <section class="scores-topic" aria-labelledby="scores-percentiles-heading">
+                        <h3 class="scores-topic-title" id="scores-percentiles-heading" data-i18n="scores_percentiles_title">Understanding Percentiles</h3>
+                        <div class="scores-reference-grid">
+                            <section class="scores-reference-card" aria-labelledby="scores-percentile-heading">
+                                <h4 id="scores-percentile-heading">
+                                    <span class="material-symbols-rounded" aria-hidden="true" translate="no">leaderboard</span>
+                                    <span data-i18n="scores_acc_percentile_title">What Are Percentile Ranks?</span>
+                                </h4>
+                                <div class="scores-reference-content">
+                                    <p data-i18n="scores_acc_percentile_p1">Percentile ranks help compare students’ performance to other students of the same age. For example, if a student has a percentile rank of 16, they score higher than 16% of same-age peers. A percentile rank of 75 means they score as well or better than 75% of peers.</p>
+                                    <p data-i18n="scores_acc_percentile_average">Just like with standard scores, most students fall within the average percentile range, which represents the middle portion of the population. If a student falls between the 16th and 84th percentile, this is considered within the average range.</p>
+                                    <p class="scores-key-takeaway" data-i18n="scores_acc_percentile_p2">Percentile ranks are not the same as the percentage of correct answers. They simply indicate how students’ score compares to others.</p>
+                                </div>
+                            </section>
+                            <section class="scores-reference-card" aria-labelledby="scores-standard-heading">
+                                <h4 id="scores-standard-heading">
+                                    <span class="material-symbols-rounded" aria-hidden="true" translate="no">insights</span>
+                                    <span data-i18n="scores_acc_standard_title">What Are Standard Scores?</span>
+                                </h4>
+                                <div class="scores-reference-content">
+                                    <p data-i18n="scores_acc_standard_p1">To better compare scores from different test measures, we convert students’ scores into a standard score. Most tests have an average standard score of 100. Increments of 15 are used to divide the population into sections such as below average, average, and above average.</p>
+                                    <p data-i18n="scores_acc_standard_p2">For example, if a student gets a standard score between 85 and 115, this is considered within the average range. This part of the curve is the highest because most students fall in this range. A standard score below 85 is considered below the average range.</p>
+                                </div>
+                            </section>
+                        </div>
+                    </section>
 
                 </div><!-- /.scores-page-body -->
             </div><!-- /.scores-page-wrapper -->
