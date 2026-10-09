@@ -8669,7 +8669,9 @@ function updatePathwaySelections() {
     const toggle = document.getElementById('pathway-sessions-toggle');
     const list = document.getElementById('pathway-sessions-list');
     if (!toggle || !list) return;
-    const host = document.fullscreenElement || document.getElementById('visual-flowchart-modal') || document.body;
+    const modal = document.getElementById('visual-flowchart-modal');
+    const host = modal && document.fullscreenElement && modal.contains(document.fullscreenElement)
+        ? document.fullscreenElement : modal || document.body;
     if (toggle.parentElement !== host) host.appendChild(toggle);
     toggle.hidden = appState.currentPage !== 'flowchart';
     const expanded = new Set(Array.from(list.querySelectorAll('details[open]')).map(item => item.dataset.sessionId));
