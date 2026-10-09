@@ -2249,9 +2249,9 @@ details > p {
 }
 
 .cal-item-report {
-  background: var(--bg-muted);
-  border-left-color: var(--info);
-  color: var(--text-secondary);
+  background: #fbe5dc;
+  border-left-color: #b85c38;
+  color: #763b24;
 }
 
 .cal-scroll .cal-item-report {
@@ -2271,7 +2271,7 @@ details > p {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--info);
+  background: #b85c38;
   flex-shrink: 0;
 }
 
@@ -2443,7 +2443,7 @@ details > p {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--info);
+  background: #b85c38;
 }
 
 .legend-swatch-half {
