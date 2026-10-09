@@ -5854,6 +5854,10 @@ body.final-summary-modal-open {
     transition: none;
     transform: none;
   }
+
+  .journey-review .anim-choice-revealed .anim-decision-option {
+    transform: none;
+  }
 }
 
 .anim-step-bubble-sub {
