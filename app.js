@@ -5755,6 +5755,9 @@ function showFinalSummary(endpointNodeData) {
         document.body.appendChild(modal);
         const pathway = document.getElementById('visual-flowchart-modal');
         if (pathway) {
+            if (document.fullscreenElement && pathway.contains(document.fullscreenElement)) {
+                document.exitFullscreen?.().catch(() => {});
+            }
             modal.summaryPathway = { element: pathway, wasInert: pathway.inert };
             pathway.inert = true;
         }
