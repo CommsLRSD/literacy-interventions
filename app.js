@@ -3411,6 +3411,7 @@ function openVisualFlowchartModal() {
         }
     });
     const keyHandler = event => {
+        if (document.getElementById('final-summary-modal')) return;
         if (event.key === 'Escape') {
             if (appState.visualFlowchartModal?.guidanceOpen) {
                 setTier1GuidanceOpen('visual-flowchart', false, { restoreFocus: true });
@@ -5621,7 +5622,23 @@ function normalizeFinalSummaryCardHeights(renderRoot) {
 }
 
 // Show the complete cross-tier journey summary at a true terminal endpoint
-function showFinalSummary(endpointNodeData, options = {}) {
+function animateJourneySummaryCard(item, review) {
+    const card = item.querySelector('.anim-step-bubble, .anim-endpoint-card');
+    if (!card) return;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const frames = Array.from({ length: 61 }, (_, index) => {
+        const progress = index / 60;
+        const spring = index === 60 ? 1 : 1 - Math.exp(-8 * progress) * Math.cos(12 * progress);
+        return {
+            offset: progress,
+            opacity: Math.min(1, progress * 5),
+            transform: reducedMotion ? 'none' : `translateY(${32 * (1 - spring)}px) scale(${0.82 + 0.18 * spring})`
+        };
+    });
+    review.animAnimations.push(card.animate(frames, { duration: reducedMotion ? 250 : 700, easing: 'linear' }));
+}
+
+function showFinalSummary(endpointNodeData) {
     const stepsContainer = getActiveStepTarget();
     if (!stepsContainer) return;
     (stepsContainer.querySelector('.journey-review')?.animTimers || []).forEach(clearTimeout);
@@ -5629,7 +5646,6 @@ function showFinalSummary(endpointNodeData, options = {}) {
     const fullJourney = appState.fullJourney || [];
     const useSummaryModal = !isTrueMobileSummaryDevice();
     const useDesktopSummaryLayout = useSummaryModal && window.matchMedia('(min-width: 769px)').matches;
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     closeFinalSummaryDialog({ immediate: true });
 
     // ── Collect all animation items (tier badges, step bubbles, connectors, endpoint) ──
@@ -5692,7 +5708,7 @@ function showFinalSummary(endpointNodeData, options = {}) {
         </svg>
         Start Over
     </button>
-    <button class="action-btn action-primary" onclick="closeIntegratedFlowchart()">
+    <button class="action-btn action-primary" onclick="${useSummaryModal ? 'closeFinalSummaryDialog()' : 'renderJourney()'}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
         Done
     </button>`;
@@ -5705,7 +5721,7 @@ function showFinalSummary(endpointNodeData, options = {}) {
     }).join('');
 
     const summaryContentHTML = `
-        <div class="journey-review${useSummaryModal ? ' journey-review-modal' : ''}${options.allowMotion ? ' anim-motion-enabled' : ''}">
+        <div class="journey-review${useSummaryModal ? ' journey-review-modal' : ''}">
             ${useSummaryModal ? '<div class="anim-summary-scroll">' : ''}
             <div class="journey-review-header${useSummaryModal ? ' journey-review-header-modal' : ''}">
                 <div class="journey-review-header-copy">
@@ -5721,11 +5737,6 @@ function showFinalSummary(endpointNodeData, options = {}) {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
                 ${escapeHtml(t('anim_skip'))}
             </button>
-            ${reducedMotion && !options.allowMotion ? `
-                <button type="button" class="anim-skip-btn anim-enable-motion-btn">
-                    ${appState.language === 'fr' ? 'Rejouer avec l’effet de ressort' : 'Replay with spring motion'}
-                </button>
-                <p class="anim-motion-note">${appState.language === 'fr' ? 'Votre appareil réduit les animations. Ce bouton active le mouvement pour cette lecture.' : 'Your device reduces animations. This button enables motion for this replay.'}</p>` : ''}
             <div class="anim-journey-summary journey-flow${useDesktopSummaryLayout ? ' anim-layout-rows' : ''}">${itemsHTML}</div>
             <div class="journey-actions" id="anim-journey-actions" style="display:none;">${actionsHTML}</div>
             ${useSummaryModal ? '</div>' : ''}
@@ -5742,6 +5753,11 @@ function showFinalSummary(endpointNodeData, options = {}) {
         modal.setAttribute('aria-label', 'Your complete journey summary');
         modal.innerHTML = summaryContentHTML;
         document.body.appendChild(modal);
+        const pathway = document.getElementById('visual-flowchart-modal');
+        if (pathway) {
+            modal.summaryPathway = { element: pathway, wasInert: pathway.inert };
+            pathway.inert = true;
+        }
         document.body.classList.add('final-summary-modal-open');
         modal.addEventListener('click', event => {
             if (event.target === modal) closeFinalSummaryDialog();
@@ -5760,9 +5776,6 @@ function showFinalSummary(endpointNodeData, options = {}) {
     } else {
         stepsContainer.innerHTML = summaryContentHTML;
     }
-    renderRoot.querySelector('.anim-enable-motion-btn')?.addEventListener('click', () => {
-        showFinalSummary(endpointNodeData, { allowMotion: true });
-    });
 
     const prevBtn = document.getElementById('carousel-prev-btn');
     if (prevBtn) prevBtn.style.display = 'none';
@@ -5776,13 +5789,14 @@ function showFinalSummary(endpointNodeData, options = {}) {
     if (!useSummaryModal) scrollToActiveStep();
 
     // ── Staggered reveal ──
-    const STEP_DELAY = 1800;
-    const DECISION_DELAY = 3000;
-    const CHOICE_DELAY = 1400;
-    const CONN_DELAY = 300;
+    const STEP_DELAY = 1500;
+    const DECISION_DELAY = 2500;
+    const CHOICE_DELAY = 1100;
+    const CONN_DELAY = 250;
     const allItems = renderRoot.querySelectorAll('.anim-journey-item');
     const review = renderRoot.querySelector('.journey-review');
     review.animTimers = [];
+    review.animAnimations = [];
     const schedule = (callback, delay) => {
         review.animTimers.push(setTimeout(() => {
             if (review.isConnected) callback();
@@ -5796,6 +5810,7 @@ function showFinalSummary(endpointNodeData, options = {}) {
         const delay = isConnector ? CONN_DELAY : isDecision ? DECISION_DELAY : STEP_DELAY;
         schedule(() => {
             el.classList.add('anim-visible');
+            animateJourneySummaryCard(el, review);
             if (isDecision) {
                 schedule(() => el.classList.add('anim-choice-revealed'), CHOICE_DELAY);
             }
@@ -5830,6 +5845,7 @@ function revealAllAnimJourneyItems(btn) {
     if (!container) return;
     (container.animTimers || []).forEach(clearTimeout);
     container.animTimers = [];
+    (container.animAnimations || []).forEach(animation => animation.cancel());
     btn.style.display = 'none';
     container.querySelectorAll('.anim-journey-item').forEach(el => {
         el.classList.add('anim-visible', 'anim-choice-revealed');
@@ -5846,6 +5862,10 @@ function closeFinalSummaryDialog(options = {}) {
     const modal = document.getElementById('final-summary-modal');
     if (!modal) return;
     (modal.querySelector('.journey-review')?.animTimers || []).forEach(clearTimeout);
+    (modal.querySelector('.journey-review')?.animAnimations || []).forEach(animation => animation.cancel());
+    if (modal.summaryPathway) {
+        modal.summaryPathway.element.inert = modal.summaryPathway.wasInert;
+    }
 
     if (appState.finalSummaryKeyHandler) {
         document.removeEventListener('keydown', appState.finalSummaryKeyHandler);
@@ -5880,7 +5900,6 @@ function showTerminalEndpoint(endpointNodeData, direction = 'forward') {
 function showCurrentJourneySummary() {
     const endpointNodeData = appState.visualFlowchart?.summaryEndpointNodeData;
     if (endpointNodeData) {
-        closeVisualFlowchartModal({ immediate: true });
         showFinalSummary(endpointNodeData);
     }
 }

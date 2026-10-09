@@ -5465,11 +5465,6 @@ details > p {
   100% { opacity: 1; transform: translateY(0)   scale(1); }
 }
 
-@keyframes anim-card-spring-in {
-  from { opacity: 0; transform: translateY(28px) scale(0.88); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
 @keyframes anim-line-grow {
   from { transform: scaleY(0); }
   to   { transform: scaleY(1); }
@@ -5503,19 +5498,12 @@ details > p {
 
 .anim-kind-step.anim-visible,
 .anim-kind-endpoint.anim-visible {
-  transform-origin: center 70%;
-  animation: anim-card-spring-in 0.85s cubic-bezier(0.22, 1.35, 0.36, 1) both;
+  animation: none;
 }
 
-@supports (animation-timing-function: linear(0, 1)) {
-  .anim-kind-step.anim-visible,
-  .anim-kind-endpoint.anim-visible {
-    animation-timing-function: linear(
-      0, 0.063, 0.213, 0.401, 0.591, 0.759, 0.893, 0.988,
-      1.047, 1.076, 1.082, 1.074, 1.059, 1.041, 1.024, 1.01,
-      1, 0.993, 0.99, 0.99, 0.991, 0.993, 0.995, 0.997, 1
-    );
-  }
+.anim-step-bubble,
+.anim-endpoint-card {
+  transform-origin: center 70%;
 }
 
 .anim-summary-modal-overlay {
@@ -5579,12 +5567,6 @@ body.final-summary-modal-open {
 
 .anim-summary-scroll::-webkit-scrollbar-corner {
   background: transparent;
-}
-
-.anim-motion-note {
-  color: var(--text-light);
-  font-size: 0.82rem;
-  margin-bottom: var(--space-md);
 }
 
 .journey-review.journey-review-modal .journey-review-header {
@@ -5870,12 +5852,12 @@ body.final-summary-modal-open {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .journey-review:not(.anim-motion-enabled) .anim-journey-item.anim-visible {
+  .journey-review .anim-journey-item.anim-visible {
     animation: none;
   }
 
-  .journey-review:not(.anim-motion-enabled) .anim-decision-option,
-  .journey-review:not(.anim-motion-enabled) .anim-choice-marker {
+  .journey-review .anim-decision-option,
+  .journey-review .anim-choice-marker {
     transition: none;
   }
 }
