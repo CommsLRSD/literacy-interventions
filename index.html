@@ -197,6 +197,19 @@
 
     <!-- Backdrop behind the Home drawer while it is open over the flowchart -->
     <div class="home-drawer-scrim" id="home-drawer-scrim" onclick="setHomeDrawerOpen(false)" hidden></div>
+    <button type="button" id="pathway-sessions-toggle" class="pathway-sessions-toggle" onclick="openPathwaySessions()" aria-controls="pathway-sessions-drawer" aria-haspopup="dialog" hidden>
+        <span class="material-symbols-rounded" aria-hidden="true" translate="no">bookmarks</span>
+        <span data-i18n="pathway_resources">Your resources</span>
+    </button>
+    <dialog id="pathway-sessions-drawer" class="pathway-sessions-drawer" aria-labelledby="pathway-sessions-title" onkeydown="event.stopPropagation()" onclick="if(event.target===this && (event.clientX &lt; this.getBoundingClientRect().left || event.clientY &lt; this.getBoundingClientRect().top)) this.close()">
+        <header class="pathway-sessions-header">
+            <h2 id="pathway-sessions-title" data-i18n="pathway_resources">Your resources</h2>
+            <button type="button" onclick="document.getElementById('pathway-sessions-drawer').close()" aria-label="Close your resources" data-i18n-aria="pathway_resources_close" autofocus>
+                <span class="material-symbols-rounded" aria-hidden="true" translate="no">close</span>
+            </button>
+        </header>
+        <div id="pathway-sessions-list"></div>
+    </dialog>
 
     <!-- Main Content -->
     <main class="main-content" id="main-content">
