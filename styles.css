@@ -5460,9 +5460,10 @@ details > p {
 /* ── Animated journey summary ──────────────────────────────────────── */
 
 @keyframes anim-pop-in {
-  0%   { opacity: 0; transform: translateY(18px) scale(0.96); }
-  60%  { opacity: 1; transform: translateY(-3px) scale(1.01); }
-  100% { opacity: 1; transform: translateY(0)   scale(1); }
+  0%   { opacity: 0; transform: translateY(28px) scale(0.88); }
+  55%  { opacity: 1; transform: translateY(-5px) scale(1.025); }
+  78%  { opacity: 1; transform: translateY(2px) scale(0.995); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes anim-line-grow {
@@ -5491,18 +5492,12 @@ details > p {
 
 .anim-journey-item.anim-visible {
   visibility: visible;
-  animation: anim-pop-in 0.65s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+  animation: anim-pop-in 0.7s cubic-bezier(0.34, 1.2, 0.64, 1) both;
   opacity: 1;
   transform: none;
 }
 
-.anim-kind-step.anim-visible,
-.anim-kind-endpoint.anim-visible {
-  animation: none;
-}
-
-.anim-step-bubble,
-.anim-endpoint-card {
+.anim-journey-item {
   transform-origin: center 70%;
 }
 
@@ -5852,10 +5847,6 @@ body.final-summary-modal-open {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .journey-review .anim-journey-item.anim-visible {
-    animation: none;
-  }
-
   .journey-review .anim-decision-option,
   .journey-review .anim-choice-marker {
     transition: none;
@@ -11762,7 +11753,9 @@ body.home-drawer-closing[data-page="flowchart"] .home-drawer-bar {
   transition: background var(--duration) var(--ease), transform var(--duration) var(--ease);
 }
 .guided-icon-btn:hover { background: rgba(255, 255, 255, 0.14); }
-.guided-icon-btn:hover .material-symbols-rounded { transform: rotate(-90deg); }
+.guided-icon-btn:hover .guided-restart-icon { transform: rotate(-90deg); }
+.guided-restart-icon { display: inline-flex; transition: transform var(--duration-slow) var(--ease); }
+#home-restart-btn .material-symbols-rounded { transform: scaleX(-1); }
 .guided-icon-btn .material-symbols-rounded { font-size: 22px; transition: transform var(--duration-slow) var(--ease); }
 
 /* ── Visual pathway as a full screen beside the top bar and side menu ── */
