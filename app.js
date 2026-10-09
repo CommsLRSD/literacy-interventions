@@ -9665,7 +9665,7 @@ function renderScheduleGradeRow(grade, data) {
             <div class="cal-row-label">${safeText(grade.label)}</div>
             <div class="cal-track">
                 <div class="cal-slots" aria-hidden="true">${slots}</div>
-                <div class="cal-lanes" style="grid-template-rows: repeat(${laneCount}, var(--cal-lane-height));">
+                <div class="cal-lanes" style="grid-template-rows: repeat(${laneCount}, minmax(var(--cal-lane-height), auto));">
                     ${assessmentHtml}${interventionHtml}${reportHtml}
                 </div>
             </div>
@@ -9981,7 +9981,8 @@ function renderLegend(data, program) {
         `;
 
         data.notes.forEach(note => {
-            html += `<p class="note-text">${safeText(note)}</p>`;
+            const formattedNote = safeText(note).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            html += `<p class="note-text">${formattedNote}</p>`;
         });
 
         html += `
