@@ -1946,7 +1946,7 @@ details > p {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Toolbar: current program + the English / French filter */
@@ -1959,6 +1959,7 @@ details > p {
   padding: var(--space-md) var(--space-lg);
   background: var(--bg-alt);
   border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .cal-toolbar-title {
@@ -2109,6 +2110,7 @@ details > p {
    into two identical half-month slots. */
 .cal-scroll {
   overflow-x: auto;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -2297,6 +2299,8 @@ details > p {
 
 .cal-mobile-list {
   display: none;
+  overflow: hidden;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 .cal-mobile-grade {

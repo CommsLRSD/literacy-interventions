@@ -9981,7 +9981,8 @@ function renderLegend(data, program) {
         `;
 
         data.notes.forEach(note => {
-            html += `<p class="note-text">${safeText(note)}</p>`;
+            const formattedNote = safeText(note).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            html += `<p class="note-text">${formattedNote}</p>`;
         });
 
         html += `
