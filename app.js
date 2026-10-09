@@ -5776,10 +5776,10 @@ function showFinalSummary(endpointNodeData) {
     if (!useSummaryModal) scrollToActiveStep();
 
     // ── Staggered reveal ──
-    const STEP_DELAY = 1500;
-    const DECISION_DELAY = 2500;
-    const CHOICE_DELAY = 1100;
-    const CONN_DELAY = 250;
+    const STEP_DELAY = 420;
+    const DECISION_DELAY = 1100;
+    const CHOICE_DELAY = 500;
+    const CONN_DELAY = 180;
     const allItems = renderRoot.querySelectorAll('.anim-journey-item');
     const review = renderRoot.querySelector('.journey-review');
     review.animTimers = [];
@@ -5788,7 +5788,7 @@ function showFinalSummary(endpointNodeData) {
             if (review.isConnected) callback();
         }, delay));
     };
-    let timeout = 500;
+    let timeout = 320;
 
     allItems.forEach((el, i) => {
         const isConnector = el.querySelector('.anim-connector') !== null;
