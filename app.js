@@ -5621,13 +5621,15 @@ function normalizeFinalSummaryCardHeights(renderRoot) {
 }
 
 // Show the complete cross-tier journey summary at a true terminal endpoint
-function showFinalSummary(endpointNodeData) {
+function showFinalSummary(endpointNodeData, options = {}) {
     const stepsContainer = getActiveStepTarget();
     if (!stepsContainer) return;
+    (stepsContainer.querySelector('.journey-review')?.animTimers || []).forEach(clearTimeout);
 
     const fullJourney = appState.fullJourney || [];
     const useSummaryModal = !isTrueMobileSummaryDevice();
     const useDesktopSummaryLayout = useSummaryModal && window.matchMedia('(min-width: 769px)').matches;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     closeFinalSummaryDialog({ immediate: true });
 
     // ── Collect all animation items (tier badges, step bubbles, connectors, endpoint) ──
@@ -5703,7 +5705,8 @@ function showFinalSummary(endpointNodeData) {
     }).join('');
 
     const summaryContentHTML = `
-        <div class="journey-review${useSummaryModal ? ' journey-review-modal' : ''}">
+        <div class="journey-review${useSummaryModal ? ' journey-review-modal' : ''}${options.allowMotion ? ' anim-motion-enabled' : ''}">
+            ${useSummaryModal ? '<div class="anim-summary-scroll">' : ''}
             <div class="journey-review-header${useSummaryModal ? ' journey-review-header-modal' : ''}">
                 <div class="journey-review-header-copy">
                     <h2>Your Complete Journey</h2>
@@ -5718,8 +5721,14 @@ function showFinalSummary(endpointNodeData) {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
                 ${escapeHtml(t('anim_skip'))}
             </button>
+            ${reducedMotion && !options.allowMotion ? `
+                <button type="button" class="anim-skip-btn anim-enable-motion-btn">
+                    ${appState.language === 'fr' ? 'Rejouer avec l’effet de ressort' : 'Replay with spring motion'}
+                </button>
+                <p class="anim-motion-note">${appState.language === 'fr' ? 'Votre appareil réduit les animations. Ce bouton active le mouvement pour cette lecture.' : 'Your device reduces animations. This button enables motion for this replay.'}</p>` : ''}
             <div class="anim-journey-summary journey-flow${useDesktopSummaryLayout ? ' anim-layout-rows' : ''}">${itemsHTML}</div>
             <div class="journey-actions" id="anim-journey-actions" style="display:none;">${actionsHTML}</div>
+            ${useSummaryModal ? '</div>' : ''}
         </div>
     `;
 
@@ -5751,6 +5760,9 @@ function showFinalSummary(endpointNodeData) {
     } else {
         stepsContainer.innerHTML = summaryContentHTML;
     }
+    renderRoot.querySelector('.anim-enable-motion-btn')?.addEventListener('click', () => {
+        showFinalSummary(endpointNodeData, { allowMotion: true });
+    });
 
     const prevBtn = document.getElementById('carousel-prev-btn');
     if (prevBtn) prevBtn.style.display = 'none';
