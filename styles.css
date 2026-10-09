@@ -5460,14 +5460,8 @@ details > p {
 /* ── Animated journey summary ──────────────────────────────────────── */
 
 @keyframes anim-pop-in {
-  0%   { opacity: 0; transform: translateY(18px) scale(0.96); }
-  60%  { opacity: 1; transform: translateY(-3px) scale(1.01); }
-  100% { opacity: 1; transform: translateY(0)   scale(1); }
-}
-
-@keyframes anim-line-grow {
-  from { transform: scaleY(0); }
-  to   { transform: scaleY(1); }
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* Wrapper that sequences the items */
@@ -5484,14 +5478,24 @@ details > p {
 /* Each item starts invisible; .anim-visible triggers the pop */
 .anim-journey-item {
   width: 100%;
+  visibility: hidden;
   opacity: 0;
   transform: translateY(18px) scale(0.96);
 }
 
 .anim-journey-item.anim-visible {
-  animation: anim-pop-in 0.45s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+  visibility: visible;
   opacity: 1;
   transform: none;
+}
+
+.anim-kind-step.anim-visible,
+.anim-kind-endpoint.anim-visible {
+  animation: anim-pop-in 0.35s cubic-bezier(0.22, 1.18, 0.36, 1) both;
+}
+
+.anim-journey-item {
+  transform-origin: center 70%;
 }
 
 .anim-summary-modal-overlay {
@@ -5519,12 +5523,42 @@ body.final-summary-modal-open {
   width: min(1100px, calc(100vw - 20px));
   max-width: none;
   max-height: 92vh;
-  overflow: auto;
+  overflow: hidden;
   margin: 0;
-  padding: clamp(16px, 2.4vw, 28px);
+  padding: 0;
   border-radius: var(--radius-xl);
   background: var(--bg);
   box-shadow: 0 20px 50px rgba(14, 28, 45, 0.28);
+}
+
+.anim-summary-scroll {
+  max-height: 92vh;
+  overflow: auto;
+  padding: clamp(16px, 2.4vw, 32px);
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.anim-summary-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.anim-summary-scroll::-webkit-scrollbar-track {
+  margin: 20px;
+  background: transparent;
+}
+
+.anim-summary-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  background-clip: padding-box;
+}
+
+.anim-summary-scroll::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .journey-review.journey-review-modal .journey-review-header {
@@ -5537,11 +5571,11 @@ body.final-summary-modal-open {
 
 @media (min-width: 769px) {
   .journey-review.journey-review-modal {
-    width: min(1680px, calc(100vw - clamp(24px, 4vw, 56px)));
-    padding: clamp(20px, 2.4vw, 32px);
+    width: min(1920px, calc(100vw - 40px));
   }
 
   .anim-journey-summary.anim-layout-rows {
+    --anim-card-width: 280px;
     max-width: none;
     display: flex;
     flex-direction: row;
@@ -5553,9 +5587,9 @@ body.final-summary-modal-open {
 
   /* Fixed uniform width — bubbles never grow/shrink, they wrap to the next row */
   .anim-journey-summary.anim-layout-rows .anim-journey-item {
-    flex: 0 0 280px;
-    width: 280px;
-    max-width: 280px;
+    flex: 0 0 var(--anim-card-width);
+    width: var(--anim-card-width);
+    max-width: var(--anim-card-width);
   }
 
   /* Tier badges span the full row as section separators */
@@ -5567,9 +5601,9 @@ body.final-summary-modal-open {
 
   /* Endpoint cards use the same fixed width as step bubbles */
   .anim-journey-summary.anim-layout-rows .anim-journey-item.anim-kind-endpoint {
-    flex: 0 0 280px;
-    width: 280px;
-    max-width: 280px;
+    flex: 0 0 var(--anim-card-width);
+    width: var(--anim-card-width);
+    max-width: var(--anim-card-width);
   }
 
   .anim-journey-summary.anim-layout-rows .anim-journey-item.anim-kind-connector {
@@ -5611,7 +5645,7 @@ body.final-summary-modal-open {
     height: 28px;
   }
 
-  /* Label sits directly under the icon */
+  /* Text fills the card so review buttons share a bottom baseline */
   .anim-journey-summary.anim-layout-rows .anim-step-bubble-text {
     flex: 1;
     width: 100%;
@@ -5640,6 +5674,17 @@ body.final-summary-modal-open {
     border-left: 6px solid var(--border);
     border-right: 0;
     margin-top: 0;
+  }
+}
+
+@media (min-width: 1200px) {
+  .anim-journey-summary.anim-layout-rows {
+    --anim-card-width: calc((100% - 160px) / 5);
+    gap: 8px;
+  }
+
+  .anim-journey-summary.anim-layout-rows .anim-kind-connector .anim-connector {
+    width: 16px;
   }
 }
 
@@ -5687,7 +5732,7 @@ body.final-summary-modal-open {
 /* Plain-language step bubble */
 .anim-step-bubble {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 12px;
   width: 100%;
   padding: 14px 16px;
@@ -5695,6 +5740,7 @@ body.final-summary-modal-open {
   border: 1.5px solid var(--border);
   border-radius: var(--radius-lg);
   margin-bottom: 0;
+  box-shadow: 0 4px 16px rgba(14, 28, 45, 0.06);
 }
 
 .anim-step-bubble-icon {
@@ -5715,8 +5761,19 @@ body.final-summary-modal-open {
 }
 
 .anim-step-bubble-text {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   flex: 1;
   min-width: 0;
+}
+
+.anim-step-bubble-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  flex: 1;
 }
 
 .anim-step-bubble-label {
@@ -5733,6 +5790,82 @@ body.final-summary-modal-open {
   font-weight: 600;
   color: var(--text);
   line-height: 1.35;
+}
+
+.anim-decision-options {
+  display: grid;
+  gap: 8px;
+  margin-top: 0;
+}
+
+.anim-decision-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: transform 0.4s cubic-bezier(0.22, 1.18, 0.36, 1), box-shadow 0.4s ease, background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, opacity 0.4s ease;
+}
+
+.anim-choice-marker {
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(4px) scale(0.9);
+  font-size: 0.75rem;
+  transition: opacity 0.3s ease 0.08s, transform 0.35s cubic-bezier(0.22, 1.18, 0.36, 1) 0.08s;
+}
+
+.anim-choice-revealed .anim-option-chosen {
+  transform: translateY(-2px) scale(1.015);
+  box-shadow: 0 4px 12px rgba(14, 28, 45, 0.1);
+  background: var(--step-bg);
+  border-color: var(--step);
+  color: var(--step-text);
+}
+
+.anim-choice-revealed .anim-option-chosen.anim-option-effective {
+  background: var(--effective-bg);
+  border-color: var(--effective);
+  color: var(--effective-text);
+}
+
+.anim-choice-revealed .anim-option-chosen.anim-option-ineffective {
+  background: var(--ineffective-bg);
+  border-color: var(--ineffective);
+  color: var(--ineffective-text);
+}
+
+.anim-choice-revealed .anim-decision-option:not(.anim-option-chosen) {
+  background: var(--bg-alt);
+  border-color: var(--border);
+  color: var(--text-light);
+  opacity: 0.55;
+  transform: scale(0.985);
+}
+
+.anim-choice-revealed .anim-choice-marker {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-review .anim-decision-option,
+  .journey-review .anim-choice-marker {
+    transition: none;
+    transform: none;
+  }
+
+  .journey-review .anim-choice-revealed .anim-decision-option {
+    transform: none;
+  }
 }
 
 .anim-step-bubble-sub {
@@ -5848,7 +5981,6 @@ body.final-summary-modal-open {
 }
 
 .anim-connector-line.anim-visible {
-  animation: anim-line-grow 0.3s ease-out both;
   transform: scaleY(1);
 }
 
@@ -5860,7 +5992,6 @@ body.final-summary-modal-open {
   border-top: 6px solid var(--border);
   margin-top: 0;
   opacity: 0;
-  transition: opacity 0.2s ease;
 }
 
 .anim-connector.anim-visible .anim-connector-arrow {
@@ -5869,6 +6000,9 @@ body.final-summary-modal-open {
 
 /* Endpoint card in the animation */
 .anim-endpoint-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   width: 100%;
   padding: var(--space-lg);
   border-radius: var(--radius-lg);
@@ -5915,6 +6049,41 @@ body.final-summary-modal-open {
 }
 
 /* Skip button (lets users jump to end without waiting) */
+.anim-playback-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.anim-speed-label {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.anim-playback-speed {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.anim-playback-controls .anim-skip-btn {
+  margin-bottom: 0;
+}
+
+.anim-playback-hint {
+  margin: 8px 0 var(--space-md);
+  font-size: 0.78rem;
+  color: var(--text-light);
+}
+
 .anim-skip-btn {
   display: inline-flex;
   align-items: center;
@@ -6008,7 +6177,8 @@ body.final-summary-modal-open {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  margin-top: 8px;
+  align-self: flex-start;
+  margin-top: 0;
   padding: 4px 10px;
   font-size: 0.73rem;
   font-weight: 600;
@@ -11634,7 +11804,9 @@ body.home-drawer-closing[data-page="flowchart"] .home-drawer-bar {
   transition: background var(--duration) var(--ease), transform var(--duration) var(--ease);
 }
 .guided-icon-btn:hover { background: rgba(255, 255, 255, 0.14); }
-.guided-icon-btn:hover .material-symbols-rounded { transform: rotate(-90deg); }
+.guided-icon-btn:hover .guided-restart-icon { transform: rotate(-90deg); }
+.guided-restart-icon { display: inline-flex; transition: transform var(--duration-slow) var(--ease); }
+#home-restart-btn .material-symbols-rounded { transform: scaleX(-1); }
 .guided-icon-btn .material-symbols-rounded { font-size: 22px; transition: transform var(--duration-slow) var(--ease); }
 
 /* ── Visual pathway as a full screen beside the top bar and side menu ── */
