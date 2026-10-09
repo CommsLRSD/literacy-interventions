@@ -8676,29 +8676,18 @@ function updatePathwaySelections() {
     toggle.hidden = appState.currentPage !== 'flowchart';
     const expanded = new Set(Array.from(list.querySelectorAll('details[open]')).map(item => item.dataset.sessionId));
     const rendered = new Set(Array.from(list.querySelectorAll('details')).map(item => item.dataset.sessionId));
-    const defs = getFlowchartDefs();
     list.innerHTML = pathwaySessions.slice().reverse().map(session => {
-        const screener = appState.tierFlowchartData?.tier1?.screeners.find(item => item.id === session.context.screener);
-        const date = new Date(session.startedAt).toLocaleString(appState.language === 'fr' ? 'fr-CA' : 'en-CA');
-        const choices = session.choices.map(choice => {
-            const node = defs[choice.tierId]?.nodes?.[choice.nodeId];
-            const label = node?.type === 'decision' ? node.choices.find(item => item.id === choice.choiceId)?.label
-                : node?.type === 'selection' ? (getAllResources().find(item => item.id === choice.choiceId)?.name ||
-                    appState.tierFlowchartData?.tier1?.screeners.find(item => item.id === choice.choiceId)?.name) : null;
-            return label ? `<li>${escapeHtml(t('filter_tier_option')(choice.tierId.replace('tier', '')))} · ${escapeHtml(node.title)}: ${escapeHtml(label)}</li>` : '';
-        }).join('');
+        const date = new Date(session.startedAt).toLocaleDateString(appState.language === 'fr' ? 'fr-CA' : 'en-US',
+            { month: 'short', day: 'numeric', year: 'numeric' }).replace(/^([A-Za-z]{3}) /, '$1. ');
         const resources = session.resources.map(resource => {
             const item = getAllResources().find(item => item.id === resource.id);
             if (!item) return '';
             return `<div class="session-resource"><strong>${escapeHtml(item.name)}</strong>
-                <p>${escapeHtml(t('filter_tier_option')(resource.filters.tier))}${resource.filters.pillar ? ` · ${escapeHtml(translatePillar(resource.filters.pillar))}` : ''}</p>
                 <div class="resource-card-links">${buildResourceLinksHtml(item, resource.filters)}</div></div>`;
         }).join('');
         return `<details class="pathway-session" data-session-id="${escapeAttr(session.id)}"${expanded.has(session.id) || (!rendered.has(session.id) && session.id === activePathwaySessionId) ? ' open' : ''}>
             <summary>${escapeHtml(t('pathway_session'))} · ${escapeHtml(date)}${session.id === activePathwaySessionId ? ` · ${escapeHtml(t('pathway_session_current'))}` : ''}</summary>
-            <p>${escapeHtml(session.context.program)} · ${escapeHtml(screener?.name || '')} · ${escapeHtml(formatGradeList(session.context.grades))}</p>
-            ${choices ? `<h3>${escapeHtml(t('pathway_session_choices'))}</h3><ul>${choices}</ul>` : ''}
-            <h3>${escapeHtml(t('pathway_selections'))}</h3>${resources || `<p>${escapeHtml(t('pathway_session_no_resources'))}</p>`}
+            ${resources || `<p>${escapeHtml(t('pathway_session_no_resources'))}</p>`}
         </details>`;
     }).join('') || `<p>${escapeHtml(t('pathway_sessions_empty'))}</p>`;
 }
