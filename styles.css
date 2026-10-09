@@ -5768,6 +5768,14 @@ body.final-summary-modal-open {
   min-width: 0;
 }
 
+.anim-step-bubble-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  flex: 1;
+}
+
 .anim-step-bubble-label {
   font-size: 0.7rem;
   font-weight: 700;
@@ -5992,6 +6000,9 @@ body.final-summary-modal-open {
 
 /* Endpoint card in the animation */
 .anim-endpoint-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   width: 100%;
   padding: var(--space-lg);
   border-radius: var(--radius-lg);
@@ -6038,6 +6049,41 @@ body.final-summary-modal-open {
 }
 
 /* Skip button (lets users jump to end without waiting) */
+.anim-playback-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.anim-speed-label {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.anim-playback-speed {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.anim-playback-controls .anim-skip-btn {
+  margin-bottom: 0;
+}
+
+.anim-playback-hint {
+  margin: 8px 0 var(--space-md);
+  font-size: 0.78rem;
+  color: var(--text-light);
+}
+
 .anim-skip-btn {
   display: inline-flex;
   align-items: center;
@@ -6132,7 +6178,7 @@ body.final-summary-modal-open {
   align-items: center;
   gap: 5px;
   align-self: flex-start;
-  margin-top: auto;
+  margin-top: 0;
   padding: 4px 10px;
   font-size: 0.73rem;
   font-weight: 600;

@@ -5598,8 +5598,10 @@ function buildAnimStepBubble(nodeDef, choice, tierId) {
         <div class="anim-step-bubble${typeClass}${variant ? ' anim-bubble-' + variant : ''}">
             <div class="anim-step-bubble-icon">${iconSVG}</div>
             <div class="anim-step-bubble-text">
-                <div class="anim-step-bubble-main">${escapeHtml(mainText)}</div>
-                ${choicesHTML}
+                <div class="anim-step-bubble-content">
+                    <div class="anim-step-bubble-main">${escapeHtml(mainText)}</div>
+                    ${choicesHTML}
+                </div>
                 ${reviewBtnHTML}
             </div>
         </div>`;
@@ -5717,10 +5719,21 @@ function showFinalSummary(endpointNodeData) {
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
                     </button>` : ''}
             </div>
-            <button class="anim-skip-btn" onclick="revealAllAnimJourneyItems(this)" aria-label="Skip animation">
+            <div class="anim-playback-controls">
+                <label class="anim-speed-label">
+                    ${appState.language === 'fr' ? 'Vitesse de lecture' : 'Playback speed'}
+                    <select class="anim-playback-speed">
+                        <option value="1">${appState.language === 'fr' ? 'Normale' : 'Normal'}</option>
+                        <option value="2">${appState.language === 'fr' ? 'Plus lente' : 'Slower'}</option>
+                    </select>
+                </label>
+                <button type="button" class="anim-skip-btn anim-replay-btn">${appState.language === 'fr' ? 'Rejouer' : 'Replay'}</button>
+                <button type="button" class="anim-skip-btn anim-skip-playback-btn" onclick="revealAllAnimJourneyItems(this)" aria-label="Skip animation">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
                 ${escapeHtml(t('anim_skip'))}
             </button>
+            </div>
+            <p class="anim-playback-hint">${appState.language === 'fr' ? 'Changer la vitesse relance la lecture.' : 'Changing speed restarts playback.'}</p>
             <div class="anim-journey-summary journey-flow${useDesktopSummaryLayout ? ' anim-layout-rows' : ''}">${itemsHTML}</div>
             <div class="journey-actions" id="anim-journey-actions" style="display:none;">${actionsHTML}</div>
             ${useSummaryModal ? '</div>' : ''}
@@ -5774,21 +5787,41 @@ function showFinalSummary(endpointNodeData) {
         if (useSummaryModal) normalizeFinalSummaryCardHeights(renderRoot);
     });
     if (!useSummaryModal) scrollToActiveStep();
-
-    // ── Staggered reveal ──
-    const STEP_DELAY = 420;
-    const DECISION_DELAY = 1100;
-    const CHOICE_DELAY = 500;
-    const CONN_DELAY = 180;
-    const allItems = renderRoot.querySelectorAll('.anim-journey-item');
     const review = renderRoot.querySelector('.journey-review');
+    review.querySelector('.anim-replay-btn').addEventListener('click', () => playJourneySummary(review));
+    review.querySelector('.anim-playback-speed').addEventListener('change', () => playJourneySummary(review));
+    playJourneySummary(review);
+}
+
+function playJourneySummary(review) {
+    (review.animTimers || []).forEach(clearTimeout);
     review.animTimers = [];
+    review.querySelectorAll('.anim-visible, .anim-choice-revealed').forEach(el => {
+        el.classList.remove('anim-visible', 'anim-choice-revealed');
+    });
+    const actions = review.querySelector('#anim-journey-actions');
+    if (actions) {
+        actions.style.display = 'none';
+        actions.style.opacity = '0';
+    }
+    review.querySelector('.anim-skip-playback-btn').style.display = '';
+    const scroller = review.querySelector('.anim-summary-scroll');
+    if (scroller) scroller.scrollTop = 0;
+    // Flush the hidden state so replay restarts the CSS entrance animations.
+    void review.offsetWidth;
+    const speed = review.querySelector('.anim-playback-speed').value === '2' ? 2 : 1;
+    // ── Staggered reveal ──
+    const STEP_DELAY = 420 * speed;
+    const DECISION_DELAY = 1100 * speed;
+    const CHOICE_DELAY = 500 * speed;
+    const CONN_DELAY = 180 * speed;
+    const allItems = review.querySelectorAll('.anim-journey-item');
     const schedule = (callback, delay) => {
         review.animTimers.push(setTimeout(() => {
             if (review.isConnected) callback();
         }, delay));
     };
-    let timeout = 320;
+    let timeout = 320 * speed;
 
     allItems.forEach((el, i) => {
         const isConnector = el.querySelector('.anim-connector') !== null;
@@ -5807,7 +5840,7 @@ function showFinalSummary(endpointNodeData) {
             // If this is the last item, reveal actions
             if (i === allItems.length - 1) {
                 schedule(() => {
-                    const actions = renderRoot.querySelector('#anim-journey-actions');
+                    const actions = review.querySelector('#anim-journey-actions');
                     if (actions) {
                         actions.style.display = '';
                         actions.style.opacity = '0';
@@ -5815,7 +5848,7 @@ function showFinalSummary(endpointNodeData) {
                         requestAnimationFrame(() => { actions.style.opacity = '1'; });
                     }
                     // Hide skip button once done
-                    const skipBtn = renderRoot.querySelector('.anim-skip-btn');
+                    const skipBtn = review.querySelector('.anim-skip-playback-btn');
                     if (skipBtn) skipBtn.style.display = 'none';
                 }, delay);
             }
