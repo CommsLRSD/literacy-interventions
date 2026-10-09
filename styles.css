@@ -5460,15 +5460,8 @@ details > p {
 /* ── Animated journey summary ──────────────────────────────────────── */
 
 @keyframes anim-pop-in {
-  0%   { opacity: 0; transform: translateY(28px) scale(0.88); }
-  55%  { opacity: 1; transform: translateY(-5px) scale(1.025); }
-  78%  { opacity: 1; transform: translateY(2px) scale(0.995); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@keyframes anim-line-grow {
-  from { transform: scaleY(0); }
-  to   { transform: scaleY(1); }
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* Wrapper that sequences the items */
@@ -5492,9 +5485,13 @@ details > p {
 
 .anim-journey-item.anim-visible {
   visibility: visible;
-  animation: anim-pop-in 0.7s cubic-bezier(0.34, 1.2, 0.64, 1) both;
   opacity: 1;
   transform: none;
+}
+
+.anim-kind-step.anim-visible,
+.anim-kind-endpoint.anim-visible {
+  animation: anim-pop-in 0.48s cubic-bezier(0.22, 1.18, 0.36, 1) both;
 }
 
 .anim-journey-item {
@@ -5806,17 +5803,20 @@ body.final-summary-modal-open {
   color: var(--text);
   font-size: 0.9rem;
   font-weight: 600;
-  transition: background-color 0.8s ease, border-color 0.8s ease, color 0.8s ease, opacity 0.8s ease;
+  transition: transform 0.4s cubic-bezier(0.22, 1.18, 0.36, 1), box-shadow 0.4s ease, background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, opacity 0.4s ease;
 }
 
 .anim-choice-marker {
   visibility: hidden;
   opacity: 0;
+  transform: translateY(4px) scale(0.9);
   font-size: 0.75rem;
-  transition: opacity 0.8s ease;
+  transition: opacity 0.3s ease 0.08s, transform 0.35s cubic-bezier(0.22, 1.18, 0.36, 1) 0.08s;
 }
 
 .anim-choice-revealed .anim-option-chosen {
+  transform: translateY(-2px) scale(1.015);
+  box-shadow: 0 4px 12px rgba(14, 28, 45, 0.1);
   background: var(--step-bg);
   border-color: var(--step);
   color: var(--step-text);
@@ -5839,17 +5839,20 @@ body.final-summary-modal-open {
   border-color: var(--border);
   color: var(--text-light);
   opacity: 0.55;
+  transform: scale(0.985);
 }
 
 .anim-choice-revealed .anim-choice-marker {
   visibility: visible;
   opacity: 1;
+  transform: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .journey-review .anim-decision-option,
   .journey-review .anim-choice-marker {
     transition: none;
+    transform: none;
   }
 }
 
@@ -5966,7 +5969,6 @@ body.final-summary-modal-open {
 }
 
 .anim-connector-line.anim-visible {
-  animation: anim-line-grow 0.3s ease-out both;
   transform: scaleY(1);
 }
 
@@ -5978,7 +5980,6 @@ body.final-summary-modal-open {
   border-top: 6px solid var(--border);
   margin-top: 0;
   opacity: 0;
-  transition: opacity 0.2s ease;
 }
 
 .anim-connector.anim-visible .anim-connector-arrow {
