@@ -58,6 +58,8 @@ let pathwayDefaults = {};
 let pathwayContext = null;
 let progressStorageQueue = Promise.resolve();
 let progressStorageEpoch = 0;
+let pathwaySessions = [];
+let activePathwaySessionId = null;
 
 function queueProgressStorage(operation) {
     progressStorageQueue = progressStorageQueue.catch(() => {}).then(operation);
@@ -66,7 +68,7 @@ function queueProgressStorage(operation) {
 
 function parseProgressStorage(raw) {
     try {
-        const state = raw && raw.length <= 100000 ? JSON.parse(raw) : null;
+        const state = raw && raw.length <= 1000000 ? JSON.parse(raw) : null;
         if (!state || !state.defaults || typeof state.defaults !== 'object' || Array.isArray(state.defaults) ||
             !Object.hasOwn(state, 'pathway') || (state.pathway !== null &&
                 (typeof state.pathway !== 'object' || Array.isArray(state.pathway)))) return null;
@@ -93,12 +95,16 @@ async function readProgressStorage() {
         if (fallback) state = fallback;
     } catch (e) { /* Session storage is optional. */ }
     pathwayDefaults = state?.defaults || {};
+    pathwaySessions = readPathwaySessions(state?.sessions);
+    activePathwaySessionId = state?.pathway && pathwaySessions.some(session => session.id === state.activeSessionId)
+        ? state.activeSessionId : null;
     return state?.pathway || null;
 }
 
 function persistProgressStorage() {
     const epoch = progressStorageEpoch;
-    const payload = JSON.stringify({ pathway: savedPathway, defaults: pathwayDefaults });
+    const payload = JSON.stringify({ pathway: savedPathway, defaults: pathwayDefaults,
+        sessions: pathwaySessions, activeSessionId: activePathwaySessionId });
     return queueProgressStorage(async () => {
         if (epoch !== progressStorageEpoch) return;
         try {
@@ -118,6 +124,7 @@ function persistProgressStorage() {
 function clearPathwayProgress() {
     progressStorageEpoch++;
     savedPathway = null;
+    activePathwaySessionId = null;
     pathwayContext = null;
     appState.fullJourney = [];
     appState.currentTierFlow = null;
@@ -298,6 +305,9 @@ async function hardResetApp() {
     closeMobileMenu();
     appReady = false;
     pathwayDefaults = {};
+    pathwaySessions = [];
+    activePathwaySessionId = null;
+    document.getElementById('pathway-sessions-drawer')?.close();
     homeSetupDraft = null;
     setHomeDrawerOpen(false);
     clearPathwayProgress();
@@ -492,7 +502,6 @@ function validatePathwayFilters(filters) {
 }
 
 function savePathwayProgress() {
-    updatePathwaySelections();
     const vf = appState.visualFlowchart;
     if (restoringPathway || !pathwayContext || !appState.selectedProgram || !vf?.tierId || !vf.selectedPath.length) return;
     savedPathway = {
@@ -500,6 +509,8 @@ function savePathwayProgress() {
         fullJourney: (appState.fullJourney || []).map(serializeTierPathway),
         filters: validatePathwayFilters(appState.rememberedMenuFilters)
     };
+    savePathwaySession();
+    updatePathwaySelections();
     persistProgressStorage();
     updateGuidedHome();
 }
@@ -965,6 +976,7 @@ function navigateToPage(pageName) {
         pageName = 'home';
     }
     setHomeDrawerOpen(false);
+    document.getElementById('pathway-sessions-drawer')?.close();
 
     // Update state
     appState.currentPage = pageName;
@@ -4773,7 +4785,7 @@ function fwLoadResults() {
     }
 
     resultsEl.innerHTML = `
-        <div class="fw-results-header">${escapeHtml(t('fw_results_label')(filtered.length))}</div>
+        <div class="fw-results-header">${escapeHtml(t('fw_results_label'))}</div>
         ${buildResourceGroupsHtml(filtered, wizardState, item => {
                 const matchingTags = getMatchingTags(item, wizardState);
                 const gradeText = uniqueSorted(matchingTags.map(tag => tag.gradeRangeText)).join('; ') ||
@@ -5087,6 +5099,7 @@ function proceedFromIntegratedInfo(fromNodeId, toNodeId) {
 
 // Select an option in selection node
 function selectIntegratedOption(nodeId, optionId, optionName, handlerName) {
+    saveSessionResource(nodeId, optionId);
     // Store choice for summary; merge any pending pathway from fwSelectItem
     const pending = appState.visualFlowchart._pendingPathway;
     const pathway = (pending && pending.nodeId === nodeId) ? pending.pathway : undefined;
@@ -8566,7 +8579,133 @@ function renderFavourites() {
         `<p class="results-empty">${escapeHtml(t('favourites_empty'))}</p>`;
 }
 
-function updatePathwaySelections() {}
+function readPathwaySessions(raw) {
+    if (!Array.isArray(raw)) return [];
+    const validId = value => typeof value === 'string' && value.length > 0 && value.length <= 150;
+    return raw.slice(-30).filter(session => session && validId(session.id) &&
+        Number.isFinite(session.startedAt) && session.startedAt > 0 && session.startedAt <= 8640000000000000 &&
+        [PROGRAM_ENGLISH, PROGRAM_FRENCH_IMMERSION].includes(session.context?.program) &&
+        getPathwayGrades(session.context.program).includes(session.context.grades?.[0]) &&
+        (appState.tierFlowchartData?.tier1?.screeners || []).some(item => item.id === session.context.screener))
+        .map(session => ({
+            id: session.id, startedAt: session.startedAt,
+            context: { program: session.context.program, screener: session.context.screener,
+                grades: getValidPathwayGrades(session.context.program, session.context.grades) },
+            choices: (Array.isArray(session.choices) ? session.choices : []).slice(0, 100)
+                .filter(choice => choice && ['tier1', 'tier2', 'tier3'].includes(choice.tierId) &&
+                    validId(choice.nodeId) && validId(choice.choiceId))
+                .map(({ tierId, nodeId, choiceId }) => ({ tierId, nodeId, choiceId })),
+            resources: (Array.isArray(session.resources) ? session.resources : []).slice(0, 100)
+                .filter(resource => resource && getAllResources().some(item => item.id === resource.id))
+                .map(resource => ({ id: resource.id, filters: {
+                    program: session.context.program,
+                    ...Object.fromEntries(['tier', 'pillar', 'resourceType', 'screener'].filter(field =>
+                        validId(resource.filters?.[field])).map(field => [field, resource.filters[field]])),
+                    grade: getValidPathwayGrades(session.context.program, resource.filters?.grade)
+                } }))
+        }));
+}
+
+function getActivePathwaySession() {
+    if (!pathwayContext) return null;
+    let session = pathwaySessions.find(item => item.id === activePathwaySessionId);
+    if (!session) {
+        session = { id: crypto.randomUUID(), startedAt: Date.now(), context: { ...pathwayContext },
+            choices: [], resources: [] };
+        activePathwaySessionId = session.id;
+        pathwaySessions.push(session);
+        pathwaySessions = pathwaySessions.slice(-30);
+    }
+    return session;
+}
+
+function savePathwaySession() {
+    const session = getActivePathwaySession();
+    if (!session) return;
+    session.context = { ...pathwayContext };
+    const tiers = [...(appState.fullJourney || []), appState.visualFlowchart];
+    session.choices = tiers.flatMap(tier => (tier.selectedPath || []).flatMap(step => {
+        const choice = tier.choices?.[step.nodeId];
+        return choice ? [{ tierId: tier.tierId, nodeId: step.nodeId, choiceId: choice.id }] : [];
+    })).filter((choice, index, choices) =>
+        choices.findLastIndex(item => item.tierId === choice.tierId && item.nodeId === choice.nodeId) === index);
+    session.choices.forEach(choice => {
+        const node = getFlowchartDefs()[choice.tierId]?.nodes?.[choice.nodeId];
+        if (node?.type !== 'selection' || node.options === 'screeners' ||
+            !getAllResources().some(item => item.id === choice.choiceId) ||
+            session.resources.some(resource => resource.id === choice.choiceId) || session.resources.length >= 100) return;
+        session.resources.push({ id: choice.choiceId, filters: { program: pathwayContext.program,
+            tier: choice.tierId.replace('tier', ''), screener: getPathwayScreenerId(), grade: pathwayContext.grades } });
+    });
+}
+
+function saveSessionResource(nodeId, resourceId) {
+    const item = getAllResources().find(resource => resource.id === resourceId);
+    const node = getFlowchartDefs()[appState.visualFlowchart.tierId]?.nodes?.[nodeId];
+    if (!item || node?.type !== 'selection' || node.options === 'screeners') return;
+    const session = getActivePathwaySession();
+    if (!session) return;
+    const wizard = appState.fwState?.nodeId === nodeId ? appState.fwState : {};
+    const filters = { program: pathwayContext.program,
+        tier: appState.visualFlowchart.tierId.replace('tier', ''),
+        screener: getPathwayScreenerId(), grade: pathwayContext.grades,
+        pillar: wizard.pillar || '', resourceType: wizard.resourceType || '' };
+    if (session.resources.length < 100 && !session.resources.some(resource =>
+        resource.id === resourceId && JSON.stringify(resource.filters) === JSON.stringify(filters))) {
+        session.resources.push({ id: resourceId, filters });
+    }
+    persistProgressStorage();
+    updatePathwaySelections();
+}
+
+function openPathwaySessions() {
+    setHomeDrawerOpen(false);
+    updatePathwaySelections();
+    const drawer = document.getElementById('pathway-sessions-drawer');
+    if (!drawer.open) drawer.showModal();
+}
+
+function updatePathwaySelections() {
+    const toggle = document.getElementById('pathway-sessions-toggle');
+    const list = document.getElementById('pathway-sessions-list');
+    if (!toggle || !list) return;
+    const host = document.fullscreenElement || document.getElementById('visual-flowchart-modal') || document.body;
+    if (toggle.parentElement !== host) host.appendChild(toggle);
+    toggle.hidden = appState.currentPage !== 'flowchart';
+    const expanded = new Set(Array.from(list.querySelectorAll('details[open]')).map(item => item.dataset.sessionId));
+    const rendered = new Set(Array.from(list.querySelectorAll('details')).map(item => item.dataset.sessionId));
+    const defs = getFlowchartDefs();
+    list.innerHTML = pathwaySessions.slice().reverse().map(session => {
+        const screener = appState.tierFlowchartData?.tier1?.screeners.find(item => item.id === session.context.screener);
+        const date = new Date(session.startedAt).toLocaleString(appState.language === 'fr' ? 'fr-CA' : 'en-CA');
+        const choices = session.choices.map(choice => {
+            const node = defs[choice.tierId]?.nodes?.[choice.nodeId];
+            const label = node?.type === 'decision' ? node.choices.find(item => item.id === choice.choiceId)?.label
+                : node?.type === 'selection' ? (getAllResources().find(item => item.id === choice.choiceId)?.name ||
+                    appState.tierFlowchartData?.tier1?.screeners.find(item => item.id === choice.choiceId)?.name) : null;
+            return label ? `<li>${escapeHtml(t('filter_tier_option')(choice.tierId.replace('tier', '')))} · ${escapeHtml(node.title)}: ${escapeHtml(label)}</li>` : '';
+        }).join('');
+        const resources = session.resources.map(resource => {
+            const item = getAllResources().find(item => item.id === resource.id);
+            if (!item) return '';
+            return `<div class="session-resource"><strong>${escapeHtml(item.name)}</strong>
+                <p>${escapeHtml(t('filter_tier_option')(resource.filters.tier))}${resource.filters.pillar ? ` · ${escapeHtml(translatePillar(resource.filters.pillar))}` : ''}</p>
+                <div class="resource-card-links">${buildResourceLinksHtml(item, resource.filters)}</div></div>`;
+        }).join('');
+        return `<details class="pathway-session" data-session-id="${escapeAttr(session.id)}"${expanded.has(session.id) || (!rendered.has(session.id) && session.id === activePathwaySessionId) ? ' open' : ''}>
+            <summary>${escapeHtml(t('pathway_session'))} · ${escapeHtml(date)}${session.id === activePathwaySessionId ? ` · ${escapeHtml(t('pathway_session_current'))}` : ''}</summary>
+            <p>${escapeHtml(session.context.program)} · ${escapeHtml(screener?.name || '')} · ${escapeHtml(formatGradeList(session.context.grades))}</p>
+            ${choices ? `<h3>${escapeHtml(t('pathway_session_choices'))}</h3><ul>${choices}</ul>` : ''}
+            <h3>${escapeHtml(t('pathway_selections'))}</h3>${resources || `<p>${escapeHtml(t('pathway_session_no_resources'))}</p>`}
+        </details>`;
+    }).join('') || `<p>${escapeHtml(t('pathway_sessions_empty'))}</p>`;
+}
+
+document.addEventListener('fullscreenchange', updatePathwaySelections);
+document.getElementById('pathway-sessions-drawer')?.addEventListener('close', () => {
+    const toggle = document.getElementById('pathway-sessions-toggle');
+    if (!toggle?.hidden && !toggle?.closest('[inert]')) toggle?.focus({ preventScroll: true });
+});
 
 document.addEventListener('keydown', event => {
     if (event.target.closest?.('[data-favourite-id]') && (event.key === 'Enter' || event.key === ' ')) {
@@ -8659,7 +8798,7 @@ function isRecommendedResource(item, state) {
 
 function buildResourceRecommendationBadgeHtml(item, state) {
     return isRecommendedResource(item, state)
-        ? `<span class="resource-recommended-badge">${escapeHtml(t('resource_recommended'))}</span>`
+        ? `<span class="resource-recommended-badge" role="img" aria-label="${escapeAttr(t('resource_recommended'))}" title="${escapeAttr(t('resource_recommended'))}">★</span>`
         : '';
 }
 

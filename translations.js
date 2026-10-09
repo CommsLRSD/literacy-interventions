@@ -35,6 +35,12 @@ const TRANSLATIONS = {
         pathway_resources_close: 'Close your resources',
         pathway_selections: 'Selected resources',
         pathway_selections_close: 'Close selected resources',
+        pathway_session: 'Session',
+        pathway_session_current: 'Current',
+        pathway_session_choices: 'Your choices',
+        pathway_session_no_resources: 'No resources selected yet. Choose a drill-down assessment or intervention in the flowchart to save it here.',
+        pathway_sessions_empty: 'Start a flowchart session to record your choices here.',
+        pathway_sessions_intro: 'Your flowchart choices and selected resources are saved by session on this device. Starting a new pathway keeps earlier sessions; Reset saved data removes them. The latest 30 sessions are kept.',
         nav_guided_process: 'Guided process',
         nav_reference_resources: 'Reference resources',
         nav_lang_toggle_label: 'Switch to French',
@@ -422,7 +428,7 @@ const TRANSLATIONS = {
 
         // ── FW results ──
         fw_no_results: 'No matching items found for the selected criteria.',
-        fw_results_label: (n) => `${n} result${n !== 1 ? 's' : ''}`,
+        fw_results_label: 'Recommended Resources',
         fw_time_prefix: 'Time:',
         fw_grade_prefix: 'Gr.',
     },
@@ -457,6 +463,12 @@ const TRANSLATIONS = {
         pathway_resources_close: 'Fermer vos ressources',
         pathway_selections: 'Ressources sélectionnées',
         pathway_selections_close: 'Fermer les ressources sélectionnées',
+        pathway_session: 'Séance',
+        pathway_session_current: 'En cours',
+        pathway_session_choices: 'Vos choix',
+        pathway_session_no_resources: 'Aucune ressource sélectionnée. Choisissez une évaluation approfondie ou une intervention dans l’organigramme pour l’enregistrer ici.',
+        pathway_sessions_empty: 'Commencez une séance dans l’organigramme pour enregistrer vos choix ici.',
+        pathway_sessions_intro: 'Vos choix et ressources sont enregistrés par séance sur cet appareil. Un nouveau parcours conserve les séances précédentes; Réinitialiser les données enregistrées les supprime. Les 30 dernières séances sont conservées.',
         nav_guided_process: 'Démarche guidée',
         nav_reference_resources: 'Ressources de référence',
         nav_lang_toggle_label: 'Passer à l\'anglais',
@@ -844,7 +856,7 @@ const TRANSLATIONS = {
 
         // ── FW results ──
         fw_no_results: 'Aucun élément correspondant aux critères sélectionnés.',
-        fw_results_label: (n) => `${n} résultat${n !== 1 ? 's' : ''}`,
+        fw_results_label: 'Ressources recommandées',
         fw_time_prefix: 'Durée\u00a0:',
         fw_grade_prefix: 'Année',
     }
