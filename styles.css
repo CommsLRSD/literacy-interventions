@@ -2254,6 +2254,18 @@ details > p {
   color: var(--text-secondary);
 }
 
+.cal-scroll .cal-item-report {
+  height: auto;
+  min-width: max-content;
+  padding: 3px 8px;
+}
+
+.cal-scroll .cal-item-report .cal-item-label {
+  width: min-content;
+  overflow: visible;
+  white-space: normal;
+}
+
 .cal-item-dot {
   width: 6px;
   height: 6px;
