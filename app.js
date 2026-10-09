@@ -5520,30 +5520,49 @@ function getStepSummaryVariant(nodeDef, choice) {
 function getAnimSummaryText(nodeDef, choice) {
     const isFrench = appState.language === 'fr';
     const summaries = {
-        'tier1-principles': isFrench ? 'Enseignement explicite confirmé' : 'Explicit instruction confirmed',
-        'tier2-principles': isFrench ? 'Obstacles écartés' : 'Barriers ruled out',
-        'tier3-intro': isFrench ? 'Critères d’entrée confirmés' : 'Entry criteria confirmed',
-        'tier1-success': isFrench ? 'Poursuivre et surveiller' : 'Continue and monitor',
-        'tier1-move-tier2': isFrench ? 'Passer au palier 2' : 'Move to Tier 2',
-        'tier1-reteach': isFrench ? 'Réenseigner le programme général' : 'Reteach core instruction',
-        'tier2-success': isFrench ? 'Envisager un retour au palier 1' : 'Consider fading to Tier 1',
-        'tier2-cycle2-success': isFrench ? 'Envisager un retour au palier 1' : 'Consider fading to Tier 1',
-        'tier2-move-tier3': isFrench ? 'Passer au palier 3' : 'Move to Tier 3',
-        'tier3-success': isFrench ? 'Envisager un retour au palier 1' : 'Consider fading to Tier 1',
-        'tier3-specialist': isFrench ? 'Consulter les cliniciens' : 'Meet with clinicians'
+        'tier1-principles': isFrench ? 'Vous avez vérifié que les leçons enseignent clairement, étape par étape.' : 'You checked that lessons teach clearly, step by step.',
+        'tier2-principles': isFrench ? 'Vous avez vérifié les autres causes possibles des difficultés de lecture.' : 'You checked for other reasons a student may struggle to read.',
+        'tier3-intro': isFrench ? 'Vous avez confirmé que l’élève a besoin d’une aide plus personnalisée.' : 'You confirmed that the student needs more individual help.',
+        'tier1-success': isFrench ? 'Continuez à enseigner et à suivre les progrès.' : 'Keep teaching and checking progress.',
+        'tier1-move-tier2': isFrench ? 'Passez à l’aide en petit groupe au palier 2.' : 'Move to small-group help in Tier 2.',
+        'tier1-reteach': isFrench ? 'Enseignez à nouveau les compétences avec une approche différente.' : 'Teach the skills again with a different approach.',
+        'tier2-success': isFrench ? 'Envisagez de réduire l’aide supplémentaire et de revenir au palier 1.' : 'Consider reducing extra help and returning to Tier 1 classroom teaching.',
+        'tier2-cycle2-success': isFrench ? 'Envisagez de réduire l’aide supplémentaire et de revenir au palier 1.' : 'Consider reducing extra help and returning to Tier 1 classroom teaching.',
+        'tier2-move-tier3': isFrench ? 'Passez à l’aide plus personnalisée au palier 3.' : 'Move to more individual help in Tier 3.',
+        'tier3-success': isFrench ? 'Envisagez de réduire l’aide supplémentaire et de revenir au palier 1.' : 'Consider reducing extra help and returning to Tier 1 classroom teaching.',
+        'tier3-specialist': isFrench ? 'Rencontrez les spécialistes pour décider de la suite.' : 'Meet with specialists to decide what to do next.'
     };
     const chosenName = stripEmoji(choice?.name || choice?.label || '').replace(/^Option\s+[A-Z0-9]+\s*:\s*/i, '').trim();
     if (nodeDef.type === 'selection' && chosenName) {
-        const context = nodeDef.options === 'interventions'
-            ? (isFrench ? 'Intervention de 8 semaines' : '8-week intervention')
-            : (isFrench ? 'Évaluation' : 'Assessment');
-        return `${context}: ${chosenName}`;
+        return nodeDef.options === 'interventions'
+            ? (isFrench ? `Vous avez choisi ${chosenName} pour huit semaines d’aide supplémentaire.` : `You chose ${chosenName} for eight weeks of extra help.`)
+            : (isFrench ? `Vous avez choisi ${chosenName} pour vérifier les compétences en lecture.` : `You chose ${chosenName} to check reading skills.`);
     }
     if (nodeDef.id === 'tier1-percentage') {
-        return isFrench ? 'Élèves sous le seuil de référence ?' : 'Students below benchmark?';
+        return isFrench ? 'Combien d’élèves ont besoin de plus d’aide ?' : 'How many students need more help?';
+    }
+    if (nodeDef.type === 'decision') {
+        return isFrench ? 'L’enseignement fonctionne-t-il ?' : 'Is the teaching working?';
     }
     return summaries[nodeDef.id] || stripEmoji(nodeDef.subtitle || nodeDef.title || '')
         .replace(/^(?:Step|Étape)\s+\d+\s*:\s*/i, '').trim();
+}
+
+function getAnimDecisionOptionText(option) {
+    const isFrench = appState.language === 'fr';
+    if (option.id === 'more-20') {
+        return isFrench ? '20 % ou plus des élèves ont besoin de plus d’aide.' : '20% or more of students need more help.';
+    }
+    if (option.id === 'less-20') {
+        return isFrench ? 'Moins de 20 % des élèves ont besoin de plus d’aide.' : 'Fewer than 20% of students need more help.';
+    }
+    if (option.id === 'effective' || option.id === 'improved') {
+        return isFrench ? 'L’enseignement fonctionne.' : 'The teaching is working.';
+    }
+    if (option.id === 'ineffective' || option.id === 'no-improvement') {
+        return isFrench ? 'L’enseignement ne fonctionne pas encore.' : 'The teaching is not working yet.';
+    }
+    return stripEmoji(option.label);
 }
 
 // Decision cards show the question and both options before revealing the answer.
@@ -5561,7 +5580,7 @@ function buildAnimStepBubble(nodeDef, choice, tierId) {
                 const selected = option.id === choice?.id;
                 const optionVariant = getStepSummaryVariant(nodeDef, { id: option.id, name: option.label });
                 return `<div class="anim-decision-option${selected ? ' anim-option-chosen' : ''}${optionVariant ? ' anim-option-' + optionVariant : ''}">
-                    <span>${escapeHtml(stripEmoji(option.label))}</span>
+                    <span>${escapeHtml(getAnimDecisionOptionText(option))}</span>
                     ${selected ? `<span class="anim-choice-marker">✓ ${selectedLabel}</span>` : ''}
                 </div>`;
             }).join('')}
@@ -5757,10 +5776,6 @@ function showFinalSummary(endpointNodeData) {
             if (review.isConnected) callback();
         }, delay));
     };
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        revealAllAnimJourneyItems(review.querySelector('.anim-skip-btn'));
-        return;
-    }
     let timeout = 500;
 
     allItems.forEach((el, i) => {
