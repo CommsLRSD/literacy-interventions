@@ -246,12 +246,6 @@ const TRANSLATIONS = {
         scores_dibels_yellow_desc: 'Students with some risk may be struggling with one or more components of reading. They need additional instruction, usually in a small group setting. Their progress should be monitored in the area in which they are struggling. In other words, these students need “Strategic Support.”',
         scores_dibels_red: 'Red - At risk:',
         scores_dibels_red_desc: 'Students at risk are struggling with reading, either scoring well below the benchmark or struggling with more than one component of reading. They need extra instruction in a small group or one-on-one setting. Their progress should be monitored in the areas in which they are struggling. In other words, these students need “Intensive Support.”',
-        scores_comparison_title: 'Percentile rank ≠ percentage correct',
-        scores_comparison_rank_title: '75th percentile: compare with peers',
-        scores_comparison_rank_desc: 'Each circle represents a same-age peer in an illustrative group of 20. The student scores as well as or better than the 15 filled circles (75% of peers).',
-        scores_comparison_percent_title: '75% correct: count correct answers',
-        scores_comparison_percent_desc: 'Each square represents a test question. The student answers 15 of 20 questions correctly: 15 ÷ 20 × 100 = 75%.',
-        scores_comparison_note: 'These are separate examples, not a conversion. Answering 75% correctly does not necessarily give a student a percentile rank of 75.',
 
 
         // ── Resources section ──
@@ -674,12 +668,6 @@ const TRANSLATIONS = {
         scores_dibels_yellow_desc: 'Les élèves présentant quelque risque peuvent éprouver des difficultés avec une ou plusieurs composantes de la lecture. Ils ont besoin d’un enseignement supplémentaire, généralement en petit groupe. Leurs progrès devraient être suivis dans le domaine où ils éprouvent des difficultés. Autrement dit, ces élèves ont besoin d’un « soutien stratégique ».',
         scores_dibels_red: 'Rouge - À risque :',
         scores_dibels_red_desc: 'Les élèves à risque éprouvent des difficultés en lecture : leur score est nettement inférieur au niveau de référence ou ils éprouvent des difficultés avec plusieurs composantes de la lecture. Ils ont besoin d’un enseignement supplémentaire en petit groupe ou individuellement. Leurs progrès devraient être suivis dans les domaines où ils éprouvent des difficultés. Autrement dit, ces élèves ont besoin d’un « soutien intensif ».',
-        scores_comparison_title: 'Rang percentile ≠ pourcentage de bonnes réponses',
-        scores_comparison_rank_title: '75e percentile : comparer aux pairs',
-        scores_comparison_rank_desc: 'Chaque cercle représente un pair du même âge dans un groupe illustratif de 20. L’élève obtient un score aussi bon ou meilleur que celui des 15 cercles pleins (75 % des pairs).',
-        scores_comparison_percent_title: '75 % de bonnes réponses : compter les réponses correctes',
-        scores_comparison_percent_desc: 'Chaque carré représente une question du test. L’élève répond correctement à 15 questions sur 20 : 15 ÷ 20 × 100 = 75 %.',
-        scores_comparison_note: 'Ce sont des exemples distincts, pas une conversion. Répondre correctement à 75 % des questions ne donne pas nécessairement un rang percentile de 75.',
 
 
         // ── Resources section ──
