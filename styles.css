@@ -11861,7 +11861,7 @@ body.side-nav-collapsed .visual-flowchart-modal { left: var(--side-nav-collapsed
   border-radius: var(--radius);
   cursor: pointer;
 }
-.pathway-session { margin-top: 0.75rem; padding: 0.65rem; border: 1px solid var(--border); border-radius: var(--radius); }
+details.pathway-session { margin-top: 0.75rem; padding: 0.65rem; border: 1px solid var(--border); border-radius: var(--radius); }
 .pathway-session summary { font-weight: 700; cursor: pointer; overflow-wrap: anywhere; }
 .session-resource { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; padding: 0.5rem 0; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
 .session-resource:first-of-type { margin-top: 0.5rem; }
