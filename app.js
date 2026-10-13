@@ -302,6 +302,8 @@ function beginPathway(tierId, setup) {
 async function hardResetApp() {
     if (!appReady) return;
     if (!window.confirm(t('guided_hard_reset_confirm'))) return;
+    const resetConfirmation = window.prompt(t('guided_hard_reset_type'));
+    if (resetConfirmation?.trim().toLowerCase() !== 'reset') return;
     closeMobileMenu();
     appReady = false;
     pathwayDefaults = {};
