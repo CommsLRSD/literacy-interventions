@@ -5553,10 +5553,10 @@ function getAnimSummaryText(nodeDef, choice) {
             : (isFrench ? `Vous avez choisi ${chosenName} pour vérifier les compétences en lecture.` : `You chose ${chosenName} to check reading skills.`);
     }
     if (nodeDef.id === 'tier1-percentage') {
-        return isFrench ? 'Combien d’élèves ont besoin de plus d’aide ?' : 'How many students need more help?';
+        return isFrench ? 'Vous avez vérifié combien d’élèves ont besoin de plus d’aide.' : 'You checked how many students need more help.';
     }
     if (nodeDef.type === 'decision') {
-        return isFrench ? 'L’enseignement fonctionne-t-il ?' : 'Is the teaching working?';
+        return isFrench ? 'Vous avez vérifié si l’enseignement était efficace ou inefficace.' : 'You checked whether instruction was effective or ineffective.';
     }
     return summaries[nodeDef.id] || stripEmoji(nodeDef.subtitle || nodeDef.title || '')
         .replace(/^(?:Step|Étape)\s+\d+\s*:\s*/i, '').trim();
@@ -5571,10 +5571,10 @@ function getAnimDecisionOptionText(option) {
         return isFrench ? 'Moins de 20 % des élèves ont besoin de plus d’aide.' : 'Fewer than 20% of students need more help.';
     }
     if (option.id === 'effective' || option.id === 'improved') {
-        return isFrench ? 'L’enseignement fonctionne.' : 'The teaching is working.';
+        return isFrench ? 'L’enseignement était efficace.' : 'Instruction was effective.';
     }
     if (option.id === 'ineffective' || option.id === 'no-improvement') {
-        return isFrench ? 'L’enseignement ne fonctionne pas encore.' : 'The teaching is not working yet.';
+        return isFrench ? 'L’enseignement était inefficace.' : 'Instruction was ineffective.';
     }
     return stripEmoji(option.label);
 }
