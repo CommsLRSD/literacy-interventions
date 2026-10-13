@@ -40,7 +40,7 @@ function getResourceBookmarks() {
 
 function resourceDestination(original, key) {
     const url = safeResourceUrl(original);
-    return getResourceBookmarks()[key] || url;
+    return safeResourceUrl(getResourceBookmarks()[key]) || url;
 }
 
 function buildResourceDestinationHtml(original, id, name, title, className, label) {
@@ -56,7 +56,8 @@ function buildResourceDestinationHtml(original, id, name, title, className, labe
 
 function refreshResourceDestinations() {
     document.querySelectorAll('[data-resource-original]').forEach(link => {
-        link.href = resourceDestination(link.dataset.resourceOriginal, link.dataset.resourceBookmarkKey);
+        const destination = new URL(resourceDestination(link.dataset.resourceOriginal, link.dataset.resourceBookmarkKey));
+        if (destination.protocol === 'https:' || destination.protocol === 'http:') link.href = destination.href;
     });
 }
 
@@ -157,6 +158,7 @@ document.getElementById('resource-browser-form').addEventListener('submit', even
 document.getElementById('resource-browser').addEventListener('keydown', event => event.stopPropagation());
 document.getElementById('resource-browser').addEventListener('close', () => {
     document.getElementById('resource-browser-frame').removeAttribute('src');
+    document.body.appendChild(document.getElementById('resource-browser'));
     previewOriginalUrl = '';
     previewBookmarkKey = '';
 });

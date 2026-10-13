@@ -3487,6 +3487,11 @@ function dismissVisualFlowchartModal() {
 function closeVisualFlowchartModal(options = {}) {
     const modal = document.getElementById('visual-flowchart-modal');
     if (!modal) return;
+    const resourceBrowser = modal.querySelector('#resource-browser');
+    if (resourceBrowser) {
+        resourceBrowser.close();
+        document.body.appendChild(resourceBrowser);
+    }
     const modalState = appState.visualFlowchartModal;
     const activeStep = modal.querySelector('.flowchart-step');
     const activeSlot = getActiveStepTarget();
