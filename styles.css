@@ -11888,3 +11888,53 @@ details.pathway-session { margin-top: 0.75rem; padding: 0.65rem; border: 1px sol
   }
   body[data-page="flowchart"] .flowchart-page-wrapper { padding-bottom: 5rem; }
 }
+/* Resource previews and saved-data backups */
+.resource-preview-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f0f7ff;
+  color: #1e40af;
+  cursor: pointer;
+}
+
+.resource-preview-btn:hover { background: #dbeafe; }
+.resource-preview-btn:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+.resource-link-list .resource-preview-btn { align-self: flex-start; margin: 0 0 12px 12px; }
+
+#resource-browser {
+  width: min(1200px, 96vw);
+  max-width: 96vw;
+  height: 92dvh;
+  max-height: 96dvh;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid #cbd5e1;
+  border-radius: 16px;
+  background: #fff;
+  color: #1e293b;
+}
+
+#resource-browser::backdrop { background: rgb(15 23 42 / 65%); }
+.resource-browser-content { height: 100%; display: flex; flex-direction: column; gap: 12px; }
+.resource-browser-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.resource-browser-header h2 { font-size: 1.2rem; margin: 0; overflow-wrap: anywhere; }
+.resource-browser-toolbar, .saved-data-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.resource-browser-toolbar input { flex: 1 1 280px; min-width: 0; padding: 10px; border: 1px solid #94a3b8; border-radius: 8px; }
+#resource-browser-frame { flex: 1; min-height: 160px; width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; }
+.resource-browser-content > p { font-size: .9rem; margin: 0; }
+#resource-browser-status:empty, #saved-data-status:empty { display: none; }
+.saved-data-tools { margin-bottom: 24px; }
+.saved-data-tools p { width: 100%; margin: 0; }
+#saved-data-import { max-width: 100%; }
+
+@media (max-width: 600px) {
+  #resource-browser { padding: 12px; }
+  .resource-browser-content { overflow-y: auto; }
+  .resource-browser-header { align-items: flex-start; }
+}

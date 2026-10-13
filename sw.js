@@ -17,6 +17,7 @@ const PRECACHE_URLS = [
     'styles.css',
     'auth-gate.js',
     'app.js',
+    'resource-tools.js',
     'translations.js',
     'manifest.webmanifest'
 ];

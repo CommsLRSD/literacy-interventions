@@ -342,6 +342,9 @@ async function hardResetApp() {
     activeScheduleGradeSelections = {};
     pendingScheduleTeachingGrades = {};
     favouriteIds = new Set();
+    resourceBookmarks = {};
+    document.getElementById('resource-browser')?.close();
+    refreshResourceDestinations();
     clearFavouriteFeedback();
     renderFavourites();
     document.getElementById('flowchart-container').innerHTML = '';
@@ -869,6 +872,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setRememberedMenuFilters({ pillar: defaults.pillar, grade: defaults.grades });
     }
     appReady = true;
+    initializeResourceBrowser();
     updateGuidedHome();
     
     // Add resize listener to update connection line positions and tier titles
@@ -4796,7 +4800,7 @@ function fwLoadResults() {
                 const linkHtml = getResourceUrls(item, wizardState).map(url => {
                     const lang = getResourceUrlLang(item, url);
                     const title = lang ? `${t('filter_view_resource')} (${lang})` : t('filter_view_resource');
-                    return `<a class="fw-result-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="${escapeHtml(title)}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
+                    return buildResourceDestinationHtml(url, item.id, item.name, title, 'fw-result-link', '');
                 }).join('');
                 return `<div class="fw-result-item${isRecommendedResource(item, wizardState) ? ' is-recommended' : ''}" role="button" tabindex="0" data-resource-id="${escapeAttr(item.id)}" data-resource-name="${escapeAttr(item.name)}" onclick="fwSelectItem(this.dataset.resourceId, this.dataset.resourceName)" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();fwSelectItem(this.dataset.resourceId, this.dataset.resourceName)}">
                     <div class="fw-result-info">
@@ -9117,7 +9121,7 @@ function buildResourceLinksHtml(item, state) {
         const lang = getResourceUrlLang(item, url);
         const title = lang ? `${t('filter_view_resource')} (${lang})` : t('filter_view_resource');
         const label = lang || t('filter_view_resource');
-        return `<a class="resource-link-btn" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(title)}" title="${escapeAttr(title)}">${escapeHtml(label)}<span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
+        return buildResourceDestinationHtml(url, item.id, item.name, title, 'resource-link-btn', label);
     }).join('');
 }
 

@@ -1299,6 +1299,13 @@
                     <h2 class="section-title" data-i18n="nav_favourites">Saved</h2>
                     <p class="section-subtitle" data-i18n="favourites_intro">Your saved resources, across all programs and filters.</p>
                 </div>
+                <div class="saved-data-tools">
+                    <button type="button" class="resource-link-btn" onclick="exportSavedData()" data-i18n="saved_export">Export saved data</button>
+                    <label class="resource-link-btn" for="saved-data-import" data-i18n="saved_import">Import saved data</label>
+                    <input id="saved-data-import" type="file" accept=".json,application/json" onchange="importSavedData(this)" aria-label="Import saved data" data-i18n-aria="saved_import">
+                    <p data-i18n="saved_backup_hint">Back up saved resources, custom links, preferences, and pathway history before resetting or moving devices. Keep backups private; custom URLs may contain access tokens.</p>
+                    <p id="saved-data-status" role="status"></p>
+                </div>
                 <div id="favourites-list" class="results-list-compact" aria-live="polite"></div>
             </div>
         </section>
@@ -1419,7 +1426,27 @@
 
     <script src="translations.js"></script>
     <script src="auth-gate.js"></script>
+    <dialog id="resource-browser" aria-labelledby="resource-browser-title">
+        <div class="resource-browser-content">
+            <header class="resource-browser-header">
+                <h2 id="resource-browser-title"></h2>
+                <button type="button" class="resource-link-btn" onclick="document.getElementById('resource-browser').close()" data-i18n="resource_preview_close" autofocus>Close preview</button>
+            </header>
+            <p data-i18n="resource_preview_hint">Some sites block previews or require sign-in. Open in a new tab if needed. For cross-site pages, copy the exact URL from that tab and paste it below; the app cannot read the iframe’s address.</p>
+            <form id="resource-browser-form" class="resource-browser-toolbar">
+                <label for="resource-browser-url" data-i18n="resource_bookmark_url">Resource URL</label>
+                <input id="resource-browser-url" type="url" required maxlength="8192">
+                <button type="submit" class="resource-link-btn" data-i18n="resource_preview_load">Load URL</button>
+                <button type="button" class="resource-link-btn" onclick="saveResourceBookmark()" data-i18n="resource_bookmark_save">Bookmark this URL</button>
+                <button type="button" class="resource-link-btn" onclick="resetResourceBookmark()" data-i18n="resource_bookmark_reset">Restore original link</button>
+                <a id="resource-browser-external" class="resource-link-btn" target="_blank" rel="noopener noreferrer" data-i18n="resource_preview_external">Open in new tab</a>
+            </form>
+            <p id="resource-browser-status" role="status"></p>
+            <iframe id="resource-browser-frame" title="Resource preview" data-i18n-title="resource_preview" sandbox="allow-scripts allow-forms allow-popups allow-downloads" referrerpolicy="no-referrer"></iframe>
+        </div>
+    </dialog>
     <script src="app.js"></script>
+    <script src="resource-tools.js"></script>
 
     <script>
     (function() {
