@@ -3191,6 +3191,7 @@ function getVisualFlowchartEntries() {
                 choice,
                 tierId: snapshot.tierId,
                 tierLabel: tierDef.title.split(':')[0].trim(),
+                number: index + 1,
                 isCurrent,
                 canRevisit: snapshot.tierId === currentTierId && !isCurrent,
                 variant,
@@ -3834,9 +3835,10 @@ function refreshVisualFlowchartModal() {
         const position = positions[index];
         if (item.type === 'tier-review') {
             const targetNum = String(item.targetTierId).replace(/\D/g, '');
+            const number = entries.filter(entry => entry.tierId === appState.visualFlowchart.tierId).length + 1;
             return `<div class="visual-flowchart-card visual-flowchart-card-tier-review visual-flowchart-card-current"
                         style="left:${position.x}px;top:${position.y}px;width:${position.width}px" role="group" aria-label="${escapeHtml(t('fc_visual_tier_review_label'))}">
-                    <span class="visual-flowchart-tier-chip">${escapeHtml(t('fc_tier_label'))} ${escapeHtml(targetNum)}</span>
+                    <span class="visual-flowchart-step-number">${number}</span>
                     <span class="visual-flowchart-card-icon"><span class="material-symbols-rounded" aria-hidden="true" translate="no">fact_check</span></span>
                     <span class="visual-flowchart-card-copy">
                         <span class="visual-flowchart-card-meta">${escapeHtml(t('fc_visual_tier_review_label'))}</span>
@@ -3856,7 +3858,6 @@ function refreshVisualFlowchartModal() {
                 : `${item.tierLabel} · ${item.entries.length} steps`;
             return `<button type="button" class="visual-flowchart-card visual-flowchart-card-collapsed visual-flowchart-card-${escapeAttr(variant)}"
                         style="left:${position.x}px;top:${position.y}px;width:${position.width}px" onclick="toggleVisualFlowchartTier('${escapeAttr(item.tierId)}')" aria-label="${escapeHtml(collapsedLabel)}">
-                    <span class="visual-flowchart-tier-chip">${escapeHtml(item.tierLabel)}</span>
                     <span class="visual-flowchart-card-icon"><span class="material-symbols-rounded" aria-hidden="true" translate="no">unfold_more</span></span>
                     <span class="visual-flowchart-card-copy">
                         <span class="visual-flowchart-card-meta">${escapeHtml(item.tierLabel)}</span>
@@ -3901,7 +3902,7 @@ function refreshVisualFlowchartModal() {
             : '';
         return `${collapseBtn}<${tag} class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
                     style="left:${position.x}px;top:${position.y}px;width:${position.width}px" ${revisit}>
-                <span class="visual-flowchart-tier-chip">${escapeHtml(entry.tierLabel)}</span>
+                <span class="visual-flowchart-step-number">${entry.number}</span>
                 <span class="visual-flowchart-card-icon">${cardIcon}</span>
                 <span class="visual-flowchart-card-copy">
                     <span class="visual-flowchart-card-meta">${escapeHtml(getStepTypeLabel(entry.node.type))}${entry.isCurrent ? ` · ${escapeHtml(t('fc_in_progress'))}` : ''}</span>

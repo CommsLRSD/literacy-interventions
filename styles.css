@@ -8332,11 +8332,12 @@ body.step-review-modal-open { overflow: hidden; }
   }
 
   .visual-flowchart-tier-bar-chip {
-    padding: 4px 10px;
+    flex-shrink: 0;
+    padding: 6px 14px;
     border-radius: var(--radius-pill);
     background: var(--step);
     color: #fff;
-    font-size: 0.65rem;
+    font-size: 1.15rem;
     font-weight: 900;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -8618,20 +8619,15 @@ body.step-review-modal-open { overflow: hidden; }
     font-size: 16px;
   }
 
-  /* Sits in flow on its own row: the card scrolls (overflow-y: auto), so an
-     overhanging absolutely positioned chip would be clipped at the card's top. */
-  .visual-flowchart-tier-chip {
+  .visual-flowchart-step-number {
     grid-column: 1 / -1;
     justify-self: start;
     align-self: start;
-    padding: 3px 9px;
-    border-radius: var(--radius);
-    background: var(--step);
-    color: #fff;
-    font-size: 0.65rem;
+    color: var(--step-text);
+    font-size: 2.75rem;
     font-weight: 900;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
   }
 
   .visual-flowchart-card-icon {
