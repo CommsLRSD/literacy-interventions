@@ -8684,18 +8684,33 @@ function getSessionNotes(session) {
     const defs = getFlowchartDefs();
     const plain = value => stripEmoji(new DOMParser().parseFromString(String(value || ''), 'text/html').body.textContent || '');
     const tierNum = tierId => Number(String(tierId).replace('tier', '')) || 1;
+    // An endpoint reached from a step is that tier's outcome; endpoints carry no
+    // saved choice, so they are derived from the choice that leads to them.
     const steps = session.choices.flatMap(choice => {
-        const node = defs[choice.tierId]?.nodes?.[choice.nodeId];
+        const nodes = defs[choice.tierId]?.nodes || {};
+        const node = nodes[choice.nodeId];
         const resolved = node && resolveSavedChoice(node, choice.choiceId, choice.tierId);
-        return resolved ? [{ tier: tierNum(choice.tierId), title: plain(node.title || node.subtitle),
-            response: plain(resolved.name) }] : [];
+        if (!resolved) return [];
+        const tier = tierNum(choice.tierId);
+        const rows = [{ tier, title: plain(node.title || node.subtitle), response: plain(resolved.name) }];
+        const targetId = node.type === 'decision'
+            ? node.choices.find(item => item.id === choice.choiceId)?.nextNode : node.nextNode;
+        const endpoint = nodes[targetId];
+        if (endpoint?.type === 'endpoint') {
+            rows.push({ tier, outcome: true, continues: ['startTier2Visual', 'startTier3Visual'].includes(endpoint.actionButton?.action),
+                title: t('notes_tier_outcome')(tier), response: plain(endpoint.title || endpoint.subtitle) });
+        }
+        return rows;
     });
+    const outcomes = steps.filter(step => step.outcome);
+    const lastOutcome = outcomes[outcomes.length - 1];
+    if (lastOutcome && !lastOutcome.continues && steps[steps.length - 1] === lastOutcome) lastOutcome.final = true;
     let next = '';
     const vf = appState.visualFlowchart;
     const lastStep = vf?.selectedPath?.[vf.selectedPath.length - 1];
     if (session.id === activePathwaySessionId && lastStep && !vf.choices?.[lastStep.nodeId]) {
         const node = defs[vf.tierId]?.nodes?.[lastStep.nodeId];
-        if (node) next = plain(node.title || node.subtitle);
+        if (node && node.type !== 'endpoint' && !lastOutcome?.final) next = plain(node.title || node.subtitle);
     }
     const resources = session.resources.flatMap(resource => {
         const item = getAllResources().find(entry => entry.id === resource.id);
@@ -8716,7 +8731,7 @@ function getSessionNotes(session) {
     return {
         date: new Date(session.startedAt),
         program: t(session.context.program === PROGRAM_FRENCH_IMMERSION ? 'fc_program_french_immersion' : 'fc_program_english'),
-        grade: formatGradeList(session.context.grades), screener, tiers, steps, next, resources
+        grade: formatGradeList(session.context.grades), screener, tiers, steps, outcomes, next, resources
     };
 }
 
@@ -8736,7 +8751,7 @@ function updatePathwaySelections() {
         const notes = getSessionNotes(session);
         const date = notes.date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })
             .replace(/^([A-Za-z]{3}) /, '$1. ');
-        const meta = [notes.program, notes.grade, notes.screener, t('notes_step_count')(notes.steps.length)]
+        const meta = [notes.program, notes.grade, notes.screener, t('notes_step_count')(notes.steps.filter(step => !step.outcome).length)]
             .filter(Boolean).map(escapeHtml).join(' · ');
         const resources = notes.resources.map(entry => {
             const tierLabel = entry.tier ? t('fw_context_tier')(entry.tier) : '';
@@ -8758,7 +8773,11 @@ function updatePathwaySelections() {
                 <span class="pathway-session-title">${escapeHtml(t('pathway_session'))} · ${escapeHtml(date)}${isCurrent ? `<span class="pathway-session-current">${escapeHtml(t('pathway_session_current'))}</span>` : ''}</span>
                 <span class="pathway-session-meta">${meta}</span>
             </summary>
-            ${notes.next ? `<p class="pathway-session-next"><span class="material-symbols-rounded" aria-hidden="true" translate="no">flag</span><span><span class="pathway-session-label">${escapeHtml(t('notes_next'))}:</span> ${escapeHtml(notes.next)}</span></p>` : ''}
+            ${notes.outcomes.length ? `<ul class="pathway-session-outcomes">${notes.outcomes.map(outcome => `<li class="pathway-session-outcome${outcome.final ? ' is-final' : ''}">
+                <span class="material-symbols-rounded" aria-hidden="true" translate="no">${outcome.final ? 'sports_score' : 'flag'}</span>
+                <span><span class="pathway-session-label">${outcome.final ? `${escapeHtml(t('notes_final_outcome'))} · ` : ''}${escapeHtml(outcome.title)}:</span> ${escapeHtml(outcome.response)}</span>
+            </li>`).join('')}</ul>` : ''}
+            ${notes.next ? `<p class="pathway-session-next"><span class="material-symbols-rounded" aria-hidden="true" translate="no">arrow_forward</span><span><span class="pathway-session-label">${escapeHtml(t('notes_next'))}:</span> ${escapeHtml(notes.next)}</span></p>` : ''}
             <p class="pathway-session-label">${escapeHtml(t('notes_resources'))}</p>
             ${resources ? `<ul class="session-resources">${resources}</ul>` : `<p class="pathway-session-empty">${escapeHtml(t('pathway_session_no_resources'))}</p>`}
             <button type="button" class="pathway-session-download" data-session-download="${escapeAttr(session.id)}" aria-label="${escapeAttr(t('notes_download_label'))}">
@@ -8851,6 +8870,7 @@ function buildSessionNotesDocx(notes) {
     const details = [
         [t('notes_date'), dateText], [t('notes_program'), notes.program], [t('notes_grade'), notes.grade],
         [t('notes_screener'), notes.screener], [t('notes_tiers'), notes.tiers.map(tierLabel).join(', ')],
+        [t('notes_final_outcome'), notes.outcomes.find(outcome => outcome.final)?.response || ''],
         [t('notes_student'), '']
     ].filter(([, value], index, rows) => value || index === rows.length - 1)
         .map(([label, value]) => [run(label, { bold: true, color: '0C315A' }), run(value)]);
@@ -8860,8 +8880,11 @@ function buildSessionNotesDocx(notes) {
         table([2400, 7680], details),
         heading(t('notes_steps')),
         notes.steps.length
-            ? table([1300, 4390, 4390], notes.steps.map(step => [run(tierLabel(step.tier)), run(step.title), run(step.response)]),
-                [t('filter_tier_label'), t('notes_step'), t('notes_response')])
+            ? table([1300, 4390, 4390], notes.steps.map(step => {
+                const title = step.final ? `${t('notes_final_outcome')} · ${step.title}` : step.title;
+                const style = step.outcome ? { bold: true, color: step.final ? '0A7F8A' : '0C315A' } : {};
+                return [run(tierLabel(step.tier), style), run(title, style), run(step.response, style)];
+            }), [t('filter_tier_label'), t('notes_step'), t('notes_response')])
             : para(run('—')),
         notes.next ? para(`${run(`${t('notes_next')}: `, { bold: true })}${run(notes.next)}`, { before: 120 }) : '',
         heading(t('notes_resources')),

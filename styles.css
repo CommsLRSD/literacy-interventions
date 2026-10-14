@@ -11934,6 +11934,21 @@ details.pathway-session[open] { box-shadow: var(--shadow-sm, 0 1px 3px rgba(12, 
 }
 .pathway-session-next .material-symbols-rounded { font-size: 1rem; color: var(--primary-light); }
 .pathway-session-next .pathway-session-label { margin: 0; display: inline; }
+.pathway-session-outcomes { list-style: none; margin: 0.55rem 0 0; padding: 0; display: grid; gap: 0.3rem; }
+.pathway-session-outcome {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.4rem 0.55rem;
+  border-left: 3px solid var(--primary-light);
+  border-radius: var(--radius);
+  background: var(--card-blue-bg);
+  font-size: 0.8rem;
+}
+.pathway-session-outcome .material-symbols-rounded { font-size: 1rem; color: var(--primary-light); }
+.pathway-session-outcome .pathway-session-label { margin: 0; display: inline; color: var(--primary); }
+.pathway-session-outcome.is-final { border-left-color: var(--accent-dark); background: var(--accent-light); font-weight: 600; }
+.pathway-session-outcome.is-final .material-symbols-rounded { color: var(--accent-dark); }
 .pathway-session-empty { margin: 0.25rem 0; padding: 0; font-size: 0.8rem; color: var(--text-secondary); }
 .session-resources { list-style: none; margin: 0; padding: 0; }
 .session-resource {
