@@ -945,14 +945,6 @@ const FLOWCHART_DEFINITIONS_FR = {
                     'Les progr\u00e8s sont-ils suivis\u00a0?',
                     'L\u2019enseignement int\u00e8gre-t-il la conception simple de la lecture\u00a0?'
                 ],
-                nextNode: 'tier1-screener',
-                buttonText: 'Continuer vers le dépistage en littératie'
-            },
-            'tier1-screener': {
-                id: 'tier1-screener',
-                type: 'info',
-                title: 'Étape 2 : Administrer le dépistage en littératie',
-                subtitle: 'Administrer le dépistage en littératie (DIBELS, CTOPP-2, THaFol, IDAPEL)',
                 nextNode: 'tier1-effectiveness',
                 buttonText: 'Continuer vers les résultats'
             },
@@ -960,7 +952,7 @@ const FLOWCHART_DEFINITIONS_FR = {
                 id: 'tier1-effectiveness',
                 type: 'decision',
                 title: '\u00c9tape 3\u00a0: R\u00e9sultat',
-                subtitle: 'L\u2019enseignement \u00e9tait-il efficace\u00a0?',
+                subtitle: 'D\u2019apr\u00e8s {{screener}}, l\u2019enseignement \u00e9tait-il efficace\u00a0?',
                 description: '',
                 choices: [
                     { id: 'effective', label: 'Enseignement efficace', sublabel: 'R\u00e9sultat du sous-test Bleu ou Vert', indicators: ['blue', 'green'], type: 'success', nextNode: 'tier1-success' },
@@ -1078,8 +1070,8 @@ const FLOWCHART_DEFINITIONS_FR = {
             'tier2-screener': {
                 id: 'tier2-screener',
                 type: 'info',
-                title: 'Étape 4 : Administrer le dépistage en littératie',
-                subtitle: 'Administrer le dépistage en littératie',
+                title: 'Étape 4 : Administrer le dépistage divisionnaire en littératie',
+                subtitle: 'Administrer le dépistage divisionnaire en littératie',
                 description: 'Après la période de 8 semaines, administrer l’outil de dépistage de suivi des progrès en littératie planifié (DIBELS, CTOPP-2).',
                 nextNode: 'tier2-progress',
                 buttonText: 'Continuer vers les résultats'
@@ -1128,8 +1120,8 @@ const FLOWCHART_DEFINITIONS_FR = {
             'tier2-cycle2-screener': {
                 id: 'tier2-cycle2-screener',
                 type: 'info',
-                title: 'Étape 8 : Administrer le dépistage en littératie',
-                subtitle: 'Administrer le dépistage en littératie',
+                title: 'Étape 8 : Administrer le dépistage divisionnaire en littératie',
+                subtitle: 'Administrer le dépistage divisionnaire en littératie',
                 description: 'Après la période de 8 semaines, administrer l’outil de dépistage de suivi des progrès en littératie planifié (DIBELS, CTOPP-2).',
                 nextNode: 'tier2-cycle2-progress',
                 buttonText: 'Continuer vers les résultats'
@@ -1241,8 +1233,8 @@ const FLOWCHART_DEFINITIONS_FR = {
             'tier3-screener': {
                 id: 'tier3-screener',
                 type: 'info',
-                title: 'Étape 3 : Administrer le dépistage en littératie',
-                subtitle: 'Administrer le dépistage en littératie',
+                title: 'Étape 3 : Administrer le dépistage divisionnaire en littératie',
+                subtitle: 'Administrer le dépistage divisionnaire en littératie',
                 description: 'Après la période de 8 semaines, administrer l’outil de dépistage de suivi des progrès en littératie planifié (DIBELS, CTOPP-2).',
                 nextNode: 'tier3-progress',
                 buttonText: 'Continuer vers les résultats'

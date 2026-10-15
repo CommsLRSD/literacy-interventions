@@ -713,15 +713,23 @@ function t(key) {
 function getFlowchartDefs() {
     const definitions = appState.language === 'fr' && typeof FLOWCHART_DEFINITIONS_FR !== 'undefined'
         ? FLOWCHART_DEFINITIONS_FR : FLOWCHART_DEFINITIONS;
-    if (appState.selectedProgram === PROGRAM_FRENCH_IMMERSION) return definitions;
     return Object.fromEntries(Object.entries(definitions).map(([tierId, tier]) => [
         tierId, {
             ...tier,
             nodes: Object.fromEntries(Object.entries(tier.nodes).map(([nodeId, node]) => [
                 nodeId, {
                     ...node,
-                    ...(node.description ? { description: node.description.replace('DIBELS, CTOPP-2, THaFol, IDAPEL', getProgressMonitoringScreeners()) } : {}),
-                    ...(node.subtitle ? { subtitle: node.subtitle.replace('DIBELS, CTOPP-2, THaFol, IDAPEL', getProgressMonitoringScreeners()) } : {})
+                    ...(node.description ? {
+                        description: node.description
+                            .replace('DIBELS, CTOPP-2, THaFol, IDAPEL', getProgressMonitoringScreeners())
+                            .replace('(DIBELS, CTOPP-2)', `(${getProgressMonitoringScreeners()})`)
+                    } : {}),
+                    ...(node.subtitle ? {
+                        subtitle: node.subtitle
+                            .replace('DIBELS, CTOPP-2, THaFol, IDAPEL', getProgressMonitoringScreeners())
+                            .replace('(DIBELS, CTOPP-2)', `(${getProgressMonitoringScreeners()})`)
+                            .replace('{{screener}}', getPathwayScreenerName())
+                    } : {})
                 }
             ]))
         }
@@ -730,7 +738,15 @@ function getFlowchartDefs() {
 
 function getProgressMonitoringScreeners() {
     return appState.selectedProgram === PROGRAM_FRENCH_IMMERSION
-        ? 'DIBELS, CTOPP-2, THaFol, IDAPEL' : 'DIBELS, CTOPP-2';
+        ? 'DIBELS, CTOPP-2' : 'DIBELS';
+}
+
+function getPathwayScreenerName() {
+    const flowScreenerName = appState.currentTierFlow?.screenerName;
+    if (flowScreenerName) return flowScreenerName;
+    const selectedScreener = (appState.tierFlowchartData?.tier1?.screeners || [])
+        .find(screener => screener.id === pathwayContext?.screener);
+    return selectedScreener?.name || 'the selected screener';
 }
 
 // Return the NODE_SUMMARIES for the current language.
@@ -2148,14 +2164,6 @@ const FLOWCHART_DEFINITIONS = {
                     'Is progress being tracked?',
                     'Does Instruction incorporate the simple view of reading?'
                 ],
-                nextNode: 'tier1-screener',
-                buttonText: 'Continue to Literacy Screener'
-            },
-            'tier1-screener': {
-                id: 'tier1-screener',
-                type: 'info',
-                title: 'Step 2: Administer literacy screener',
-                subtitle: 'Administer literacy screener (DIBELS, CTOPP-2, THaFol, IDAPEL)',
                 nextNode: 'tier1-effectiveness',
                 buttonText: 'Continue to Results'
             },
@@ -2163,7 +2171,7 @@ const FLOWCHART_DEFINITIONS = {
                 id: 'tier1-effectiveness',
                 type: 'decision',
                 title: 'Step 3: Result',
-                subtitle: 'Was instruction effective?',
+                subtitle: 'Based on {{screener}}, was the instruction effective?',
                 description: '',
                 choices: [
                     { id: 'effective', label: 'Instruction Effective', sublabel: 'Subtest result Blue or Green', indicators: ['blue', 'green'], type: 'success', nextNode: 'tier1-success' },
@@ -2285,8 +2293,8 @@ const FLOWCHART_DEFINITIONS = {
             'tier2-screener': {
                 id: 'tier2-screener',
                 type: 'info',
-                title: 'Step 4: Administer literacy screener',
-                subtitle: 'Administer literacy screener',
+                title: 'Step 4: Administer Divisional literacy screener',
+                subtitle: 'Administer Divisional literacy screener',
                 description: 'After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2).',
                 nextNode: 'tier2-progress',
                 buttonText: 'Continue to Results'
@@ -2335,8 +2343,8 @@ const FLOWCHART_DEFINITIONS = {
             'tier2-cycle2-screener': {
                 id: 'tier2-cycle2-screener',
                 type: 'info',
-                title: 'Step 8: Administer literacy screener',
-                subtitle: 'Administer literacy screener',
+                title: 'Step 8: Administer Divisional literacy screener',
+                subtitle: 'Administer Divisional literacy screener',
                 description: 'After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2).',
                 nextNode: 'tier2-cycle2-progress',
                 buttonText: 'Continue to Results'
@@ -2448,8 +2456,8 @@ const FLOWCHART_DEFINITIONS = {
             'tier3-screener': {
                 id: 'tier3-screener',
                 type: 'info',
-                title: 'Step 3: Administer literacy screener',
-                subtitle: 'Administer literacy screener',
+                title: 'Step 3: Administer Divisional literacy screener',
+                subtitle: 'Administer Divisional literacy screener',
                 description: 'After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2).',
                 nextNode: 'tier3-progress',
                 buttonText: 'Continue to Results'
@@ -7703,7 +7711,7 @@ function proceedToTier2ProgressMonitoring() {
                     <div class="step-indicator">Step 4</div>
                     <div class="step-content-box">
                         <h3>After 8 Weeks: Conduct Progress Monitoring</h3>
-                        <p>Administer a literacy screener to evaluate student progress:</p>
+                        <p>Administer a Divisional literacy screener to evaluate student progress:</p>
                         
                         <div class="info-callout">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -7972,8 +7980,8 @@ function proceedToTier3ProgressMonitoring(showResults = false) {
                     <div class="step-indicator">Step ${showResults ? '4' : '3'}</div>
                     <div class="step-content-box">
                         ${showResults ? '<h3>Was instruction effective?</h3>' : `
-                        <h3>Administer literacy screener</h3>
-                        <p>After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2).</p>
+                        <h3>Administer Divisional literacy screener</h3>
+                        <p>After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (${getProgressMonitoringScreeners()}).</p>
                         <button class="btn-primary" onclick="proceedToTier3ProgressMonitoring(true)">Continue to Results</button>`}
                         ${showResults ? `
                         <div class="decision-buttons">
