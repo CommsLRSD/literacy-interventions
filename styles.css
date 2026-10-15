@@ -8295,7 +8295,7 @@ body.step-review-modal-open { overflow: hidden; }
   .visual-flowchart-dialog {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
     width: 100vw;
     height: 100vh;
     overflow: hidden;
@@ -8325,6 +8325,7 @@ body.step-review-modal-open { overflow: hidden; }
     justify-content: space-between;
     gap: var(--space-md);
     padding: 8px 22px;
+    margin-bottom: 0;
     border-bottom: 1px solid var(--border);
     background: linear-gradient(135deg, var(--step-bg), var(--bg) 64%);
   }
@@ -8448,16 +8449,19 @@ body.step-review-modal-open { overflow: hidden; }
   }
 
   .visual-flowchart-tier-bar-chip[data-tier="tier1"],
+  .visual-flowchart-card[data-tier="tier1"],
   .visual-flowchart-tier-tabs .tier-tab[data-tier="tier1"] {
     --visual-tier-colour: #0ea8b2;
   }
 
   .visual-flowchart-tier-bar-chip[data-tier="tier2"],
+  .visual-flowchart-card[data-tier="tier2"],
   .visual-flowchart-tier-tabs .tier-tab[data-tier="tier2"] {
     --visual-tier-colour: #f9aa0e;
   }
 
   .visual-flowchart-tier-bar-chip[data-tier="tier3"],
+  .visual-flowchart-card[data-tier="tier3"],
   .visual-flowchart-tier-tabs .tier-tab[data-tier="tier3"] {
     --visual-tier-colour: #ed5d49;
   }
@@ -8527,7 +8531,7 @@ body.step-review-modal-open { overflow: hidden; }
   }
 
   .visual-flowchart-viewport {
-    grid-row: 4;
+    grid-row: 3;
     position: relative;
     min-width: 0;
     min-height: 0;
@@ -8705,8 +8709,8 @@ body.step-review-modal-open { overflow: hidden; }
   .visual-flowchart-card-collapsed {
     align-items: center;
     min-height: 90px;
-    border-style: dashed;
-    background: var(--bg);
+    border-color: var(--visual-tier-colour);
+    background: color-mix(in srgb, var(--visual-tier-colour) 12%, var(--bg));
     opacity: 0.9;
   }
 
@@ -8714,31 +8718,30 @@ body.step-review-modal-open { overflow: hidden; }
     opacity: 1;
   }
 
-  /* One-click pill that folds an expanded (completed) tier back into its
-     single summary card, sitting just above the tier's first step. */
+  .visual-flowchart-card-expanded-tier,
+  button.visual-flowchart-card-expanded-tier:hover {
+    border-color: var(--visual-tier-colour);
+    background: color-mix(in srgb, var(--visual-tier-colour) 8%, var(--bg));
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--visual-tier-colour) 20%, transparent),
+                0 0 24px color-mix(in srgb, var(--visual-tier-colour) 35%, transparent);
+  }
+
+  /* The last card labels the same collapse action available on every tier card. */
   .visual-flowchart-collapse-tier {
-    position: absolute;
     display: inline-flex;
     align-items: center;
     gap: 4px;
     padding: 4px 10px;
-    border: 1px solid var(--border);
+    margin-top: 0.5rem;
+    border: 1px solid var(--visual-tier-colour);
     border-radius: var(--radius-pill);
     background: var(--bg);
-    color: var(--text-light);
+    color: var(--text);
     font: inherit;
     font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    cursor: pointer;
-    box-shadow: 0 6px 16px rgba(12, 49, 90, 0.12);
-    z-index: 2;
-  }
-
-  .visual-flowchart-collapse-tier:hover {
-    color: var(--text);
-    border-color: var(--step);
   }
 
   .visual-flowchart-collapse-tier .material-symbols-rounded {
@@ -12044,6 +12047,17 @@ details.pathway-session {
   background: transparent;
 }
 details.pathway-session[open] { box-shadow: none; }
+.saved-session-card {
+  margin-top: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+.saved-session-card .pathway-session-title { margin: 0; }
+.saved-session-card .pathway-session-title::after { content: none; }
+.saved-session-card .pathway-session-meta { margin: 0.4rem 0 0; }
+.saved-session-card .pathway-session-actions { margin-top: 0.5rem; }
 .pathway-session > summary {
   display: grid;
   gap: 0.1rem;

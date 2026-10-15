@@ -1078,11 +1078,11 @@ function updateMobilePageTitle() {
     titleEl.textContent = heading ? heading.textContent.trim() : '';
 }
 
-function navigateToPage(pageName) {
+function navigateToPage(pageName, { sessionNotesOnly = false } = {}) {
     if (pageName === 'flowchart' && !appReady) return;
     // Home is the flowchart's first step: until a pathway has been started
     // (or can be resumed), the Flowchart menu item shows the Home setup.
-    if (pageName === 'flowchart' && !pathwayContext && (!savedPathway || !restorePathway(savedPathway))) {
+    if (pageName === 'flowchart' && !sessionNotesOnly && !pathwayContext && (!savedPathway || !restorePathway(savedPathway))) {
         pageName = 'home';
     }
     setHomeDrawerOpen(false);
@@ -1115,7 +1115,7 @@ function navigateToPage(pageName) {
     });
     
     // Lazy-initialize sections on first visit
-    if (pageName === 'flowchart') {
+    if (pageName === 'flowchart' && !sessionNotesOnly) {
         const fc = document.getElementById('flowchart-container');
         if (fc && !fc.dataset.initialized) {
             if (!savedPathway || !restorePathway(savedPathway)) openInteractiveFlowchart();
@@ -3822,8 +3822,7 @@ function toggleVisualFlowchartTier(tierId) {
 
 // Group raw entries into display items: entries for the active tier are shown
 // individually, while completed tiers collapse into one card unless expanded.
-// The first card of an expanded tier carries a flag so a one-click "collapse
-// tier" control can be rendered next to it.
+// The last card of an expanded tier carries its explicit collapse label.
 function buildVisualFlowchartDisplayItems(entries) {
     const currentTierId = appState.visualFlowchart?.tierId;
     const expandedTiers = appState.visualFlowchartModal?.expandedTiers || new Set();
@@ -3839,11 +3838,9 @@ function buildVisualFlowchartDisplayItems(entries) {
             }
             items.push({ type: 'collapsed', tierId: entry.tierId, tierLabel: entry.tierLabel, entries: group, variant: group[group.length - 1].variant });
         } else {
-            const previous = items[items.length - 1];
-            const startsExpandedTier = entry.tierId !== currentTierId
-                && expandedTiers.has(entry.tierId)
-                && (!previous || previous.type !== 'entry' || previous.entry.tierId !== entry.tierId);
-            items.push({ type: 'entry', entry, variant: entry.variant, expandedTierId: startsExpandedTier ? entry.tierId : null });
+            const expandedTierId = entry.tierId !== currentTierId && expandedTiers.has(entry.tierId) ? entry.tierId : null;
+            items.push({ type: 'entry', entry, variant: entry.variant, expandedTierId,
+                endsExpandedTier: !!expandedTierId && entries[i + 1]?.tierId !== entry.tierId });
             i += 1;
         }
     }
@@ -4002,6 +3999,7 @@ function refreshVisualFlowchartModal() {
                 ? t('fc_visual_tier_collapsed')(tierNum, item.entries.length)
                 : `${item.tierLabel} · ${item.entries.length} steps`;
             return `<button type="button" class="visual-flowchart-card visual-flowchart-card-collapsed visual-flowchart-card-${escapeAttr(variant)}"
+                        data-tier="${escapeAttr(item.tierId)}" aria-expanded="false"
                         style="left:${position.x}px;top:${position.y}px;width:${position.width}px" onclick="toggleVisualFlowchartTier('${escapeAttr(item.tierId)}')" aria-label="${escapeHtml(collapsedLabel)}">
                     <span class="visual-flowchart-card-icon"><span class="material-symbols-rounded" aria-hidden="true" translate="no">unfold_more</span></span>
                     <span class="visual-flowchart-card-copy">
@@ -4019,21 +4017,18 @@ function refreshVisualFlowchartModal() {
             ? (ICONS[entry.node.status] || ICONS.info)
             : getStepTypeIcon(entry.node.type);
         const isInteractive = entry.isCurrent && entry.node.type !== 'endpoint';
-        const tag = entry.canRevisit && entry.node.type !== 'endpoint' ? 'button' : 'article';
-        const revisit = tag === 'button'
+        const tag = item.expandedTierId || (entry.canRevisit && entry.node.type !== 'endpoint') ? 'button' : 'article';
+        const collapseLabel = t('fc_visual_tier_collapse');
+        const revisit = item.expandedTierId
+            ? ` type="button" data-visual-collapse-tier="${escapeAttr(item.expandedTierId)}" aria-expanded="true" aria-label="${escapeAttr(`${collapseLabel}: ${entry.tierLabel} · ${displayTitle}`)}"`
+            : tag === 'button'
             ? ` type="button" data-visual-revisit="${escapeAttr(entry.node.id)}" aria-label="${escapeHtml(t('fc_revisit'))}: ${escapeAttr(getStepShortTitle(entry.node))}"`
             : '';
-        // One-click control to fold an expanded (completed) tier back into its
-        // single summary card and restore the previous view.
-        const collapseLabel = t('fc_visual_tier_collapse');
-        const collapseBtn = item.expandedTierId
-            ? `<button type="button" class="visual-flowchart-collapse-tier"
-                        style="left:${position.x}px;top:${position.y - 46}px"
-                        onclick="toggleVisualFlowchartTier('${escapeAttr(item.expandedTierId)}')"
-                        title="${escapeHtml(collapseLabel)}" aria-label="${escapeHtml(`${collapseLabel}: ${entry.tierLabel}`)}">
+        const collapseLabelHTML = item.endsExpandedTier
+            ? `<span class="visual-flowchart-collapse-tier">
                     <span class="material-symbols-rounded" aria-hidden="true" translate="no">unfold_less</span>
                     <span>${escapeHtml(collapseLabel)}</span>
-                </button>`
+                </span>`
             : '';
         const endpointDescription = entry.node.descriptionHtml || escapeHtml(entry.node.description || '');
         const endpointAction = entry.node.id === 'tier1-reteach'
@@ -4048,7 +4043,7 @@ function refreshVisualFlowchartModal() {
             ? `${renderSessionDownloadButtonHtml('visual-flowchart-tier-review-btn')}
                <button type="button" class="visual-flowchart-tier-review-btn" onclick="closePathwaySession(true)">${escapeHtml(t('session_end'))}</button>`
             : '';
-        return `${collapseBtn}<${tag} class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ' visual-flowchart-card-completed'}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
+        return `<${tag} data-tier="${escapeAttr(entry.tierId)}" class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ' visual-flowchart-card-completed'}${item.expandedTierId ? ' visual-flowchart-card-expanded-tier' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
                     style="left:${position.x}px;top:${position.y}px;width:${position.width}px" ${revisit}>
                 <span class="visual-flowchart-step-number">${entry.number}</span>
                 <span class="visual-flowchart-card-icon">${cardIcon}</span>
@@ -4057,7 +4052,8 @@ function refreshVisualFlowchartModal() {
                     <strong>${escapeHtml(displayTitle)}</strong>
                     ${!usesChoiceAsTitle && answer && !isDuplicateStepSummary(answer, displayTitle) ? `<span class="visual-flowchart-card-answer">${escapeHtml(answer)}</span>` : ''}
                     ${entry.node.type === 'endpoint' && endpointDescription ? `<span class="visual-flowchart-card-answer">${endpointDescription}</span>` : ''}
-                    ${entry.node.type === 'endpoint' ? endpointAction + sessionActions : ''}
+                    ${entry.node.type === 'endpoint' && !item.expandedTierId ? endpointAction + sessionActions : ''}
+                    ${collapseLabelHTML}
                 </span>
                 ${isInteractive ? '<div class="visual-flowchart-active-host"></div>' : ''}
             </${tag}>`;
@@ -4305,6 +4301,11 @@ function wireVisualFlowchartPanZoom(viewport) {
     if (viewport.dataset.panZoomWired === 'true') return;
     viewport.dataset.panZoomWired = 'true';
     viewport.addEventListener('click', event => {
+        const collapse = event.target.closest('[data-visual-collapse-tier]');
+        if (collapse) {
+            toggleVisualFlowchartTier(collapse.dataset.visualCollapseTier);
+            return;
+        }
         const revisit = event.target.closest('[data-visual-revisit]');
         if (revisit) undoToStep(revisit.dataset.visualRevisit);
     });
@@ -8943,11 +8944,37 @@ function saveSessionResource(nodeId, resourceId) {
     updatePathwaySelections();
 }
 
-function openPathwaySessions() {
+function openSavedSessionNotes(sessionId) {
+    const session = pathwaySessions.find(item => item.id === sessionId);
+    if (!appReady || !session) return;
+    if (session.pathway && session.status !== 'completed') {
+        resumePathwaySession(sessionId);
+    } else {
+        closeVisualFlowchartModal({ immediate: true });
+        navigateToPage('flowchart', { sessionNotesOnly: true });
+        if (!pathwayContext) {
+            document.getElementById('flowchart-container').innerHTML = `<div class="content-card">
+                <h3>${escapeHtml(t('pathway_resources'))} · ${escapeHtml(t('pathway_session'))} ${session.number}</h3>
+                <button type="button" class="action-btn action-secondary" onclick="navigateToPage('favourites')">${escapeHtml(t('nav_favourites'))}</button>
+            </div>`;
+        }
+    }
+    openPathwaySessions(sessionId);
+}
+
+function openPathwaySessions(sessionId) {
     setHomeDrawerOpen(false);
     updatePathwaySelections();
     const drawer = document.getElementById('pathway-sessions-drawer');
     if (!drawer.open) drawer.showModal();
+    if (sessionId) {
+        const rows = document.querySelectorAll('#pathway-sessions-list > details');
+        rows.forEach(row => { row.open = row.dataset.sessionId === sessionId; });
+        const target = Array.from(rows).find(row => row.dataset.sessionId === sessionId);
+        target?.querySelector('.session-notes')?.setAttribute('open', '');
+        target?.scrollIntoView({ block: 'start' });
+        target?.querySelector('summary')?.focus({ preventScroll: true });
+    }
 }
 
 function getSessionNotes(session) {
@@ -9048,6 +9075,17 @@ function renderPathwaySessionList(list) {
         const isCurrent = session.id === activePathwaySessionId;
         const status = isCurrent ? 'pathway_session_current' : session.status === 'completed'
             ? 'session_completed' : session.pathway ? 'session_draft' : 'session_notes_only';
+        if (list.id === 'saved-sessions-list') {
+            return `<article class="pathway-session saved-session-card" data-session-id="${escapeAttr(session.id)}">
+                <h4 class="pathway-session-title">${escapeHtml(t('pathway_session'))} ${notes.number} · ${escapeHtml(date)}<span class="pathway-session-current">${escapeHtml(t(status))}</span></h4>
+                <p class="pathway-session-meta">${meta}</p>
+                <div class="pathway-session-actions">
+                    ${session.pathway && session.status !== 'completed' ? `<button type="button" class="pathway-session-download" data-session-resume="${escapeAttr(session.id)}">${escapeHtml(t('session_resume'))}</button>` : ''}
+                    <button type="button" class="pathway-session-download" data-session-notes="${escapeAttr(session.id)}">${escapeHtml(t('session_open_notes'))}</button>
+                    <button type="button" class="pathway-session-download" data-session-download="${escapeAttr(session.id)}">${escapeHtml(t('notes_download'))}</button>
+                </div>
+            </article>`;
+        }
         return `<details class="pathway-session${isCurrent ? ' pathway-session-latest' : ''}" data-session-id="${escapeAttr(session.id)}"${expanded.has(session.id) || (!rendered.has(session.id) && isCurrent && list.id === 'pathway-sessions-list') ? ' open' : ''}>
             <summary>
                 <span class="pathway-session-title">${escapeHtml(t('pathway_session'))} ${notes.number} · ${escapeHtml(date)}<span class="pathway-session-current">${escapeHtml(t(status))}</span></span>
@@ -9213,9 +9251,10 @@ function downloadSessionNotes(sessionId) {
 }
 
 document.addEventListener('click', event => {
-    const button = event.target.closest?.('[data-session-download], [data-session-resume]');
+    const button = event.target.closest?.('[data-session-download], [data-session-resume], [data-session-notes]');
     if (!button) return;
     if (button.dataset.sessionDownload) downloadSessionNotes(button.dataset.sessionDownload);
+    else if (button.dataset.sessionNotes) openSavedSessionNotes(button.dataset.sessionNotes);
     else resumePathwaySession(button.dataset.sessionResume);
 });
 
