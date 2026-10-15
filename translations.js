@@ -933,13 +933,21 @@ const FLOWCHART_DEFINITIONS_FR = {
                     'Les progr\u00e8s sont-ils suivis\u00a0?',
                     'L\u2019enseignement int\u00e8gre-t-il la conception simple de la lecture\u00a0?'
                 ],
+                nextNode: 'tier1-screener',
+                buttonText: 'Continuer vers le dépistage en littératie'
+            },
+            'tier1-screener': {
+                id: 'tier1-screener',
+                type: 'info',
+                title: 'Étape 2 : Administrer le dépistage en littératie',
+                subtitle: 'Administrer le dépistage en littératie (DIBELS, CTOPP-2, THaFol, IDAPEL)',
                 nextNode: 'tier1-effectiveness',
                 buttonText: 'Continuer vers les résultats'
             },
             'tier1-effectiveness': {
                 id: 'tier1-effectiveness',
                 type: 'decision',
-                title: '\u00c9tape 2\u00a0: R\u00e9sultat',
+                title: '\u00c9tape 3\u00a0: R\u00e9sultat',
                 subtitle: 'L\u2019enseignement \u00e9tait-il efficace\u00a0?',
                 description: '',
                 choices: [
@@ -957,7 +965,7 @@ const FLOWCHART_DEFINITIONS_FR = {
             'tier1-percentage': {
                 id: 'tier1-percentage',
                 type: 'decision',
-                title: '\u00c9tape 3\u00a0: Enseignement inefficace',
+                title: '\u00c9tape 4\u00a0: Enseignement inefficace',
                 subtitle: 'Quel pourcentage d\u2019\u00e9l\u00e8ves est en difficult\u00e9\u00a0?',
                 description: 'D\u2019apr\u00e8s les r\u00e9sultats du d\u00e9pistage, combien d\u2019\u00e9l\u00e8ves sont en dessous du niveau de r\u00e9f\u00e9rence\u00a0?',
                 choices: [
@@ -990,7 +998,8 @@ const FLOWCHART_DEFINITIONS_FR = {
             'tier2-principles': {
                 id: 'tier2-principles',
                 type: 'checklist',
-                title: '\u00c9tape 1\u00a0: Entr\u00e9e',
+                title: 'Étape 1 : Intervention en petits groupes',
+                entryTitle: 'Entrée',
                 journeySummary: 'Vous avez \u00e9cart\u00e9 les d\u00e9ficiences et autres obstacles comme cause des difficult\u00e9s en litt\u00e9ratie et confirm\u00e9 que les soutiens du palier 2 ont \u00e9t\u00e9 mis en place correctement.',
                 reviewHint: 'Utilisez la carte du processus pour rouvrir cette \u00e9tape et revoir la liste en tout temps.',
                 checklistLayout: 'grouped',
@@ -1051,15 +1060,24 @@ const FLOWCHART_DEFINITIONS_FR = {
                 subtitle: 'S\u00e9lectionner et administrer une intervention de 8 semaines.',
                 description: 'Utilisez le menu ci-dessous pour trouver une intervention appropri\u00e9e, suivez la r\u00e9ponse de l\u2019\u00e9l\u00e8ve avec des outils de suivi des progr\u00e8s (si n\u00e9cessaire) et administrez-la pendant une p\u00e9riode de 8 semaines.',
                 options: 'interventions',
-                nextNode: 'tier2-progress',
+                nextNode: 'tier2-screener',
                 nextHandler: 'selectTier2InterventionVisual'
+            },
+            'tier2-screener': {
+                id: 'tier2-screener',
+                type: 'info',
+                title: 'Étape 4 : Administrer le dépistage en littératie',
+                subtitle: 'Administrer le dépistage en littératie',
+                description: 'Après la période de 8 semaines, administrer l’outil de dépistage de suivi des progrès en littératie planifié (DIBELS, CTOPP-2).',
+                nextNode: 'tier2-progress',
+                buttonText: 'Continuer vers les résultats'
             },
             'tier2-progress': {
                 id: 'tier2-progress',
                 type: 'decision',
-                title: '\u00c9tape 4\u00a0: Suivi des progr\u00e8s',
+                title: '\u00c9tape 5\u00a0: Suivi des progr\u00e8s',
                 subtitle: 'L\u2019enseignement \u00e9tait-il efficace\u00a0?',
-                description: 'Apr\u00e8s la p\u00e9riode de 8 semaines, administrer l\u2019outil de d\u00e9pistage de suivi des progr\u00e8s en litt\u00e9ratie planifi\u00e9 (DIBELS, CTOPP-2, THaFol, IDAPEL).\n\nSi vous avez choisi la mauvaise option, choisissez simplement la bonne et continuez.',
+                description: '',
                 choices: [
                     { id: 'improved', label: 'Enseignement efficace', sublabel: 'R\u00e9sultat du sous-test Bleu ou Vert', type: 'success', nextNode: 'tier2-success' },
                     { id: 'no-improvement', label: 'Enseignement inefficace', sublabel: 'R\u00e9sultat du sous-test Jaune ou Rouge', type: 'warning', nextNode: 'tier2-cycle2-assessment' }
@@ -1078,7 +1096,7 @@ const FLOWCHART_DEFINITIONS_FR = {
             'tier2-cycle2-assessment': {
                 id: 'tier2-cycle2-assessment',
                 type: 'selection',
-                title: '\u00c9tape 5\u00a0: \u00c9valuation approfondie',
+                title: '\u00c9tape 6\u00a0: \u00c9valuation approfondie',
                 subtitle: 'Administrer une deuxi\u00e8me \u00e9valuation approfondie.',
                 description: 'Utilisez \u00e0 nouveau le menu pour trouver et administrer une \u00e9valuation approfondie correspondant aux besoins de vos \u00e9l\u00e8ves, tels que d\u00e9termin\u00e9s par le dernier d\u00e9pistage en litt\u00e9ratie.',
                 options: 'drillDownAssessments',
@@ -1088,19 +1106,28 @@ const FLOWCHART_DEFINITIONS_FR = {
             'tier2-cycle2-intervention': {
                 id: 'tier2-cycle2-intervention',
                 type: 'selection',
-                title: '\u00c9tape 6\u00a0: Intervention de 8 semaines',
+                title: '\u00c9tape 7\u00a0: Intervention de 8 semaines',
                 subtitle: 'Modifier ou continuer les interventions du palier 2.',
                 description: 'Modifier ou continuer les interventions du palier 2 et suivre r\u00e9guli\u00e8rement la r\u00e9ponse de l\u2019\u00e9l\u00e8ve \u00e0 l\u2019intervention avec des outils de suivi des progr\u00e8s (si n\u00e9cessaire).',
                 options: 'interventions',
-                nextNode: 'tier2-cycle2-progress',
+                nextNode: 'tier2-cycle2-screener',
                 nextHandler: 'selectTier2InterventionVisual'
+            },
+            'tier2-cycle2-screener': {
+                id: 'tier2-cycle2-screener',
+                type: 'info',
+                title: 'Étape 8 : Administrer le dépistage en littératie',
+                subtitle: 'Administrer le dépistage en littératie',
+                description: 'Après la période de 8 semaines, administrer l’outil de dépistage de suivi des progrès en littératie planifié (DIBELS, CTOPP-2).',
+                nextNode: 'tier2-cycle2-progress',
+                buttonText: 'Continuer vers les résultats'
             },
             'tier2-cycle2-progress': {
                 id: 'tier2-cycle2-progress',
                 type: 'decision',
-                title: '\u00c9tape 7\u00a0: Suivi des progr\u00e8s',
+                title: '\u00c9tape 9\u00a0: Suivi des progr\u00e8s',
                 subtitle: 'L\u2019enseignement \u00e9tait-il efficace\u00a0?',
-                description: 'Apr\u00e8s la p\u00e9riode de 8 semaines, administrer l\u2019outil de d\u00e9pistage de suivi des progr\u00e8s en litt\u00e9ratie planifi\u00e9 (DIBELS, CTOPP-2, THaFol, IDAPEL).\n\nSi vous avez choisi la mauvaise option, choisissez simplement la bonne et continuez.',
+                description: '',
                 choices: [
                     { id: 'improved', label: 'Enseignement efficace', sublabel: 'R\u00e9sultat du sous-test Bleu ou Vert', type: 'success', nextNode: 'tier2-cycle2-success' },
                     { id: 'no-improvement', label: 'Enseignement inefficace', sublabel: 'R\u00e9sultat du sous-test Jaune ou Rouge', type: 'warning', nextNode: 'tier2-move-tier3' }
@@ -1196,15 +1223,24 @@ const FLOWCHART_DEFINITIONS_FR = {
                 subtitle: 'S\u00e9lectionner et administrer une intervention de 8 semaines.',
                 description: 'Utilisez le menu ci-dessous pour trouver une intervention appropri\u00e9e et l\u2019administrer pendant une p\u00e9riode de 8 semaines. Suivez hebdomadairement la r\u00e9ponse de l\u2019\u00e9l\u00e8ve \u00e0 l\u2019intervention.',
                 options: 'interventions',
-                nextNode: 'tier3-progress',
+                nextNode: 'tier3-screener',
                 nextHandler: 'selectTier3InterventionVisual'
+            },
+            'tier3-screener': {
+                id: 'tier3-screener',
+                type: 'info',
+                title: 'Étape 3 : Administrer le dépistage en littératie',
+                subtitle: 'Administrer le dépistage en littératie',
+                description: 'Après la période de 8 semaines, administrer l’outil de dépistage de suivi des progrès en littératie planifié (DIBELS, CTOPP-2).',
+                nextNode: 'tier3-progress',
+                buttonText: 'Continuer vers les résultats'
             },
             'tier3-progress': {
                 id: 'tier3-progress',
                 type: 'decision',
-                title: '\u00c9tape 3\u00a0: Suivi des progr\u00e8s',
+                title: '\u00c9tape 4\u00a0: Suivi des progr\u00e8s',
                 subtitle: 'L\u2019enseignement \u00e9tait-il efficace\u00a0?',
-                description: 'Apr\u00e8s la p\u00e9riode de 8 semaines, administrer l\u2019outil de d\u00e9pistage de suivi des progr\u00e8s en litt\u00e9ratie planifi\u00e9 (DIBELS, CTOPP-2, THaFol, IDAPEL).\n\nSi vous avez choisi la mauvaise option, choisissez simplement la bonne et continuez.',
+                description: '',
                 choices: [
                     { id: 'improved', label: 'Enseignement efficace', sublabel: 'R\u00e9sultat du sous-test Bleu ou Vert', type: 'success', nextNode: 'tier3-success' },
                     { id: 'no-improvement', label: 'Enseignement inefficace', sublabel: 'R\u00e9sultat du sous-test Jaune ou Rouge', type: 'warning', nextNode: 'tier3-specialist' }
