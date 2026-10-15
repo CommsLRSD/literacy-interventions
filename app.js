@@ -4785,17 +4785,7 @@ function createIntegratedSelectionNode(nodeData) {
                 ${infoBoxHTML}
                 ${warningBoxHTML}
                 <div class="fw-wizard">
-                    <div class="fw-context-chips">
-                        <span class="fw-context-chip">${escapeHtml(t('fw_context_tier')(tierNum))}</span>
-                        <span class="fw-context-chip">${escapeHtml(program)}</span>
-                        <span class="fw-context-chip">${escapeHtml(translateResourceType(itemType))}</span>
-                    </div>
-                    ${appState.fwState.pillarsLocked ? `<div class="fw-select-group">
-                        <span id="fw-pillar-label" class="fw-select-label">${escapeHtml(t('fw_choose_pillars_label'))}</span>
-                        <div class="fw-context-chips fw-locked-pillars" role="list" aria-labelledby="fw-pillar-label">
-                            ${appState.fwState.pillars.map(value => `<span class="fw-context-chip" role="listitem">${escapeHtml(translatePillar(value))}</span>`).join('')}
-                        </div>
-                    </div>` : `<div class="fw-select-group">
+                    ${appState.fwState.pillarsLocked ? '' : `<div class="fw-select-group">
                         <span id="fw-pillar-label" class="fw-select-label">${escapeHtml(t('fw_choose_pillars_label'))}</span>
                         <details id="fw-pillar-filter" class="cal-grade-dropdown fw-pillar-dropdown" onkeydown="if(event.key==='Escape'){event.preventDefault();this.open=false;this.querySelector('summary').focus();}">
                             <summary aria-labelledby="fw-pillar-label fw-pillar-value"><span id="fw-pillar-value">${escapeHtml(getFwPillarSummary(appState.fwState.pillars))}</span></summary>
@@ -4805,6 +4795,7 @@ function createIntegratedSelectionNode(nodeData) {
                     <div id="fw-results" class="fw-results"></div>
                 </div>
                 ${getEvidenceLegendTriggerHtml()}
+                <p class="fw-recommended-legend"><span class="fw-recommended-swatch" aria-hidden="true">★</span>${escapeHtml(t('fw_recommended_legend'))}</p>
             </div>
         `;
     }
@@ -4868,6 +4859,19 @@ function buildChoicePathway(pillars, name) {
     return pillarText ? [pillarText, name] : [name];
 }
 
+// Selected pillars in the catalogue's pillar order.
+function fwPillarOrder(pillars) {
+    const order = (appState.interventionMenuData?.pillars || []).map(pillar => pillar.name);
+    const rank = pillar => (order.indexOf(pillar) + 1) || order.length + 1;
+    return [...pillars].sort((a, b) => rank(a) - rank(b));
+}
+
+// Close the pillar dropdown when the user clicks anywhere outside it.
+document.addEventListener('click', event => {
+    const dropdown = document.getElementById('fw-pillar-filter');
+    if (dropdown?.open && !dropdown.contains(event.target)) dropdown.open = false;
+});
+
 function getFwPillarSummary(pillars) {
     return pillars.length ? pillars.map(translatePillar).join(', ') : t('fw_choose_pillars_none');
 }
@@ -4923,14 +4927,20 @@ function fwLoadResults() {
     const activate = multiSelect ? 'fwToggleItem(this.dataset.resourceId)' : 'fwSelectItem(this.dataset.resourceId, this.dataset.resourceName)';
     resultsEl.innerHTML = `
         ${multiSelect ? `<p class="fw-multi-hint">${escapeHtml(t('fw_select_multiple_hint'))}</p>` : ''}
-        ${buildResourceGroupsHtml(filtered, wizardState, item => {
-                const matchingTags = getMatchingTags(item, wizardState);
+        ${fwPillarOrder(pillars).map(pillar => {
+            // One section per selected pillar, recommended resources first.
+            const sectionState = { ...wizardState, pillar };
+            const items = filtered.filter(item => getMatchingTags(item, sectionState).length);
+            if (!items.length) return '';
+            const recommended = items.filter(item => isRecommendedResource(item, sectionState));
+            const ordered = [...recommended, ...items.filter(item => !recommended.includes(item))];
+            return `<div class="fw-results-header resource-list-header">${escapeHtml(translatePillar(pillar))}</div>
+                <div class="fw-results-list">${ordered.map(item => {
+                const matchingTags = getMatchingTags(item, sectionState);
                 const gradeText = uniqueSorted(matchingTags.map(tag => tag.gradeRangeText)).join('; ') ||
                     uniqueSorted(matchingTags.flatMap(tag => tag.gradeFilter || [])).join(', ');
-                const matchingPillars = uniqueSorted(matchingTags.map(tag => tag.pillar));
-                const pillarText = matchingPillars.map(translatePillar).join(', ');
                 const evidenceBadge = getEvidenceBadgeHtml(getResourceEvidenceLevel({ tags: matchingTags }));
-                const linkHtml = getResourceUrls(item, wizardState).map(url => {
+                const linkHtml = getResourceUrls(item, sectionState).map(url => {
                     const lang = getResourceUrlLang(item, url);
                     const title = lang ? `${t('filter_view_resource')} (${lang})` : t('filter_view_resource');
                     return `<a class="fw-result-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="${escapeHtml(title)}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
@@ -4939,17 +4949,18 @@ function fwLoadResults() {
                 const indicator = multiSelect
                     ? `<span class="fw-result-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>`
                     : '<svg class="fw-result-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M9 18l6-6-6-6"/></svg>';
-                return `<div class="fw-result-item${isRecommendedResource(item, wizardState) ? ' is-recommended' : ''}${isSelected ? ' is-selected' : ''}" role="${multiSelect ? 'checkbox' : 'button'}"${multiSelect ? ` aria-checked="${isSelected}"` : ''} tabindex="0" data-resource-id="${escapeAttr(item.id)}" data-resource-name="${escapeAttr(item.name)}" onclick="${activate}" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();${activate}}">
+                return `<div class="fw-result-item${recommended.includes(item) ? ' is-recommended' : ''}${isSelected ? ' is-selected' : ''}" role="${multiSelect ? 'checkbox' : 'button'}"${multiSelect ? ` aria-checked="${isSelected}"` : ''} tabindex="0" data-resource-id="${escapeAttr(item.id)}" data-resource-name="${escapeAttr(item.name)}" onclick="${activate}" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();${activate}}">
                     ${multiSelect ? indicator : ''}
                     <div class="fw-result-info">
-                        <div class="fw-result-name">${escapeHtml(item.name)}${buildResourceRecommendationBadgeHtml(item, wizardState)}${evidenceBadge}</div>
-                        <div class="fw-result-meta">${escapeHtml(pillarText)}${gradeText ? ` • ${escapeHtml(t('fw_grade_prefix'))} ${escapeHtml(gradeText)}` : ''}</div>
+                        <div class="fw-result-name">${escapeHtml(item.name)}${buildResourceRecommendationBadgeHtml(item, sectionState)}${evidenceBadge}</div>
+                        ${gradeText ? `<div class="fw-result-meta">${escapeHtml(t('fw_grade_prefix'))} ${escapeHtml(gradeText)}</div>` : ''}
                     </div>
                     ${buildFavouriteButtonHtml(item)}
                     ${linkHtml}
                     ${multiSelect ? '' : indicator}
                 </div>`;
-            }, 'fw-results-list')}
+            }).join('')}</div>`;
+        }).join('')}
         ${multiSelect ? `<div class="fw-multi-actions">
             <span class="fw-multi-count" aria-live="polite"></span>
             <button type="button" class="continue-btn fw-multi-continue" onclick="fwConfirmSelection()">
