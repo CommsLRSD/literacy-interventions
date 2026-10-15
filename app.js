@@ -4763,7 +4763,7 @@ function createIntegratedSelectionNode(nodeData) {
 
         appState.fwState.pillars.forEach(value => { if (!pillarValues.includes(value)) pillarValues.unshift(value); });
         const pillarOptionsHtml = pillarValues.map(value => `
-            <label class="fw-pillar-chip">
+            <label class="cal-grade-option">
                 <input type="checkbox" value="${escapeAttr(value)}" ${appState.fwState.pillars.includes(value) ? 'checked' : ''} onchange="fwOnPillarToggle(this.value, this.checked)">
                 <span>${escapeHtml(translatePillar(value))}</span>
             </label>`).join('');
@@ -4788,10 +4788,13 @@ function createIntegratedSelectionNode(nodeData) {
                         <span class="fw-context-chip">${escapeHtml(program)}</span>
                         <span class="fw-context-chip">${escapeHtml(translateResourceType(itemType))}</span>
                     </div>
-                    <fieldset class="fw-pillar-group">
-                        <legend>${escapeHtml(t('fw_choose_pillars_label'))}</legend>
-                        <div class="fw-pillar-options">${pillarOptionsHtml}</div>
-                    </fieldset>
+                    <div class="fw-select-group">
+                        <span id="fw-pillar-label" class="fw-select-label">${escapeHtml(t('fw_choose_pillars_label'))}</span>
+                        <details id="fw-pillar-filter" class="cal-grade-dropdown fw-pillar-dropdown" onkeydown="if(event.key==='Escape'){event.preventDefault();this.open=false;this.querySelector('summary').focus();}">
+                            <summary aria-labelledby="fw-pillar-label fw-pillar-value"><span id="fw-pillar-value">${escapeHtml(getFwPillarSummary(appState.fwState.pillars))}</span></summary>
+                            <div class="cal-grade-options" role="group" aria-labelledby="fw-pillar-label">${pillarOptionsHtml}</div>
+                        </details>
+                    </div>
                     <div id="fw-results" class="fw-results"></div>
                 </div>
                 ${getEvidenceLegendTriggerHtml()}
@@ -4858,6 +4861,10 @@ function buildChoicePathway(pillars, name) {
     return pillarText ? [pillarText, name] : [name];
 }
 
+function getFwPillarSummary(pillars) {
+    return pillars.length ? pillars.map(translatePillar).join(', ') : t('fw_choose_pillars_none');
+}
+
 // Flowchart embedded intervention wizard: pillar toggle handler
 function fwOnPillarToggle(value, checked) {
     const state = appState.fwState;
@@ -4865,6 +4872,8 @@ function fwOnPillarToggle(value, checked) {
     const pillars = state.pillars.filter(pillar => pillar !== value);
     if (checked) pillars.push(value);
     state.pillars = pillars;
+    const summary = document.getElementById('fw-pillar-value');
+    if (summary) summary.textContent = getFwPillarSummary(pillars);
     setRememberedMenuFilters({ pillar: pillars[0] || null, ...(state.multiSelect ? { pillars: pillars.slice() } : {}) });
 
     fwLoadResults();
@@ -9210,12 +9219,9 @@ function buildResourceGroupsHtml(items, state, renderItem, listClass = '') {
     const renderList = resources => listClass
         ? `<div class="${escapeAttr(listClass)}">${resources.map(renderItem).join('')}</div>`
         : resources.map(renderItem).join('');
-    const renderGroup = (resources, variant, label) => resources.length ? `<section class="resource-group resource-group-${variant}">
-            <h4 class="resource-group-header">${variant === 'recommended' ? '<span aria-hidden="true">★</span>' : ''}${escapeHtml(label)}</h4>
-            ${renderList(resources)}
-        </section>` : '';
-    return renderGroup(recommended, 'recommended', t('fw_results_label')) +
-        renderGroup(other, 'more', t('resource_more'));
+    const renderGroup = (resources, label) => resources.length
+        ? `<div class="fw-results-header resource-list-header">${escapeHtml(label)}</div>${renderList(resources)}` : '';
+    return renderGroup(recommended, t('fw_results_label')) + renderGroup(other, t('resource_more'));
 }
 
 // Filter the full resource list by every field in `state` except the one
