@@ -12058,6 +12058,21 @@ details.pathway-session[open] { box-shadow: none; }
 .saved-session-card .pathway-session-title::after { content: none; }
 .saved-session-card .pathway-session-meta { margin: 0.4rem 0 0; }
 .saved-session-card .pathway-session-actions { margin-top: 0.5rem; }
+.saved-session-current {
+  background: #fff1bf;
+  border-color: var(--card-yellow-border);
+  box-shadow: inset 4px 0 var(--card-yellow-border);
+  animation: current-session-glow 3s ease-in-out infinite;
+}
+.saved-session-current .pathway-session-current { color: #7a4d00; }
+@keyframes current-session-glow {
+  0%, 100% { box-shadow: inset 4px 0 var(--card-yellow-border), 0 0 4px rgba(246, 174, 8, 0.12); }
+  50% { box-shadow: inset 4px 0 var(--card-yellow-border), 0 0 14px rgba(246, 174, 8, 0.3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .saved-session-current { animation: none; }
+}
+.pathway-session-download.session-delete { color: var(--ineffective-text); }
 .pathway-session > summary {
   display: grid;
   gap: 0.1rem;

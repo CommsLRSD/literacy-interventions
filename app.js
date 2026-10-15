@@ -662,13 +662,11 @@ function returnToPathway() {
     requestAnimationFrame(scrollToActiveStep);
 }
 
-function closePathwaySession(completed = false) {
+function closePathwaySession() {
     if (!appReady || !savedPathway) return;
-    const vf = appState.visualFlowchart;
-    if (completed && getFlowchartDefs()[vf?.tierId]?.nodes?.[vf.currentNodeId]?.type !== 'endpoint') return;
     savePathwayProgress();
     const session = pathwaySessions.find(item => item.id === activePathwaySessionId);
-    if (session) session.status = completed ? 'completed' : 'draft';
+    if (session) session.status = 'completed';
     document.getElementById('pathway-sessions-drawer')?.close();
     closeVisualFlowchartModal({ immediate: true });
     closeFinalSummaryDialog({ immediate: true });
@@ -678,6 +676,16 @@ function closePathwaySession(completed = false) {
     clearPathwayProgress();
     document.getElementById('flowchart-container').innerHTML = '';
     navigateToPage('favourites');
+    document.getElementById('saved-sessions-title')?.focus();
+}
+
+function deletePathwaySession(sessionId) {
+    if (!appReady || !pathwaySessions.some(session => session.id === sessionId)) return;
+    if (!window.confirm(t('session_delete_confirm'))) return;
+    if (sessionId === activePathwaySessionId) closePathwaySession();
+    pathwaySessions = pathwaySessions.filter(session => session.id !== sessionId);
+    persistProgressStorage();
+    updateGuidedHome();
     document.getElementById('saved-sessions-title')?.focus();
 }
 
@@ -708,7 +716,7 @@ function resumePathwaySession(sessionId) {
 
 function renderSessionCloseButtonHtml() {
     return `<button type="button" class="pathway-session-close" onclick="closePathwaySession()"
-        title="${escapeAttr(t('session_autosave_hint'))}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">save</span>${escapeHtml(t('session_save_close'))}</button>`;
+        title="${escapeAttr(t('session_autosave_hint'))}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">stop_circle</span>${escapeHtml(t('session_end'))}</button>`;
 }
 
 function renderSessionDownloadButtonHtml(buttonClass = 'action-btn') {
@@ -4041,7 +4049,7 @@ function refreshVisualFlowchartModal() {
         const sessionActions = entry.isCurrent && entry.node.type === 'endpoint'
             && appState.visualFlowchart?.summaryEndpointNodeData?.id === entry.node.id
             ? `${renderSessionDownloadButtonHtml('visual-flowchart-tier-review-btn')}
-               <button type="button" class="visual-flowchart-tier-review-btn" onclick="closePathwaySession(true)">${escapeHtml(t('session_end'))}</button>`
+               <button type="button" class="visual-flowchart-tier-review-btn" onclick="closePathwaySession()">${escapeHtml(t('session_end'))}</button>`
             : '';
         return `<${tag} data-tier="${escapeAttr(entry.tierId)}" class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ' visual-flowchart-card-completed'}${item.expandedTierId ? ' visual-flowchart-card-expanded-tier' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
                     style="left:${position.x}px;top:${position.y}px;width:${position.width}px" ${revisit}>
@@ -5259,7 +5267,7 @@ function createIntegratedEndpointNode(nodeData) {
 
     // Terminal routes can be officially ended without discarding their notes.
     const defaultActionsHTML = isTerminalEndpoint ? `
-        <button class="action-btn action-secondary" onclick="closePathwaySession(true)">
+        <button class="action-btn action-secondary" onclick="closePathwaySession()">
             ${escapeHtml(t('session_end'))}
         </button>
     ` : '';
@@ -5979,7 +5987,7 @@ function showFinalSummary(endpointNodeData) {
         </svg>
         Start Over
     </button>
-    <button class="action-btn action-primary" onclick="closePathwaySession(true)">
+    <button class="action-btn action-primary" onclick="closePathwaySession()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
         ${escapeHtml(t('session_end'))}
     </button>`;
@@ -6238,7 +6246,7 @@ function showRouteCompleteGate(endpointNodeData) {
             <p class="gate-subtitle">${escapeHtml(typeof t('gate_subtitle_steps') === 'function' ? t('gate_subtitle_steps')(totalSteps) : `You completed ${totalSteps} step${totalSteps !== 1 ? 's' : ''} across`)} ${tierPillsHTML}</p>
             <div class="endpoint-actions">
                 ${renderSessionDownloadButtonHtml()}
-                <button type="button" class="action-btn action-secondary" onclick="closePathwaySession(true)">${escapeHtml(t('session_end'))}</button>
+                <button type="button" class="action-btn action-secondary" onclick="closePathwaySession()">${escapeHtml(t('session_end'))}</button>
             </div>
         </div>
     `;
@@ -9076,13 +9084,15 @@ function renderPathwaySessionList(list) {
         const status = isCurrent ? 'pathway_session_current' : session.status === 'completed'
             ? 'session_completed' : session.pathway ? 'session_draft' : 'session_notes_only';
         if (list.id === 'saved-sessions-list') {
-            return `<article class="pathway-session saved-session-card" data-session-id="${escapeAttr(session.id)}">
+            return `<article class="pathway-session saved-session-card${isCurrent ? ' saved-session-current' : ''}" data-session-id="${escapeAttr(session.id)}">
                 <h4 class="pathway-session-title">${escapeHtml(t('pathway_session'))} ${notes.number} · ${escapeHtml(date)}<span class="pathway-session-current">${escapeHtml(t(status))}</span></h4>
                 <p class="pathway-session-meta">${meta}</p>
                 <div class="pathway-session-actions">
                     ${session.pathway && session.status !== 'completed' ? `<button type="button" class="pathway-session-download" data-session-resume="${escapeAttr(session.id)}">${escapeHtml(t('session_resume'))}</button>` : ''}
+                    ${isCurrent ? `<button type="button" class="pathway-session-download" onclick="closePathwaySession()">${escapeHtml(t('session_end'))}</button>` : ''}
                     <button type="button" class="pathway-session-download" data-session-notes="${escapeAttr(session.id)}">${escapeHtml(t('session_open_notes'))}</button>
                     <button type="button" class="pathway-session-download" data-session-download="${escapeAttr(session.id)}">${escapeHtml(t('notes_download'))}</button>
+                    <button type="button" class="pathway-session-download session-delete" data-session-delete="${escapeAttr(session.id)}">${escapeHtml(t('session_delete'))}</button>
                 </div>
             </article>`;
         }
@@ -9251,10 +9261,11 @@ function downloadSessionNotes(sessionId) {
 }
 
 document.addEventListener('click', event => {
-    const button = event.target.closest?.('[data-session-download], [data-session-resume], [data-session-notes]');
+    const button = event.target.closest?.('[data-session-download], [data-session-resume], [data-session-notes], [data-session-delete]');
     if (!button) return;
     if (button.dataset.sessionDownload) downloadSessionNotes(button.dataset.sessionDownload);
     else if (button.dataset.sessionNotes) openSavedSessionNotes(button.dataset.sessionNotes);
+    else if (button.dataset.sessionDelete) deletePathwaySession(button.dataset.sessionDelete);
     else resumePathwaySession(button.dataset.sessionResume);
 });
 
