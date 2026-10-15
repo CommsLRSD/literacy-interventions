@@ -711,6 +711,11 @@ function renderSessionCloseButtonHtml() {
         title="${escapeAttr(t('session_autosave_hint'))}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">save</span>${escapeHtml(t('session_save_close'))}</button>`;
 }
 
+function renderSessionDownloadButtonHtml(buttonClass = 'action-btn') {
+    return `<button type="button" class="${buttonClass} session-route-download" onclick="downloadSessionNotes(activePathwaySessionId)"
+        aria-label="${escapeAttr(t('notes_download_label'))}">${escapeHtml(t('notes_download'))}</button>`;
+}
+
 function focusActivePathwayStep() {
     const target = getActiveStepTarget()?.querySelector('.step-badge, .go-to-tier-heading, h3');
     if (target) {
@@ -4038,9 +4043,9 @@ function refreshVisualFlowchartModal() {
                 : entry.isCurrent && entry.node.id === 'tier2-move-tier3' && appState.visualFlowchart?.pendingTierTransition === 'tier3'
                     ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="confirmVisualFlowchartTierTransition()">${escapeHtml(t('continue_to_tier'))} 3</button>`
             : '';
-        const summaryAction = entry.isCurrent && entry.node.type === 'endpoint'
+        const sessionActions = entry.isCurrent && entry.node.type === 'endpoint'
             && appState.visualFlowchart?.summaryEndpointNodeData?.id === entry.node.id
-            ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="showCurrentJourneySummary()">${escapeHtml(t('gate_view_summary'))}</button>
+            ? `${renderSessionDownloadButtonHtml('visual-flowchart-tier-review-btn')}
                <button type="button" class="visual-flowchart-tier-review-btn" onclick="closePathwaySession(true)">${escapeHtml(t('session_end'))}</button>`
             : '';
         return `${collapseBtn}<${tag} class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ' visual-flowchart-card-completed'}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
@@ -4052,7 +4057,7 @@ function refreshVisualFlowchartModal() {
                     <strong>${escapeHtml(displayTitle)}</strong>
                     ${!usesChoiceAsTitle && answer && !isDuplicateStepSummary(answer, displayTitle) ? `<span class="visual-flowchart-card-answer">${escapeHtml(answer)}</span>` : ''}
                     ${entry.node.type === 'endpoint' && endpointDescription ? `<span class="visual-flowchart-card-answer">${endpointDescription}</span>` : ''}
-                    ${entry.node.type === 'endpoint' ? endpointAction + summaryAction : ''}
+                    ${entry.node.type === 'endpoint' ? endpointAction + sessionActions : ''}
                 </span>
                 ${isInteractive ? '<div class="visual-flowchart-active-host"></div>' : ''}
             </${tag}>`;
@@ -5234,14 +5239,7 @@ function createIntegratedEndpointNode(nodeData) {
     const isTerminalEndpoint = !tierTransitionActions.has(nodeData.actionButton?.action) &&
         !tierTransitionActions.has(nodeData.secondaryAction?.action);
 
-    const summaryButtonHTML = isTerminalEndpoint ? `
-        <button class="action-btn action-primary gate-summary-btn" onclick="showCurrentJourneySummary()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true">
-                <circle cx="12" cy="12" r="10"/><polyline points="10 8 16 12 10 16"/>
-            </svg>
-            ${escapeHtml(t('gate_view_summary'))}
-        </button>
-    ` : '';
+    const downloadButtonHTML = isTerminalEndpoint ? renderSessionDownloadButtonHtml() : '';
 
     // Whitelist of allowed action names for security
     const allowedActions = ['startTier2Visual', 'startTier3Visual', 'restartTier1Visual', 'restartTier2Visual'];
@@ -5275,7 +5273,7 @@ function createIntegratedEndpointNode(nodeData) {
             ${warningBoxHTML}
             ${recommendationsHTML}
             <div class="endpoint-actions">
-                ${summaryButtonHTML}
+                ${downloadButtonHTML}
                 ${actionButtonHTML}
                 ${secondaryActionHTML}
                 ${defaultActionsHTML}
@@ -6206,8 +6204,7 @@ function showCurrentJourneySummary() {
     }
 }
 
-// Show the route completion gate — a simple "well done" screen that the user
-// must click through before the animated journey summary plays.
+// Show the route completion gate with session download and completion actions.
 function showRouteCompleteGate(endpointNodeData) {
     const stepsContainer = getActiveStepTarget();
     if (!stepsContainer) return;
@@ -6238,13 +6235,10 @@ function showRouteCompleteGate(endpointNodeData) {
             </div>
             <h2 class="gate-title">${escapeHtml(t('gate_title'))}</h2>
             <p class="gate-subtitle">${escapeHtml(typeof t('gate_subtitle_steps') === 'function' ? t('gate_subtitle_steps')(totalSteps) : `You completed ${totalSteps} step${totalSteps !== 1 ? 's' : ''} across`)} ${tierPillsHTML}</p>
-            <p class="gate-desc">${escapeHtml(t('gate_desc'))}</p>
-            <button class="action-btn action-primary gate-summary-btn" id="gate-summary-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true">
-                    <circle cx="12" cy="12" r="10"/><polyline points="10 8 16 12 10 16"/>
-                </svg>
-                ${escapeHtml(t('gate_view_summary'))}
-            </button>
+            <div class="endpoint-actions">
+                ${renderSessionDownloadButtonHtml()}
+                <button type="button" class="action-btn action-secondary" onclick="closePathwaySession(true)">${escapeHtml(t('session_end'))}</button>
+            </div>
         </div>
     `;
 
@@ -6256,11 +6250,6 @@ function showRouteCompleteGate(endpointNodeData) {
         if (gate) gate.classList.add('route-complete-gate-visible');
     });
     scrollToActiveStep();
-
-    const btn = document.getElementById('gate-summary-btn');
-    if (btn) {
-        btn.addEventListener('click', () => showFinalSummary(endpointNodeData));
-    }
 }
 
 // Open a modal dialog showing a step as it appeared during the flowchart
