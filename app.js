@@ -2294,7 +2294,7 @@ const FLOWCHART_DEFINITIONS = {
                 id: 'tier2-screener',
                 type: 'info',
                 title: 'Step 4: Administer divisional literacy screener',
-                subtitle: 'Administer Divisional literacy screener',
+                subtitle: 'Administer divisional literacy screener',
                 description: 'After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2).',
                 nextNode: 'tier2-progress',
                 buttonText: 'Continue to Results'
@@ -2344,7 +2344,7 @@ const FLOWCHART_DEFINITIONS = {
                 id: 'tier2-cycle2-screener',
                 type: 'info',
                 title: 'Step 8: Administer divisional literacy screener',
-                subtitle: 'Administer Divisional literacy screener',
+                subtitle: 'Administer divisional literacy screener',
                 description: 'After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2).',
                 nextNode: 'tier2-cycle2-progress',
                 buttonText: 'Continue to Results'
