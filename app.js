@@ -461,7 +461,7 @@ function validateTierPathway(raw) {
             const flags = raw.checklistChecked?.[step.nodeId];
             checked[step.nodeId] = node.items.map((_, index) => flags?.[index] === true);
         }
-        const previous = selectedPath[selectedPath.length - 1];
+        let previous = selectedPath[selectedPath.length - 1];
         if (!previous && step.nodeId !== def.startNode) return null;
         if (previous) {
             const prevNode = def.nodes[previous.nodeId];
@@ -469,7 +469,15 @@ function validateTierPathway(raw) {
             const next = prevNode.type === 'decision'
                 ? prevNode.choices.find(choice => choice.id === prevChoice?.id)?.nextNode
                 : prevNode.nextNode;
-            if (!prevChoice || next !== step.nodeId) return null;
+            if (!prevChoice) return null;
+            if (next !== step.nodeId) {
+                const inserted = def.nodes[next];
+                if (inserted?.type !== 'info' || !next.endsWith('-screener') || inserted.nextNode !== step.nodeId) return null;
+                choices[next] = resolveSavedChoice(inserted, 'acknowledged', raw.tierId);
+                seen.add(next);
+                selectedPath.push({ nodeId: next, fromNodeId: previous.nodeId, choiceId: prevChoice.id });
+                previous = selectedPath[selectedPath.length - 1];
+            }
         }
         selectedPath.push({ nodeId: step.nodeId, fromNodeId: previous?.nodeId || null, choiceId: previous ? choices[previous.nodeId]?.id : null });
     }
@@ -697,9 +705,11 @@ function getFlowchartDefs() {
         tierId, {
             ...tier,
             nodes: Object.fromEntries(Object.entries(tier.nodes).map(([nodeId, node]) => [
-                nodeId, node.description?.includes('DIBELS, CTOPP-2, THaFol, IDAPEL')
-                    ? { ...node, description: node.description.replace('DIBELS, CTOPP-2, THaFol, IDAPEL', getProgressMonitoringScreeners()) }
-                    : node
+                nodeId, {
+                    ...node,
+                    ...(node.description ? { description: node.description.replace('DIBELS, CTOPP-2, THaFol, IDAPEL', getProgressMonitoringScreeners()) } : {}),
+                    ...(node.subtitle ? { subtitle: node.subtitle.replace('DIBELS, CTOPP-2, THaFol, IDAPEL', getProgressMonitoringScreeners()) } : {})
+                }
             ]))
         }
     ]));
@@ -2125,13 +2135,21 @@ const FLOWCHART_DEFINITIONS = {
                     'Is progress being tracked?',
                     'Does Instruction incorporate the simple view of reading?'
                 ],
+                nextNode: 'tier1-screener',
+                buttonText: 'Continue to Literacy Screener'
+            },
+            'tier1-screener': {
+                id: 'tier1-screener',
+                type: 'info',
+                title: 'Step 2: Administer literacy screener',
+                subtitle: 'Administer literacy screener (DIBELS, CTOPP-2, THaFol, IDAPEL)',
                 nextNode: 'tier1-effectiveness',
                 buttonText: 'Continue to Results'
             },
             'tier1-effectiveness': {
                 id: 'tier1-effectiveness',
                 type: 'decision',
-                title: 'Step 2: Result',
+                title: 'Step 3: Result',
                 subtitle: 'Was instruction effective?',
                 description: '',
                 choices: [
@@ -2149,7 +2167,7 @@ const FLOWCHART_DEFINITIONS = {
             'tier1-percentage': {
                 id: 'tier1-percentage',
                 type: 'decision',
-                title: 'Step 3: Instruction Ineffective',
+                title: 'Step 4: Instruction Ineffective',
                 subtitle: 'What percentage of students are unsuccessful?',
                 description: 'Based on screener results, how many students are below benchmark?',
                 choices: [
@@ -2186,7 +2204,8 @@ const FLOWCHART_DEFINITIONS = {
             'tier2-principles': {
                 id: 'tier2-principles',
                 type: 'checklist',
-                title: 'Step 1: Entry',
+                title: 'Step 1: Small Group Intervention',
+                entryTitle: 'Entry',
                 journeySummary: 'You ruled out impairments and other barriers as a cause of literacy challenges and confirmed Tier 2 supports were set up correctly.',
                 reviewHint: 'Use the process map to reopen this step and review the checklist anytime.',
                 checklistLayout: 'grouped',
@@ -2247,15 +2266,24 @@ const FLOWCHART_DEFINITIONS = {
                 subtitle: 'Select and administer an 8-week intervention.',
                 description: 'Use the menu below to find an appropriate intervention, monitor student response with progress monitoring tools (as required), and administer for an 8-week period.',
                 options: 'interventions',
-                nextNode: 'tier2-progress',
+                nextNode: 'tier2-screener',
                 nextHandler: 'selectTier2InterventionVisual'
+            },
+            'tier2-screener': {
+                id: 'tier2-screener',
+                type: 'info',
+                title: 'Step 4: Administer literacy screener',
+                subtitle: 'Administer literacy screener',
+                description: 'After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2).',
+                nextNode: 'tier2-progress',
+                buttonText: 'Continue to Results'
             },
             'tier2-progress': {
                 id: 'tier2-progress',
                 type: 'decision',
-                title: 'Step 4: Progress Monitoring',
+                title: 'Step 5: Progress Monitoring',
                 subtitle: 'Was instruction effective?',
-                description: 'After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2, THaFol, IDAPEL).\n\nIf you chose the wrong option, simply choose the correct one and continue.',
+                description: '',
                 choices: [
                     { id: 'improved', label: 'Instruction Effective', sublabel: 'Subtest result Blue or Green', indicators: ['blue', 'green'], type: 'success', nextNode: 'tier2-success' },
                     { id: 'no-improvement', label: 'Instruction Ineffective', sublabel: 'Subtest result Yellow or Red', indicators: ['yellow', 'red'], type: 'warning', nextNode: 'tier2-cycle2-assessment' }
@@ -2274,7 +2302,7 @@ const FLOWCHART_DEFINITIONS = {
             'tier2-cycle2-assessment': {
                 id: 'tier2-cycle2-assessment',
                 type: 'selection',
-                title: 'Step 5: Drill Down Assessment',
+                title: 'Step 6: Drill Down Assessment',
                 subtitle: 'Administer a second drill down assessment.',
                 description: 'Use the menu again to find and administer a drill down assessment that aligns with the needs of your students, as determined by the latest literacy screener.',
                 options: 'drillDownAssessments',
@@ -2284,19 +2312,28 @@ const FLOWCHART_DEFINITIONS = {
             'tier2-cycle2-intervention': {
                 id: 'tier2-cycle2-intervention',
                 type: 'selection',
-                title: 'Step 6: 8-week Intervention',
+                title: 'Step 7: 8-week Intervention',
                 subtitle: 'Alter or continue Tier 2 interventions.',
                 description: 'Alter or continue Tier 2 interventions and regularly monitor student response to intervention with progress monitoring tools (as required).',
                 options: 'interventions',
-                nextNode: 'tier2-cycle2-progress',
+                nextNode: 'tier2-cycle2-screener',
                 nextHandler: 'selectTier2InterventionVisual'
+            },
+            'tier2-cycle2-screener': {
+                id: 'tier2-cycle2-screener',
+                type: 'info',
+                title: 'Step 8: Administer literacy screener',
+                subtitle: 'Administer literacy screener',
+                description: 'After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2).',
+                nextNode: 'tier2-cycle2-progress',
+                buttonText: 'Continue to Results'
             },
             'tier2-cycle2-progress': {
                 id: 'tier2-cycle2-progress',
                 type: 'decision',
-                title: 'Step 7: Progress Monitoring',
+                title: 'Step 9: Progress Monitoring',
                 subtitle: 'Was instruction effective?',
-                description: 'After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2, THaFol, IDAPEL).\n\nIf you chose the wrong option, simply choose the correct one and continue.',
+                description: '',
                 choices: [
                     { id: 'improved', label: 'Instruction Effective', sublabel: 'Subtest result Blue or Green', indicators: ['blue', 'green'], type: 'success', nextNode: 'tier2-cycle2-success' },
                     { id: 'no-improvement', label: 'Instruction Ineffective', sublabel: 'Subtest result Yellow or Red', indicators: ['yellow', 'red'], type: 'warning', nextNode: 'tier2-move-tier3' }
@@ -2392,15 +2429,24 @@ const FLOWCHART_DEFINITIONS = {
                 subtitle: 'Select and administer an 8-week intervention.',
                 description: 'Use the menu below to find an appropriate intervention, and administer for an 8-week period. Monitor student response to intervention weekly.',
                 options: 'interventions',
-                nextNode: 'tier3-progress',
+                nextNode: 'tier3-screener',
                 nextHandler: 'selectTier3InterventionVisual'
+            },
+            'tier3-screener': {
+                id: 'tier3-screener',
+                type: 'info',
+                title: 'Step 3: Administer literacy screener',
+                subtitle: 'Administer literacy screener',
+                description: 'After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2).',
+                nextNode: 'tier3-progress',
+                buttonText: 'Continue to Results'
             },
             'tier3-progress': {
                 id: 'tier3-progress',
                 type: 'decision',
-                title: 'Step 3: Progress Monitoring',
+                title: 'Step 4: Progress Monitoring',
                 subtitle: 'Was instruction effective?',
-                description: 'After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2, THaFol, IDAPEL).\n\nIf you chose the wrong option, simply choose the correct one and continue.',
+                description: '',
                 choices: [
                     { id: 'improved', label: 'Instruction Effective', sublabel: 'Subtest result Blue or Green', indicators: ['blue', 'green'], type: 'success', nextNode: 'tier3-success' },
                     { id: 'no-improvement', label: 'Instruction Ineffective', sublabel: 'Subtest result Yellow or Red', indicators: ['yellow', 'red'], type: 'warning', nextNode: 'tier3-specialist' }
@@ -4513,7 +4559,8 @@ function formatChecklistItemText(item) {
         html = html.replace(new RegExp(needle, 'i'), match =>
             `<a class="checklist-line-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">${match}</a>`);
     });
-    return html;
+    return html.replace(/five pillars of reading|cinq piliers de l’enseignement de la lecture/gi,
+        match => `<strong>${match}</strong>`);
 }
 
 function formatChecklistLeadText(nodeData) {
@@ -4568,13 +4615,13 @@ function renderChecklistBody(nodeData, readOnly = false) {
             <div class="checklist-post-section">
                 <h4 class="checklist-post-section-title">${escapeHtml(section.title)}</h4>
                 <ul class="checklist-post-section-list checklist-feature-list">
-                    ${section.items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}
+                    ${section.items.map(item => `<li>${formatChecklistItemText(item)}</li>`).join('')}
                 </ul>
             </div>
         `).join('')
         : '';
 
-    return `${bodyHTML}${postSectionsHTML}`;
+    return `${nodeData.entryTitle ? `<h4 class="checklist-post-section-title">${escapeHtml(nodeData.entryTitle)}</h4>` : ''}${bodyHTML}${postSectionsHTML}`;
 }
 
 // Every point stays visible and must be ticked off before continuing.
@@ -4701,7 +4748,6 @@ function createIntegratedSelectionNode(nodeData) {
             <div class="step-content">
                 ${nodeData.subtitle ? `<h3>${escapeHtml(nodeData.subtitle)}</h3>` : ''}
                 ${nodeData.description ? `<p>${escapeHtml(nodeData.description)}</p>` : ''}
-                ${getEvidenceLegendTriggerHtml()}
                 ${infoBoxHTML}
                 ${warningBoxHTML}
                 <div class="fw-wizard">
@@ -4720,6 +4766,7 @@ function createIntegratedSelectionNode(nodeData) {
                     </div>
                     <div id="fw-results" class="fw-results"></div>
                 </div>
+                ${getEvidenceLegendTriggerHtml()}
             </div>
         `;
     }
@@ -4935,6 +4982,7 @@ function createIntegratedInfoNode(nodeData) {
         </div>
         <div class="step-content">
             <h3>${nodeData.subtitle}</h3>
+            ${nodeData.description ? `<p>${escapeHtml(nodeData.description)}</p>` : ''}
             ${warningBoxHTML}
             ${nodeData.features ? `<h4>${nodeData.featuresTitle || 'Key Characteristics'}</h4>` : ''}
             ${featuresHTML}
@@ -5111,13 +5159,13 @@ function proceedFromIntegratedInfo(fromNodeId, toNodeId) {
 
 // Select an option in selection node
 function selectIntegratedOption(nodeId, optionId, optionName, handlerName) {
-    saveSessionResource(nodeId, optionId);
     // Store choice for summary; merge any pending pathway from fwSelectItem
     const pending = appState.visualFlowchart._pendingPathway;
     const pathway = (pending && pending.nodeId === nodeId) ? pending.pathway : undefined;
     appState.visualFlowchart.choices[nodeId] = pathway
         ? { id: optionId, name: optionName, pathway }
         : { id: optionId, name: optionName };
+    saveSessionResource(nodeId, optionId);
     
     markStepCompleted(nodeId);
     
@@ -6196,7 +6244,7 @@ function selectTier2InterventionVisualIntegrated(nodeId, interventionId, interve
     appState.currentTierFlow.intervention = interventionId;
     appState.currentTierFlow.interventionName = interventionName;
     
-    const nextNode = nodeId === 'tier2-cycle2-intervention' ? 'tier2-cycle2-progress' : 'tier2-progress';
+    const nextNode = getFlowchartDefs().tier2.nodes[nodeId].nextNode;
     showIntegratedNode(nextNode, nodeId, interventionId);
 }
 
@@ -6214,7 +6262,7 @@ function selectTier3InterventionVisualIntegrated(nodeId, interventionId, interve
     appState.currentTierFlow.intervention = interventionId;
     appState.currentTierFlow.interventionName = interventionName;
     
-    showIntegratedNode('tier3-progress', nodeId, interventionId);
+    showIntegratedNode(getFlowchartDefs().tier3.nodes[nodeId].nextNode, nodeId, interventionId);
 }
 
 // Initialize the visual flowchart (legacy - kept for backwards compatibility)
@@ -6991,7 +7039,7 @@ function selectTier2InterventionVisual(nodeId, interventionId, interventionName)
     appState.currentTierFlow.intervention = interventionId;
     appState.currentTierFlow.interventionName = interventionName;
     
-    const nextNode = nodeId === 'tier2-cycle2-intervention' ? 'tier2-cycle2-progress' : 'tier2-progress';
+    const nextNode = getFlowchartDefs().tier2.nodes[nodeId].nextNode;
     showFlowchartNode(nextNode, nodeId, interventionId);
 }
 
@@ -7009,7 +7057,7 @@ function selectTier3InterventionVisual(nodeId, interventionId, interventionName)
     appState.currentTierFlow.intervention = interventionId;
     appState.currentTierFlow.interventionName = interventionName;
     
-    showFlowchartNode('tier3-progress', nodeId, interventionId);
+    showFlowchartNode(getFlowchartDefs().tier3.nodes[nodeId].nextNode, nodeId, interventionId);
 }
 
 // Action handlers for endpoint buttons
@@ -7773,12 +7821,12 @@ function selectTier3Intervention(interventionId, interventionName) {
     proceedToTier3ProgressMonitoring();
 }
 
-function proceedToTier3ProgressMonitoring() {
+function proceedToTier3ProgressMonitoring(showResults = false) {
     const container = document.getElementById('flowchart-container');
     container.innerHTML = `
         <div class="flowchart-tier-view">
             <div class="flowchart-header">
-                <button class="back-button" onclick="proceedToTier3Intervention()">
+                <button class="back-button" onclick="${showResults ? 'proceedToTier3ProgressMonitoring()' : 'proceedToTier3Intervention()'}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
@@ -7789,22 +7837,20 @@ function proceedToTier3ProgressMonitoring() {
             
             <div class="flowchart-content">
                 <div class="flowchart-step-wrapper active">
-                    <div class="step-indicator">Step 3</div>
+                    <div class="step-indicator">Step ${showResults ? '4' : '3'}</div>
                     <div class="step-content-box">
-                        <h3>Was instruction effective?</h3>
-                        <p>After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (${escapeHtml(getProgressMonitoringScreeners())}).</p>
-                        
-                        <p>If you chose the wrong option, simply choose the correct one and continue.</p>
-                        
-                        <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Was instruction effective?</h4>
-                        
+                        ${showResults ? '<h3>Was instruction effective?</h3>' : `
+                        <h3>Administer literacy screener</h3>
+                        <p>After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2).</p>
+                        <button class="btn-primary" onclick="proceedToTier3ProgressMonitoring(true)">Continue to Results</button>`}
+                        ${showResults ? `
                         <div class="decision-buttons">
                             <button class="decision-btn success" onclick="tier3StudentImproved()">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
                                 <div>
                                     <strong>Instruction Effective</strong>
                                     <span>Subtest result Blue or Green</span>
-                                </div>
+                                </div>` : ''}
                             </button>
                             
                             <button class="decision-btn warning" onclick="tier3StudentDidNotImprove()">
@@ -8612,7 +8658,10 @@ function readPathwaySessions(raw) {
                 .map(({ tierId, nodeId, choiceId }) => ({ tierId, nodeId, choiceId })),
             resources: (Array.isArray(session.resources) ? session.resources : []).slice(0, 100)
                 .filter(resource => resource && getAllResources().some(item => item.id === resource.id))
-                .map(resource => ({ id: resource.id, filters: {
+                .map(resource => ({ id: resource.id,
+                    ...(validId(resource.nodeId) && ['tier1', 'tier2', 'tier3'].includes(resource.tierId)
+                        ? { nodeId: resource.nodeId, tierId: resource.tierId } : {}),
+                    filters: {
                     program: session.context.program,
                     ...Object.fromEntries(['tier', 'pillar', 'resourceType', 'screener'].filter(field =>
                         validId(resource.filters?.[field])).map(field => [field, resource.filters[field]])),
@@ -8638,19 +8687,23 @@ function savePathwaySession() {
     const session = getActivePathwaySession();
     if (!session) return;
     session.context = { ...pathwayContext };
-    const tiers = [...(appState.fullJourney || []), appState.visualFlowchart];
+    const currentTier = appState.visualFlowchart;
+    const tiers = [...(appState.fullJourney || []).filter(tier => tier.tierId !== currentTier.tierId), currentTier];
     session.choices = tiers.flatMap(tier => (tier.selectedPath || []).flatMap(step => {
         const choice = tier.choices?.[step.nodeId];
         return choice ? [{ tierId: tier.tierId, nodeId: step.nodeId, choiceId: choice.id }] : [];
     })).filter((choice, index, choices) =>
         choices.findLastIndex(item => item.tierId === choice.tierId && item.nodeId === choice.nodeId) === index);
-    session.choices.forEach(choice => {
+    session.resources = session.choices.flatMap(choice => {
         const node = getFlowchartDefs()[choice.tierId]?.nodes?.[choice.nodeId];
         if (node?.type !== 'selection' || node.options === 'screeners' ||
-            !getAllResources().some(item => item.id === choice.choiceId) ||
-            session.resources.some(resource => resource.id === choice.choiceId) || session.resources.length >= 100) return;
-        session.resources.push({ id: choice.choiceId, filters: { program: pathwayContext.program,
-            tier: choice.tierId.replace('tier', ''), screener: getPathwayScreenerId(), grade: pathwayContext.grades } });
+            !getAllResources().some(item => item.id === choice.choiceId)) return [];
+        const previous = session.resources.find(resource => resource.id === choice.choiceId &&
+            (resource.nodeId ? resource.nodeId === choice.nodeId && resource.tierId === choice.tierId
+                : String(resource.filters.tier) === choice.tierId.replace('tier', '')));
+        return [{ id: choice.choiceId, nodeId: choice.nodeId, tierId: choice.tierId,
+            filters: previous?.filters || { program: pathwayContext.program,
+                tier: choice.tierId.replace('tier', ''), screener: getPathwayScreenerId(), grade: pathwayContext.grades } }];
     });
 }
 
@@ -8665,10 +8718,10 @@ function saveSessionResource(nodeId, resourceId) {
         tier: appState.visualFlowchart.tierId.replace('tier', ''),
         screener: getPathwayScreenerId(), grade: pathwayContext.grades,
         pillar: wizard.pillar || '', resourceType: wizard.resourceType || '' };
-    if (session.resources.length < 100 && !session.resources.some(resource =>
-        resource.id === resourceId && JSON.stringify(resource.filters) === JSON.stringify(filters))) {
-        session.resources.push({ id: resourceId, filters });
-    }
+    const tierId = appState.visualFlowchart.tierId;
+    session.resources = session.resources.filter(resource => resource.nodeId !== nodeId || resource.tierId !== tierId);
+    session.resources.push({ id: resourceId, nodeId, tierId, filters });
+    savePathwaySession();
     persistProgressStorage();
     updatePathwaySelections();
 }
