@@ -2875,24 +2875,9 @@ details > p {
   border-color: var(--primary-lighter);
 }
 
-.interventions-results-panel .resource-card {
-  border-left: 4px solid var(--secondary);
-  background: linear-gradient(90deg, var(--card-blue-bg), var(--bg) 18%);
-}
-
-.interventions-results-panel .resource-card:nth-child(4n + 2) {
-  border-left-color: var(--accent);
-  background: linear-gradient(90deg, var(--card-yellow-bg), var(--bg) 18%);
-}
-
-.interventions-results-panel .resource-card:nth-child(4n + 3) {
-  border-left-color: var(--card-pink-border);
-  background: linear-gradient(90deg, var(--card-pink-bg), var(--bg) 18%);
-}
-
-.interventions-results-panel .resource-card:nth-child(4n + 4) {
-  border-left-color: var(--card-mint-border);
-  background: linear-gradient(90deg, var(--card-mint-bg), var(--bg) 18%);
+.interventions-results-panel .resource-card:not(.is-recommended) {
+  border-color: var(--card-blue-border);
+  background: var(--card-blue-bg);
 }
 
 .resource-card-main {
