@@ -9746,10 +9746,14 @@ function buildResourceLinksHtml(item, state) {
     }).join('');
 }
 
-function buildResourceMetaPillsHtml(matchingTags) {
+function buildResourceMetaPillsHtml(matchingTags, showResourceTypes = false) {
     const gradeText = uniqueSorted(matchingTags.map(tag => tag.gradeRangeText)).join('; ');
     const screenerText = uniqueSorted(matchingTags.flatMap(tag => (tag.screeners || []).length ? tag.screeners : [NO_SPECIFIC_SCREENER_VALUE])).map(translateScreener).join(', ');
     const pills = [];
+    if (showResourceTypes) {
+        const types = uniqueSorted(matchingTags.map(tag => tag.resourceType)).map(translateResourceType).join(', ');
+        if (types) pills.push(`<span class="resource-card-pill"><strong>${escapeHtml(t('filter_type_label'))}:</strong> ${escapeHtml(types)}</span>`);
+    }
     if (gradeText) pills.push(`<span class="resource-card-pill"><strong>${escapeHtml(t('filter_grades_label'))}:</strong> ${escapeHtml(gradeText)}</span>`);
     if (screenerText) pills.push(`<span class="resource-card-pill"><strong>${escapeHtml(t('filter_screeners_label'))}:</strong> ${escapeHtml(screenerText)}</span>`);
     return pills.join('');
@@ -9768,7 +9772,7 @@ function buildResourceCardHtml(item, state = menuState) {
                     ${buildResourceRecommendationBadgeHtml(item, state)}
                     ${getEvidenceBadgeHtml(evidenceLevel)}
                 </div>
-                <div class="resource-card-pill-row">${buildResourceMetaPillsHtml(matchingTags)}</div>
+                <div class="resource-card-pill-row">${buildResourceMetaPillsHtml(matchingTags, getMenuSelections(state.resourceType).length > 1)}</div>
                 ${notes ? `<div class="resource-card-note-block"><span class="resource-card-note-label">${escapeHtml(t('filter_notes_label'))}</span><div class="resource-card-meta resource-card-notes">${escapeHtml(notes)}</div></div>` : ''}
             </div>
             <div class="resource-card-links">${buildFavouriteButtonHtml(item)}${buildResourceLinksHtml(item, state)}</div>

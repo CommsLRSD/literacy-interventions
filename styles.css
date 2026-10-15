@@ -4589,6 +4589,10 @@ details > p {
   color: var(--text-secondary);
 }
 
+.interventions-results-panel > .fw-recommended-legend {
+  margin: 0 0 var(--space-md);
+}
+
 .fw-recommended-swatch {
   display: inline-flex;
   align-items: center;
