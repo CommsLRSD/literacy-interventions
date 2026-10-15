@@ -96,6 +96,7 @@ const TRANSLATIONS = {
 
         // ── Home hero ──
         hero_eyebrow: 'LRSD Literacy Resource',
+        guided_start_here: 'Start Here!',
         hero_title_html: 'What’s the next step in supporting your learners’ literacy?',
         hero_subtitle: 'Start with classroom instruction, then use screening information to plan support and monitor progress. We’ll guide you one step at a time, with resources when you need them.',
         guided_choose_program: 'Choose your program',
@@ -546,6 +547,7 @@ const TRANSLATIONS = {
 
         // ── Home hero ──
         hero_eyebrow: 'Ressource en littératie de la DSLR',
+        guided_start_here: 'Commencez ici !',
         hero_title_html: 'Quelle est la prochaine étape pour soutenir la littératie de vos élèves?',
         hero_subtitle: 'Commencez par l’enseignement en classe, puis utilisez les données de dépistage pour planifier le soutien et suivre les progrès. Nous vous guidons une étape à la fois, avec des ressources au moment voulu.',
         guided_choose_program: 'Choisissez votre programme',
