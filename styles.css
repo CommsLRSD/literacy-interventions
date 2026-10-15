@@ -4611,6 +4611,10 @@ details > p {
   color: var(--text-secondary);
 }
 
+.fw-locked-pillars {
+  margin-bottom: 0;
+}
+
 .fw-pillar-dropdown {
   max-width: 100%;
 }

@@ -4755,6 +4755,8 @@ function createIntegratedSelectionNode(nodeData) {
             handlerName: nodeData.nextHandler,
             multiSelect,
             basePillarsKey,
+            // Pillars chosen in the preceding drill-down are fixed for its intervention step.
+            pillarsLocked: !!drillDownPillars?.length,
             selectedIds: reuse && multiSelect ? (previous.selectedIds || []) : []
         };
         // Remember tier/program too, so the standalone Interventions Menu
@@ -4788,13 +4790,18 @@ function createIntegratedSelectionNode(nodeData) {
                         <span class="fw-context-chip">${escapeHtml(program)}</span>
                         <span class="fw-context-chip">${escapeHtml(translateResourceType(itemType))}</span>
                     </div>
-                    <div class="fw-select-group">
+                    ${appState.fwState.pillarsLocked ? `<div class="fw-select-group">
+                        <span id="fw-pillar-label" class="fw-select-label">${escapeHtml(t('fw_choose_pillars_label'))}</span>
+                        <div class="fw-context-chips fw-locked-pillars" role="list" aria-labelledby="fw-pillar-label">
+                            ${appState.fwState.pillars.map(value => `<span class="fw-context-chip" role="listitem">${escapeHtml(translatePillar(value))}</span>`).join('')}
+                        </div>
+                    </div>` : `<div class="fw-select-group">
                         <span id="fw-pillar-label" class="fw-select-label">${escapeHtml(t('fw_choose_pillars_label'))}</span>
                         <details id="fw-pillar-filter" class="cal-grade-dropdown fw-pillar-dropdown" onkeydown="if(event.key==='Escape'){event.preventDefault();this.open=false;this.querySelector('summary').focus();}">
                             <summary aria-labelledby="fw-pillar-label fw-pillar-value"><span id="fw-pillar-value">${escapeHtml(getFwPillarSummary(appState.fwState.pillars))}</span></summary>
                             <div class="cal-grade-options" role="group" aria-labelledby="fw-pillar-label">${pillarOptionsHtml}</div>
                         </details>
-                    </div>
+                    </div>`}
                     <div id="fw-results" class="fw-results"></div>
                 </div>
                 ${getEvidenceLegendTriggerHtml()}
@@ -4868,7 +4875,7 @@ function getFwPillarSummary(pillars) {
 // Flowchart embedded intervention wizard: pillar toggle handler
 function fwOnPillarToggle(value, checked) {
     const state = appState.fwState;
-    if (!state || !value) return;
+    if (!state || !value || state.pillarsLocked) return;
     const pillars = state.pillars.filter(pillar => pillar !== value);
     if (checked) pillars.push(value);
     state.pillars = pillars;
