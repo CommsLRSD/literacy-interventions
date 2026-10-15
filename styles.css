@@ -12075,6 +12075,32 @@ details.pathway-session-latest {
   font-weight: 700;
 }
 .pathway-session-meta { font-size: 0.75rem; color: var(--text-secondary); }
+.pathway-session-title { flex-wrap: wrap; }
+.saved-group + .saved-group { margin-top: 2rem; }
+.saved-group h3 { margin-bottom: 0.5rem; }
+.saved-sessions-hint { margin: 0 0 1rem; font-size: 0.85rem; color: var(--text-secondary); }
+.pathway-session-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.session-notes { margin-top: 0.75rem; font-size: 0.85rem; }
+.session-notes ol { padding-left: 1.25rem; }
+.session-notes li + li { margin-top: 0.4rem; }
+.pathway-session-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.pathway-session-close:hover { background: var(--primary-faint); }
+.pathway-session-close .material-symbols-rounded { font-size: 1rem; }
+.pathway-session-close:focus-visible,
+.pathway-session-download:focus-visible { outline: 3px solid #a66b00; outline-offset: 3px; }
 .pathway-session-label {
   margin: 0.6rem 0 0.2rem;
   padding: 0;

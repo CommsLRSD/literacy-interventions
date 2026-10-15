@@ -107,6 +107,7 @@ function persistProgressStorage() {
     const epoch = progressStorageEpoch;
     const payload = JSON.stringify({ pathway: savedPathway, defaults: pathwayDefaults,
         sessions: pathwaySessions, activeSessionId: activePathwaySessionId });
+    try { sessionStorage.setItem(PATHWAY_SESSION_KEY, payload); } catch (e) { /* Session storage is optional. */ }
     return queueProgressStorage(async () => {
         if (epoch !== progressStorageEpoch) return;
         try {
@@ -114,7 +115,9 @@ function persistProgressStorage() {
             if (epoch !== progressStorageEpoch) return;
             await cache.put(PATHWAY_CACHE_URL, new Response(payload, { headers: { 'Content-Type': 'application/json' } }));
             if (epoch === progressStorageEpoch) {
-                try { sessionStorage.removeItem(PATHWAY_SESSION_KEY); } catch (error) { /* Session storage is optional. */ }
+                try {
+                    if (sessionStorage.getItem(PATHWAY_SESSION_KEY) === payload) sessionStorage.removeItem(PATHWAY_SESSION_KEY);
+                } catch (error) { /* Session storage is optional. */ }
             }
         } catch (e) {
             if (epoch !== progressStorageEpoch) return;
@@ -170,8 +173,8 @@ function getValidPathwayGrades(program, grades) {
     return normalizeGradeList(grades).filter(grade => allowed.includes(grade)).slice(0, 1);
 }
 
-function getProgramScreeners() {
-    return (appState.tierFlowchartData?.tier1?.screeners || []).filter(item => isScreenerIdForCurrentProgram(item.id));
+function getProgramScreeners(program = appState.selectedProgram) {
+    return (appState.tierFlowchartData?.tier1?.screeners || []).filter(item => isScreenerIdForCurrentProgram(item.id, program));
 }
 
 function getPathwaySetupDefaults() {
@@ -265,6 +268,11 @@ function updateHomeSetup(partial) {
             fwLoadResults();
         }
         updateScreenerIndicator();
+        const session = pathwaySessions.find(item => item.id === activePathwaySessionId);
+        if (session && savedPathway) {
+            session.context = structuredClone(savedPathway.context);
+            session.pathway = structuredClone(savedPathway);
+        }
     }
     persistProgressStorage();
     updateGuidedHome();
@@ -420,7 +428,7 @@ function serializeTierPathway(vf) {
     };
 }
 
-function resolveSavedChoice(node, id, tierId) {
+function resolveSavedChoice(node, id, tierId, program = appState.selectedProgram) {
     if (node.type === 'checklist' && id === 'completed') {
         return { id, name: t('all_reviewed')(node.items.length) };
     }
@@ -433,7 +441,7 @@ function resolveSavedChoice(node, id, tierId) {
         if (node.options !== 'screeners' && id === NO_RESOURCE_CHOICE_ID) return { id, name: t('fw_no_resource_choice') };
         if (node.options === 'screeners') {
             const item = (appState.tierFlowchartData?.[tierId]?.screeners || [])
-                .filter(option => isScreenerIdForCurrentProgram(option.id)).find(option => option.id === id);
+                .filter(option => isScreenerIdForCurrentProgram(option.id, program)).find(option => option.id === id);
             return item ? { id, name: item.name } : null;
         }
         // Drill-down steps may record several resources as a comma-separated list.
@@ -446,7 +454,7 @@ function resolveSavedChoice(node, id, tierId) {
     return null;
 }
 
-function validateTierPathway(raw) {
+function validateTierPathway(raw, program = appState.selectedProgram) {
     if (!raw || !['tier1', 'tier2', 'tier3'].includes(raw.tierId)) return null;
     const def = getFlowchartDefs()[raw.tierId];
     if (!Array.isArray(raw.selectedPath) || !raw.selectedPath.length || raw.selectedPath.length > Object.keys(def.nodes).length) return null;
@@ -460,11 +468,11 @@ function validateTierPathway(raw) {
         const node = def.nodes[step.nodeId];
         const id = raw.choices?.[step.nodeId]?.id;
         if (id !== undefined) {
-            const choice = resolveSavedChoice(node, id, raw.tierId);
+            const choice = resolveSavedChoice(node, id, raw.tierId, program);
             if (!choice) return null;
             const savedPillars = raw.choices[step.nodeId].pillars;
             if (node.type === 'selection' && node.options !== 'screeners' && Array.isArray(savedPillars)) {
-                const known = distinctTagValues({ program: appState.selectedProgram }, 'pillar');
+                const known = distinctTagValues({ program }, 'pillar');
                 choice.pillars = [...new Set(savedPillars.filter(pillar => known.includes(pillar)))];
                 choice.pathway = buildChoicePathway(choice.pillars, choice.name);
             }
@@ -498,27 +506,27 @@ function validateTierPathway(raw) {
         layoutMode: normalizeJourneyLayoutMode(raw.layoutMode) };
 }
 
-function readSavedPathway(saved) {
+function readSavedPathway(saved, program = appState.selectedProgram) {
     try {
-        if (![PROGRAM_ENGLISH, PROGRAM_FRENCH_IMMERSION].includes(appState.selectedProgram)) return null;
-        if (!saved || saved.version !== 2 || saved.program !== appState.selectedProgram) return null;
+        if (![PROGRAM_ENGLISH, PROGRAM_FRENCH_IMMERSION].includes(program)) return null;
+        if (!saved || saved.version !== 2 || saved.program !== program) return null;
         // Pathways saved before multi-grade support stored a single `grade`.
         const grades = getValidPathwayGrades(saved.program, saved.context?.grades ?? saved.context?.grade);
         if (saved.context?.program !== saved.program || !grades.length ||
-            !getProgramScreeners().some(item => item.id === saved.context?.screener)) return null;
-        const current = validateTierPathway(saved.current);
+            !getProgramScreeners(program).some(item => item.id === saved.context?.screener)) return null;
+        const current = validateTierPathway(saved.current, program);
         if (!current) return null;
-        const fullJourney = (Array.isArray(saved.fullJourney) ? saved.fullJourney.slice(0, 3) : []).map(validateTierPathway);
+        const fullJourney = (Array.isArray(saved.fullJourney) ? saved.fullJourney.slice(0, 3) : []).map(tier => validateTierPathway(tier, program));
         if (fullJourney.some(tier => !tier)) return null;
         return { version: 2, program: saved.program, context: { program: saved.program, screener: saved.context.screener, grades },
-            current, fullJourney, filters: validatePathwayFilters(saved.filters) };
+            current, fullJourney, filters: validatePathwayFilters(saved.filters, program) };
     } catch (e) {
         return null;
     }
 }
 
-function validatePathwayFilters(filters) {
-    const context = { program: appState.selectedProgram };
+function validatePathwayFilters(filters, program = appState.selectedProgram) {
+    const context = { program };
     const validated = Object.fromEntries(['pillar', 'screener'].map(field => [
         field, distinctTagValues(context, field).includes(filters?.[field]) ? filters[field] : ''
     ]));
@@ -615,7 +623,7 @@ function restorePathway(saved) {
         appState.visualFlowchart = { ...appState.visualFlowchart, ...current,
             currentNodeId: current.selectedPath[current.selectedPath.length - 1].nodeId,
             lastRenderedActiveNodeId: null };
-        appState.fullJourney = (saved.fullJourney || []).map(validateTierPathway).filter(Boolean);
+            appState.fullJourney = (saved.fullJourney || []).map(tier => validateTierPathway(tier)).filter(Boolean);
         const screener = appState.tierFlowchartData.tier1.screeners.find(item => item.id === pathwayContext.screener);
         setRememberedScreener(saved.filters?.screener || screener.name);
         appState.currentTierFlow = { screener: screener.id, screenerName: screener.name, grades };
@@ -650,6 +658,55 @@ function resumeGuidedPathway() {
 function returnToPathway() {
     resumeGuidedPathway();
     requestAnimationFrame(scrollToActiveStep);
+}
+
+function closePathwaySession(completed = false) {
+    if (!appReady || !savedPathway) return;
+    const vf = appState.visualFlowchart;
+    if (completed && getFlowchartDefs()[vf?.tierId]?.nodes?.[vf.currentNodeId]?.type !== 'endpoint') return;
+    savePathwayProgress();
+    const session = pathwaySessions.find(item => item.id === activePathwaySessionId);
+    if (session) session.status = completed ? 'completed' : 'draft';
+    document.getElementById('pathway-sessions-drawer')?.close();
+    closeVisualFlowchartModal({ immediate: true });
+    closeFinalSummaryDialog({ immediate: true });
+    setHomeDrawerOpen(false);
+    homeSetupDraft = null;
+    appState.visualFlowchartDismissed = false;
+    clearPathwayProgress();
+    document.getElementById('flowchart-container').innerHTML = '';
+    navigateToPage('favourites');
+    document.getElementById('saved-sessions-title')?.focus();
+}
+
+function resumePathwaySession(sessionId) {
+    if (!appReady) return;
+    const session = pathwaySessions.find(item => item.id === sessionId);
+    if (!session || session.status === 'completed') return;
+    const pathway = readSavedPathway(session.pathway, session.context.program);
+    if (!pathway) return;
+    savePathwayProgress();
+    document.getElementById('pathway-sessions-drawer')?.close();
+    closeVisualFlowchartModal({ immediate: true });
+    closeFinalSummaryDialog({ immediate: true });
+    setHomeDrawerOpen(false);
+    homeSetupDraft = null;
+    clearPathwayProgress();
+    if (appState.selectedProgram !== session.context.program) {
+        finalizeProgramSelection(session.context.program, appState.language);
+    }
+    activePathwaySessionId = session.id;
+    savedPathway = pathway;
+    appState.visualFlowchartDismissed = false;
+    if (restorePathway(pathway)) {
+        navigateToPage('flowchart');
+        requestAnimationFrame(focusActivePathwayStep);
+    }
+}
+
+function renderSessionCloseButtonHtml() {
+    return `<button type="button" class="pathway-session-close" onclick="closePathwaySession()"
+        title="${escapeAttr(t('session_autosave_hint'))}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">save</span>${escapeHtml(t('session_save_close'))}</button>`;
 }
 
 function focusActivePathwayStep() {
@@ -908,6 +965,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize assessment schedules
     await initializeAssessmentSchedules();
     savedPathway = readSavedPathway(await readProgressStorage());
+    const activeSession = pathwaySessions.find(session => session.id === activePathwaySessionId);
+    if (activeSession && savedPathway && !activeSession.pathway) activeSession.pathway = structuredClone(savedPathway);
     if (!savedPathway && appState.selectedProgram) {
         const defaults = getPathwaySetupDefaults();
         setRememberedMenuFilters({ pillar: defaults.pillar, grade: defaults.grades });
@@ -2589,6 +2648,7 @@ function initIntegratedFlowchart(tierId) {
                 <div class="flowchart-glass-header-end">
                     ${showTier1Guidance ? renderTier1GuidanceHtml('flowchart', false, "navigateToPage('scores')") : ''}
                     ${renderPathwayContextHtml()}
+                    ${renderSessionCloseButtonHtml()}
                 </div>
             </div>
             
@@ -3445,6 +3505,7 @@ function openVisualFlowchartModal() {
                 </div>
                 ${renderVisualFlowchartHeaderControlsHtml()}
                 <div class="visual-flowchart-header-actions">
+                    ${renderSessionCloseButtonHtml()}
                     <button class="visual-flowchart-fullscreen-btn" id="visual-flowchart-fullscreen-btn" type="button" onclick="toggleVisualFlowchartFullscreen()" aria-label="${escapeHtml(t('fc_visual_fullscreen'))}" title="${escapeHtml(t('fc_visual_fullscreen'))}">
                         <span class="material-symbols-rounded" aria-hidden="true" translate="no">fullscreen</span>
                     </button>
@@ -3977,7 +4038,8 @@ function refreshVisualFlowchartModal() {
             : '';
         const summaryAction = entry.isCurrent && entry.node.type === 'endpoint'
             && appState.visualFlowchart?.summaryEndpointNodeData?.id === entry.node.id
-            ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="showCurrentJourneySummary()">${escapeHtml(t('gate_view_summary'))}</button>`
+            ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="showCurrentJourneySummary()">${escapeHtml(t('gate_view_summary'))}</button>
+               <button type="button" class="visual-flowchart-tier-review-btn" onclick="closePathwaySession(true)">${escapeHtml(t('session_end'))}</button>`
             : '';
         return `${collapseBtn}<${tag} class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ' visual-flowchart-card-completed'}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
                     style="left:${position.x}px;top:${position.y}px;width:${position.width}px" ${revisit}>
@@ -5196,10 +5258,9 @@ function createIntegratedEndpointNode(nodeData) {
 
     // For pure terminal endpoints (no tier-transition actions), always provide
     // Done so the user is never left without a next action.
-    const defaultActionsHTML = (!actionButtonHTML && !secondaryActionHTML) ? `
-        <button class="action-btn action-primary" onclick="closeIntegratedFlowchart()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M20 6L9 17l-5-5"/></svg>
-            Done
+    const defaultActionsHTML = isTerminalEndpoint ? `
+        <button class="action-btn action-secondary" onclick="closePathwaySession(true)">
+            ${escapeHtml(t('session_end'))}
         </button>
     ` : '';
     
@@ -5918,9 +5979,9 @@ function showFinalSummary(endpointNodeData) {
         </svg>
         Start Over
     </button>
-    <button class="action-btn action-primary" onclick="${useSummaryModal ? 'closeFinalSummaryDialog()' : 'renderJourney()'}">
+    <button class="action-btn action-primary" onclick="closePathwaySession(true)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-        Done
+        ${escapeHtml(t('session_end'))}
     </button>`;
 
     // ── Render skeleton; all items hidden, to be revealed in sequence ──
@@ -8316,12 +8377,12 @@ function openInteractiveFlowchart() {
 // shared between both programs.
 const FRENCH_ONLY_SCREENER_IDS = ['thafol', 'idapel'];
 
-function isScreenerIdForCurrentProgram(screenerId) {
+function isScreenerIdForCurrentProgram(screenerId, program = appState.selectedProgram) {
     const isFrenchOnlyScreener = FRENCH_ONLY_SCREENER_IDS.includes(String(screenerId).toLowerCase());
     // French Immersion gets the French-specific screeners (THaFoL, IDAPEL) as
     // well as the shared English ones (DIBELS, CTOPP-2), so nothing is
     // filtered out. English only gets the shared ones.
-    return appState.selectedProgram === PROGRAM_FRENCH_IMMERSION ? true : !isFrenchOnlyScreener;
+    return program === PROGRAM_FRENCH_IMMERSION ? true : !isFrenchOnlyScreener;
 }
 
 // The wizard's screener dropdown groups by "English" / "French" language;
@@ -8784,9 +8845,10 @@ function buildFavouriteButtonHtml(item) {
 
 function renderFavourites() {
     const ids = getFavouriteIds();
+    const count = ids.size + pathwaySessions.length;
     document.querySelectorAll('[data-page="favourites"] .nav-badge').forEach(badge => {
-        badge.textContent = String(ids.size);
-        badge.classList.toggle('is-empty', ids.size === 0);
+        badge.textContent = String(count);
+        badge.classList.toggle('is-empty', count === 0);
     });
     const list = document.getElementById('favourites-list');
     if (!list) return;
@@ -8804,6 +8866,8 @@ function readPathwaySessions(raw) {
         (appState.tierFlowchartData?.tier1?.screeners || []).some(item => item.id === session.context.screener))
         .map((session, index) => ({
             id: session.id, startedAt: session.startedAt,
+            status: session.status === 'completed' ? 'completed' : 'draft',
+            pathway: readSavedPathway(session.pathway, session.context.program),
             number: Number.isSafeInteger(session.number) && session.number > 0 ? session.number : index + 1,
             context: { program: session.context.program, screener: session.context.screener,
                 grades: getValidPathwayGrades(session.context.program, session.context.grades) },
@@ -8843,6 +8907,8 @@ function savePathwaySession() {
     const session = getActivePathwaySession();
     if (!session) return;
     session.context = { ...pathwayContext };
+    session.status = 'draft';
+    session.pathway = structuredClone(savedPathway);
     const currentTier = appState.visualFlowchart;
     const tiers = [...(appState.fullJourney || []).filter(tier => tier.tierId !== currentTier.tierId), currentTier];
     session.choices = tiers.flatMap(tier => (tier.selectedPath || []).flatMap(step => {
@@ -8903,7 +8969,7 @@ function getSessionNotes(session) {
     const steps = session.choices.flatMap(choice => {
         const nodes = defs[choice.tierId]?.nodes || {};
         const node = nodes[choice.nodeId];
-        const resolved = node && resolveSavedChoice(node, choice.choiceId, choice.tierId);
+        const resolved = node && resolveSavedChoice(node, choice.choiceId, choice.tierId, session.context.program);
         if (!resolved) return [];
         const tier = tierNum(choice.tierId);
         const rows = [{ tier, title: plain(node.title || node.subtitle), response: plain(resolved.name) }];
@@ -8920,9 +8986,10 @@ function getSessionNotes(session) {
     const lastOutcome = outcomes[outcomes.length - 1];
     if (lastOutcome && !lastOutcome.continues && steps[steps.length - 1] === lastOutcome) lastOutcome.final = true;
     let next = '';
-    const vf = appState.visualFlowchart;
+    const vf = session.id === activePathwaySessionId && appState.visualFlowchart?.tierId
+        ? appState.visualFlowchart : session.pathway?.current;
     const lastStep = vf?.selectedPath?.[vf.selectedPath.length - 1];
-    if (session.id === activePathwaySessionId && lastStep && !vf.choices?.[lastStep.nodeId]) {
+    if (session.status !== 'completed' && lastStep && !vf.choices?.[lastStep.nodeId]) {
         const node = defs[vf.tierId]?.nodes?.[lastStep.nodeId];
         if (node && node.type !== 'endpoint' && !lastOutcome?.final) next = plain(node.title || node.subtitle);
     }
@@ -8959,7 +9026,13 @@ function updatePathwaySelections() {
         ? document.fullscreenElement : modal || document.body;
     if (toggle.parentElement !== host) host.appendChild(toggle);
     toggle.hidden = appState.currentPage !== 'flowchart';
-    const expanded = new Set(Array.from(list.querySelectorAll('details[open]')).map(item => item.dataset.sessionId));
+    for (const target of [list, document.getElementById('saved-sessions-list')].filter(Boolean)) {
+        renderPathwaySessionList(target);
+    }
+}
+
+function renderPathwaySessionList(list) {
+    const expanded = new Set(Array.from(list.querySelectorAll('details[open][data-session-id]')).map(item => item.dataset.sessionId));
     const rendered = new Set(Array.from(list.querySelectorAll('details')).map(item => item.dataset.sessionId));
     const locale = appState.language === 'fr' ? 'fr-CA' : 'en-US';
     list.innerHTML = pathwaySessions.slice().reverse().map((session, index) => {
@@ -8983,11 +9056,15 @@ function updatePathwaySelections() {
             </li>`;
         }).join('');
         const isCurrent = session.id === activePathwaySessionId;
-        return `<details class="pathway-session${index === 0 ? ' pathway-session-latest' : ''}" data-session-id="${escapeAttr(session.id)}"${expanded.has(session.id) || (!rendered.has(session.id) && isCurrent) ? ' open' : ''}>
+        const status = isCurrent ? 'pathway_session_current' : session.status === 'completed'
+            ? 'session_completed' : session.pathway ? 'session_draft' : 'session_notes_only';
+        return `<details class="pathway-session${isCurrent ? ' pathway-session-latest' : ''}" data-session-id="${escapeAttr(session.id)}"${expanded.has(session.id) || (!rendered.has(session.id) && isCurrent && list.id === 'pathway-sessions-list') ? ' open' : ''}>
             <summary>
-                <span class="pathway-session-title">${escapeHtml(t('pathway_session'))} ${notes.number} · ${escapeHtml(date)}${isCurrent ? `<span class="pathway-session-current">${escapeHtml(t('pathway_session_current'))}</span>` : ''}</span>
+                <span class="pathway-session-title">${escapeHtml(t('pathway_session'))} ${notes.number} · ${escapeHtml(date)}<span class="pathway-session-current">${escapeHtml(t(status))}</span></span>
                 <span class="pathway-session-meta">${meta}</span>
             </summary>
+            ${notes.steps.length ? `<details class="session-notes"><summary>${escapeHtml(t('pathway_resources'))}</summary><ol>${notes.steps.filter(step => !step.outcome).map(step =>
+                `<li><strong>${escapeHtml(step.title)}:</strong> ${escapeHtml(step.response)}</li>`).join('')}</ol></details>` : ''}
             ${notes.outcomes.length ? `<ul class="pathway-session-outcomes">${notes.outcomes.map(outcome => `<li class="pathway-session-outcome${outcome.final ? ' is-final' : ''}">
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">${outcome.final ? 'sports_score' : 'flag'}</span>
                 <span><span class="pathway-session-label">${outcome.final ? `${escapeHtml(t('notes_final_outcome'))} · ` : ''}${escapeHtml(outcome.title)}:</span> ${escapeHtml(outcome.response)}</span>
@@ -8995,9 +9072,12 @@ function updatePathwaySelections() {
             ${notes.next ? `<p class="pathway-session-next"><span class="material-symbols-rounded" aria-hidden="true" translate="no">arrow_forward</span><span><span class="pathway-session-label">${escapeHtml(t('notes_next'))}:</span> ${escapeHtml(notes.next)}</span></p>` : ''}
             <p class="pathway-session-label">${escapeHtml(t('notes_resources'))}</p>
             ${resources ? `<ul class="session-resources">${resources}</ul>` : `<p class="pathway-session-empty">${escapeHtml(t('pathway_session_no_resources'))}</p>`}
+            <div class="pathway-session-actions">
+            ${session.pathway && session.status !== 'completed' ? `<button type="button" class="pathway-session-download" data-session-resume="${escapeAttr(session.id)}">${escapeHtml(t('session_resume'))}</button>` : ''}
             <button type="button" class="pathway-session-download" data-session-download="${escapeAttr(session.id)}" aria-label="${escapeAttr(t('notes_download_label'))}">
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">download</span>${escapeHtml(t('notes_download'))}
             </button>
+            </div>
         </details>`;
     }).join('') || `<p class="pathway-session-empty">${escapeHtml(t('pathway_sessions_empty'))}</p>`;
 }
@@ -9142,9 +9222,11 @@ function downloadSessionNotes(sessionId) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-document.getElementById('pathway-sessions-list')?.addEventListener('click', event => {
-    const button = event.target.closest?.('[data-session-download]');
-    if (button) downloadSessionNotes(button.dataset.sessionDownload);
+document.addEventListener('click', event => {
+    const button = event.target.closest?.('[data-session-download], [data-session-resume]');
+    if (!button) return;
+    if (button.dataset.sessionDownload) downloadSessionNotes(button.dataset.sessionDownload);
+    else resumePathwaySession(button.dataset.sessionResume);
 });
 
 document.addEventListener('fullscreenchange', updatePathwaySelections);
