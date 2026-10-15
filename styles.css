@@ -2875,24 +2875,9 @@ details > p {
   border-color: var(--primary-lighter);
 }
 
-.interventions-results-panel .resource-card {
-  border-left: 4px solid var(--secondary);
-  background: linear-gradient(90deg, var(--card-blue-bg), var(--bg) 18%);
-}
-
-.interventions-results-panel .resource-card:nth-child(4n + 2) {
-  border-left-color: var(--accent);
-  background: linear-gradient(90deg, var(--card-yellow-bg), var(--bg) 18%);
-}
-
-.interventions-results-panel .resource-card:nth-child(4n + 3) {
-  border-left-color: var(--card-pink-border);
-  background: linear-gradient(90deg, var(--card-pink-bg), var(--bg) 18%);
-}
-
-.interventions-results-panel .resource-card:nth-child(4n + 4) {
-  border-left-color: var(--card-mint-border);
-  background: linear-gradient(90deg, var(--card-mint-bg), var(--bg) 18%);
+.interventions-results-panel .resource-card:not(.is-recommended) {
+  border-color: var(--card-blue-border);
+  background: var(--card-blue-bg);
 }
 
 .resource-card-main {
@@ -4602,6 +4587,10 @@ details > p {
   margin: var(--space-lg) 0 0;
   font-size: 0.75rem;
   color: var(--text-secondary);
+}
+
+.interventions-results-panel > .fw-recommended-legend {
+  margin: 0 0 var(--space-md);
 }
 
 .fw-recommended-swatch {
@@ -7788,6 +7777,24 @@ body.step-review-modal-open { overflow: hidden; }
   gap: var(--space-md);
 }
 
+.menu-search-panel-body > [hidden] {
+  display: none;
+}
+
+.menu-pillar-dropdown {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.menu-pillar-dropdown .cal-grade-options {
+  left: 0;
+}
+
+.menu-pillar-dropdown .cal-grade-option {
+  white-space: normal;
+}
+
 .menu-search-panel-footer {
   display: flex;
   align-items: center;
@@ -7966,6 +7973,7 @@ body.step-review-modal-open { overflow: hidden; }
   padding-top: var(--space-md);
   display: grid;
   gap: var(--space-md);
+  margin-bottom: var(--space-md);
 }
 
 .filter-advanced-summary {
