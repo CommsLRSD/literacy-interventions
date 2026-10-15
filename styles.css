@@ -11578,6 +11578,38 @@ body.program-prompt-open { overflow: hidden; }
 .guided-home-hero .hero-title { font-size: clamp(1.7rem, 3vw, 2.5rem); }
 .guided-home-hero .hero-subtitle { max-width: 650px; }
 .guided-home-hero .hero-photo { width: 300px; height: 270px; }
+.home-start-annotation {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  margin-top: 1rem;
+  color: #ff7770;
+  pointer-events: none;
+}
+.home-start-lettering {
+  width: 300px;
+  min-width: 0;
+  margin-top: 0.3rem;
+  transform: rotate(-6deg);
+}
+.home-start-arrow,
+.home-start-lettering {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.home-start-arrow {
+  width: 96px;
+  height: 76px;
+  flex-shrink: 0;
+}
+.home-start-lettering-fr { display: none; }
+.home-start-lettering:lang(fr) .home-start-lettering-en { display: none; }
+.home-start-lettering:lang(fr) .home-start-lettering-fr { display: inline; }
+.home-start-arrow-retrace { stroke-width: 2; opacity: 0.5; }
+.home-start-annotation + .home-program-controls { margin-top: 0.25rem; }
 .home-program-controls { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.25rem; }
 .home-program-controls label { gap: 0.35rem; font-size: 0.9rem; font-weight: 600; }
 .home-program-controls select {
