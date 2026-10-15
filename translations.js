@@ -1141,7 +1141,7 @@ const FLOWCHART_DEFINITIONS_FR = {
                 id: 'tier2-cycle2-success',
                 type: 'endpoint',
                 status: 'success',
-                title: '\u00c9tape 8\u00a0: Succ\u00e8s\u00a0!',
+                title: 'Succ\u00e8s\u00a0!',
                 description: 'Envisager de r\u00e9duire progressivement les soutiens au palier 1 et de surveiller.',
                 recommendations: [
                     'Envisager de r\u00e9duire progressivement les soutiens au palier 1 et de surveiller.'
@@ -1151,7 +1151,7 @@ const FLOWCHART_DEFINITIONS_FR = {
                 id: 'tier2-move-tier3',
                 type: 'endpoint',
                 status: 'info',
-                title: '\u00c9tape 8\u00a0: Passer au palier 3',
+                title: 'Passer au palier 3',
                 description: 'Si l\u2019\u00e9l\u00e8ve ne fait pas de progr\u00e8s attendus au palier 2 apr\u00e8s deux cycles d\u2019intervention de 8 semaines, il passe au palier 3. Moins de 10\u00a0% des \u00e9l\u00e8ves devraient avoir besoin du palier 3.\n\nCe parcours continue vers l\u2019organigramme du palier trois.',
                 recommendations: [
                     'Continuer vers l\u2019organigramme du palier trois.'
