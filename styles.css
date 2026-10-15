@@ -4512,6 +4512,15 @@ details > p {
   margin-top: var(--space-sm);
 }
 
+.step-content-resource-picker {
+  padding-bottom: var(--space-sm);
+}
+
+.step-content-resource-picker > .evidence-legend-trigger {
+  display: block;
+  margin-top: var(--space-lg);
+}
+
 .fw-results-header {
   font-size: 0.78rem;
   font-weight: 600;
@@ -8369,6 +8378,34 @@ body.step-review-modal-open { overflow: hidden; }
     font-weight: 800;
   }
 
+  .visual-flowchart-tier-bar-chip[data-tier="tier1"],
+  .visual-flowchart-tier-tabs .tier-tab[data-tier="tier1"] {
+    --visual-tier-colour: #0ea8b2;
+  }
+
+  .visual-flowchart-tier-bar-chip[data-tier="tier2"],
+  .visual-flowchart-tier-tabs .tier-tab[data-tier="tier2"] {
+    --visual-tier-colour: #f9aa0e;
+  }
+
+  .visual-flowchart-tier-bar-chip[data-tier="tier3"],
+  .visual-flowchart-tier-tabs .tier-tab[data-tier="tier3"] {
+    --visual-tier-colour: #ed5d49;
+  }
+
+  .visual-flowchart-tier-bar-chip,
+  .visual-flowchart-tier-tabs .tier-tab {
+    background: var(--visual-tier-colour);
+    color: #0c3259;
+    border-color: var(--visual-tier-colour);
+  }
+
+  .visual-flowchart-tier-tabs .tier-tab.active {
+    outline: 2px solid #0c3259;
+    outline-offset: 2px;
+    font-weight: 800;
+  }
+
   /* The tier toggle re-uses the same .tier-tab styling as the standard view,
      pushed to the right of the tier name/chip so both stay visible together. */
   .visual-flowchart-tier-tabs {
@@ -8675,6 +8712,26 @@ body.step-review-modal-open { overflow: hidden; }
     min-width: 0;
     flex-direction: column;
     gap: 3px;
+  }
+
+  .visual-flowchart-card-completed {
+    align-content: start;
+  }
+
+  .visual-flowchart-card-completed .visual-flowchart-step-number {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .visual-flowchart-card-completed .visual-flowchart-card-icon {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    justify-self: start;
+  }
+
+  .visual-flowchart-card-completed .visual-flowchart-card-copy {
+    grid-column: 1 / -1;
   }
 
   .visual-flowchart-card-meta {
@@ -11917,6 +11974,11 @@ details.pathway-session {
   background: var(--bg);
 }
 details.pathway-session[open] { box-shadow: var(--shadow-sm, 0 1px 3px rgba(12, 49, 90, 0.08)); }
+details.pathway-session-latest {
+  border-left: 4px solid var(--primary);
+  background: var(--primary-faint);
+}
+.pathway-session-latest + .pathway-session { margin-top: 1.4rem; }
 .pathway-session summary {
   display: grid;
   gap: 0.1rem;

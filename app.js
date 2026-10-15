@@ -3624,7 +3624,7 @@ function updateVisualFlowchartTierBar() {
     if (tierId !== 'tier1' && appState.visualFlowchartModal) appState.visualFlowchartModal.guidanceOpen = false;
     const guidanceOpen = !!appState.visualFlowchartModal?.guidanceOpen;
     bar.innerHTML = `
-        <span class="visual-flowchart-tier-bar-chip">${escapeHtml(tierLabel)}</span>
+        <span class="visual-flowchart-tier-bar-chip" data-tier="${escapeAttr(tierId)}">${escapeHtml(tierLabel)}</span>
         <span class="visual-flowchart-tier-bar-name">${escapeHtml(tierName)}</span>
         ${renderTierTabsHtml(tierId, 'visual-flowchart-tier-tabs')}
         ${tierId === 'tier1' ? renderTier1GuidanceHtml('visual-flowchart', guidanceOpen, 'openScoresFromVisualFlowchart()') : ''}
@@ -3840,11 +3840,12 @@ function refreshVisualFlowchartModal() {
                 if (isLongContentStep(item.entry.node)) return activeLongStepWidth;
                 return interactiveCardWidth;
             }
+            if (!item.entry.isCurrent) return item.entry.isTierFirstStep ? 280 : 220;
             if (item.entry.isTierFirstStep) return wideCardWidth;
         }
-        return cardWidth;
+        return item.type === 'collapsed' ? 220 : cardWidth;
     };
-    const columnGap = 90;
+    const columnGap = 50;
     const rowGap = 180;
     let routeRow = 0;
     let cursorX = 90;
@@ -3875,7 +3876,7 @@ function refreshVisualFlowchartModal() {
         const startY = from.y + cardMidY;
         const endX = to.x;
         const endY = to.y + cardMidY;
-        const bend = Math.max(45, (endX - startX) * 0.5);
+        const bend = (endX - startX) * 0.5;
         const variant = items[index].variant || 'step1';
         return `<path class="visual-flowchart-connector visual-flowchart-connector-${escapeAttr(variant)}" d="M ${startX} ${startY} C ${startX + bend} ${startY}, ${endX - bend} ${endY}, ${endX} ${endY}" marker-end="url(#visual-arrow-${escapeAttr(variant)})"/>`;
     }).join('');
@@ -3949,7 +3950,7 @@ function refreshVisualFlowchartModal() {
             && appState.visualFlowchart?.summaryEndpointNodeData?.id === entry.node.id
             ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="showCurrentJourneySummary()">${escapeHtml(t('gate_view_summary'))}</button>`
             : '';
-        return `${collapseBtn}<${tag} class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
+        return `${collapseBtn}<${tag} class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ' visual-flowchart-card-completed'}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
                     style="left:${position.x}px;top:${position.y}px;width:${position.width}px" ${revisit}>
                 <span class="visual-flowchart-step-number">${entry.number}</span>
                 <span class="visual-flowchart-card-icon">${cardIcon}</span>
@@ -4745,7 +4746,7 @@ function createIntegratedSelectionNode(nodeData) {
                     </svg>
                 </button>
             </div>
-            <div class="step-content">
+            <div class="step-content step-content-resource-picker">
                 ${nodeData.subtitle ? `<h3>${escapeHtml(nodeData.subtitle)}</h3>` : ''}
                 ${nodeData.description ? `<p>${escapeHtml(nodeData.description)}</p>` : ''}
                 ${infoBoxHTML}
@@ -8782,6 +8783,7 @@ function getSessionNotes(session) {
         .find(item => item.id === session.context.screener)?.name || '';
     const tiers = [...new Set([...steps.map(step => step.tier), ...resources.map(entry => entry.tier).filter(Boolean)])].sort();
     return {
+        number: pathwaySessions.findIndex(item => item.id === session.id) + 1,
         date: new Date(session.startedAt),
         program: t(session.context.program === PROGRAM_FRENCH_IMMERSION ? 'fc_program_french_immersion' : 'fc_program_english'),
         grade: formatGradeList(session.context.grades), screener, tiers, steps, outcomes, next, resources
@@ -8800,7 +8802,7 @@ function updatePathwaySelections() {
     const expanded = new Set(Array.from(list.querySelectorAll('details[open]')).map(item => item.dataset.sessionId));
     const rendered = new Set(Array.from(list.querySelectorAll('details')).map(item => item.dataset.sessionId));
     const locale = appState.language === 'fr' ? 'fr-CA' : 'en-US';
-    list.innerHTML = pathwaySessions.slice().reverse().map(session => {
+    list.innerHTML = pathwaySessions.slice().reverse().map((session, index) => {
         const notes = getSessionNotes(session);
         const date = notes.date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })
             .replace(/^([A-Za-z]{3}) /, '$1. ');
@@ -8821,9 +8823,9 @@ function updatePathwaySelections() {
             </li>`;
         }).join('');
         const isCurrent = session.id === activePathwaySessionId;
-        return `<details class="pathway-session" data-session-id="${escapeAttr(session.id)}"${expanded.has(session.id) || (!rendered.has(session.id) && isCurrent) ? ' open' : ''}>
+        return `<details class="pathway-session${index === 0 ? ' pathway-session-latest' : ''}" data-session-id="${escapeAttr(session.id)}"${expanded.has(session.id) || (!rendered.has(session.id) && isCurrent) ? ' open' : ''}>
             <summary>
-                <span class="pathway-session-title">${escapeHtml(t('pathway_session'))} · ${escapeHtml(date)}${isCurrent ? `<span class="pathway-session-current">${escapeHtml(t('pathway_session_current'))}</span>` : ''}</span>
+                <span class="pathway-session-title">${escapeHtml(t('pathway_session'))} ${notes.number} · ${escapeHtml(date)}${isCurrent ? `<span class="pathway-session-current">${escapeHtml(t('pathway_session_current'))}</span>` : ''}</span>
                 <span class="pathway-session-meta">${meta}</span>
             </summary>
             ${notes.outcomes.length ? `<ul class="pathway-session-outcomes">${notes.outcomes.map(outcome => `<li class="pathway-session-outcome${outcome.final ? ' is-final' : ''}">
@@ -8929,7 +8931,7 @@ function buildSessionNotesDocx(notes) {
         .map(([label, value]) => [run(label, { bold: true, color: '0C315A' }), run(value)]);
     const body = [
         para(run(t('notes_doc_title'), { bold: true, size: 34, color: '0C315A' }), { after: 40 }),
-        para(run(dateText, { color: '5B6B7F' }), { after: 200 }),
+        para(run(`${t('pathway_session')} ${notes.number} · ${dateText}`, { color: '5B6B7F' }), { after: 200 }),
         table([2400, 7680], details),
         heading(t('notes_steps')),
         notes.steps.length
