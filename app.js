@@ -8687,7 +8687,8 @@ function savePathwaySession() {
     const session = getActivePathwaySession();
     if (!session) return;
     session.context = { ...pathwayContext };
-    const tiers = [...(appState.fullJourney || []), appState.visualFlowchart];
+    const currentTier = appState.visualFlowchart;
+    const tiers = [...(appState.fullJourney || []).filter(tier => tier.tierId !== currentTier.tierId), currentTier];
     session.choices = tiers.flatMap(tier => (tier.selectedPath || []).flatMap(step => {
         const choice = tier.choices?.[step.nodeId];
         return choice ? [{ tierId: tier.tierId, nodeId: step.nodeId, choiceId: choice.id }] : [];
