@@ -4305,9 +4305,18 @@ details > p {
   border-color: #be8b2b;
 }
 
-.is-recommended {
-  border-color: var(--primary);
-  box-shadow: inset 4px 0 var(--primary);
+.is-recommended,
+.resource-card.is-recommended,
+.legacy-resource-option.is-recommended,
+.fw-result-item.is-recommended {
+  background: #fff1bf;
+  border-color: var(--card-yellow-border);
+  box-shadow: inset 4px 0 var(--card-yellow-border);
+}
+
+.fw-result-item.is-recommended:hover {
+  background: #ffe89a;
+  border-color: var(--accent-dark);
 }
 
 .resource-recommended-badge {
@@ -4315,33 +4324,6 @@ details > p {
   margin: 0 0.5rem;
   color: #a66b00;
   font-size: 1.2rem;
-}
-
-.more-resources {
-  grid-column: 1 / -1;
-  width: 100%;
-  margin-top: var(--space-sm);
-}
-
-.more-resources > summary {
-  padding: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.more-resources > summary:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-
-.more-resources[open] > summary {
-  margin-bottom: var(--space-sm);
-}
-
-.more-resources > .resource-card + .resource-card {
-  margin-top: var(--space-sm);
 }
 
 .favourite-feedback {
@@ -4512,20 +4494,29 @@ details > p {
   margin-top: var(--space-sm);
 }
 
+.fw-results-header {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.resource-list-header {
+  grid-column: 1 / -1;
+}
+
+* + .resource-list-header {
+  margin-top: var(--space-md);
+}
+
 .step-content-resource-picker {
   padding-bottom: var(--space-sm);
 }
 
 .step-content-resource-picker > .evidence-legend-trigger {
   display: block;
-  margin-top: var(--space-lg);
-}
-
-.fw-results-header {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: var(--space-xs);
+  margin: var(--space-sm) 0 0 auto;
+  text-align: right;
 }
 
 .fw-results-list {
@@ -4598,22 +4589,99 @@ details > p {
 .fw-skip-btn:focus-visible { outline: 3px solid #a66b00; outline-offset: 2px; }
 .fw-skip-btn .material-symbols-rounded { font-size: 18px; }
 
-.fw-context-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: var(--space-md);
+.fw-select-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
-.fw-context-chip {
+.fw-recommended-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: var(--space-lg) 0 0;
   font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--step);
-  background: var(--step-soft);
-  border: 1px solid var(--step);
-  border-radius: 999px;
-  padding: 0.2rem 0.7rem;
+  color: var(--text-secondary);
 }
+
+.fw-recommended-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--card-yellow-border);
+  border-radius: 4px;
+  background: #fff1bf;
+  color: #a66b00;
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+.fw-pillar-dropdown {
+  max-width: 100%;
+}
+
+.fw-pillar-dropdown .cal-grade-options {
+  left: 0;
+  right: auto;
+}
+
+.fw-multi-hint {
+  margin: 0 0 var(--space-sm);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.fw-result-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--step);
+  border-radius: 6px;
+  background: var(--bg);
+  color: transparent;
+}
+
+.fw-result-check svg { width: 14px; height: 14px; }
+
+.fw-result-item .fw-result-info { flex: 1; min-width: 0; }
+
+.fw-result-item.is-selected {
+  border-color: var(--step);
+  outline: 2px solid var(--step);
+  outline-offset: -1px;
+}
+
+.fw-result-item.is-selected .fw-result-check {
+  background: var(--step);
+  color: #fff;
+}
+
+.fw-result-item:focus-visible {
+  outline: 3px solid #a66b00;
+  outline-offset: 2px;
+}
+
+.fw-multi-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.fw-multi-count {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.fw-multi-actions .continue-btn { margin: 0; }
 
 .fw-result-link {
   flex-shrink: 0;

@@ -413,7 +413,8 @@ function serializeTierPathway(vf) {
     return {
         tierId: vf.tierId,
         selectedPath: vf.selectedPath.map(step => ({ nodeId: step.nodeId })),
-        choices: Object.fromEntries(Object.entries(vf.choices || {}).map(([id, choice]) => [id, { id: choice.id }])),
+        choices: Object.fromEntries(Object.entries(vf.choices || {}).map(([id, choice]) => [id,
+            Array.isArray(choice.pillars) ? { id: choice.id, pillars: choice.pillars.slice() } : { id: choice.id }])),
         checklistChecked: vf.checklistChecked || {},
         layoutMode: normalizeJourneyLayoutMode(vf.layoutMode)
     };
@@ -430,11 +431,17 @@ function resolveSavedChoice(node, id, tierId) {
     }
     if (node.type === 'selection') {
         if (node.options !== 'screeners' && id === NO_RESOURCE_CHOICE_ID) return { id, name: t('fw_no_resource_choice') };
-        const options = node.options === 'screeners'
-            ? (appState.tierFlowchartData?.[tierId]?.screeners || []).filter(item => isScreenerIdForCurrentProgram(item.id))
-            : appState.interventionMenuData?.resources || [];
-        const item = options.find(option => option.id === id);
-        return item ? { id, name: item.name } : null;
+        if (node.options === 'screeners') {
+            const item = (appState.tierFlowchartData?.[tierId]?.screeners || [])
+                .filter(option => isScreenerIdForCurrentProgram(option.id)).find(option => option.id === id);
+            return item ? { id, name: item.name } : null;
+        }
+        // Drill-down steps may record several resources as a comma-separated list.
+        const resources = appState.interventionMenuData?.resources || [];
+        const ids = splitChoiceIds(id);
+        const items = ids.map(itemId => resources.find(option => option.id === itemId));
+        if (!ids.length || ids.length > 50 || items.some(item => !item) || new Set(ids).size !== ids.length) return null;
+        return { id, name: items.map(item => item.name).join(', ') };
     }
     return null;
 }
@@ -455,6 +462,12 @@ function validateTierPathway(raw) {
         if (id !== undefined) {
             const choice = resolveSavedChoice(node, id, raw.tierId);
             if (!choice) return null;
+            const savedPillars = raw.choices[step.nodeId].pillars;
+            if (node.type === 'selection' && node.options !== 'screeners' && Array.isArray(savedPillars)) {
+                const known = distinctTagValues({ program: appState.selectedProgram }, 'pillar');
+                choice.pillars = [...new Set(savedPillars.filter(pillar => known.includes(pillar)))];
+                choice.pathway = buildChoicePathway(choice.pillars, choice.name);
+            }
             choices[step.nodeId] = choice;
         }
         if (node.type === 'checklist') {
@@ -4216,7 +4229,7 @@ function wireVisualFlowchartPanZoom(viewport) {
         // sit inside the card's scroll container) must also be excluded, or
         // capturing the pointer here for panning hijacks their click event
         // and the selection never registers.
-        if (event.target.closest('button, input, select, textarea, a, label, summary, [role="button"]')) return;
+        if (event.target.closest('button, input, select, textarea, a, label, summary, [role="button"], [role="checkbox"]')) return;
         // Let a card that has overflowed its max height be dragged/scrolled
         // internally instead of starting a canvas pan.
         const overflowingCard = event.target.closest('.visual-flowchart-card');
@@ -4717,25 +4730,45 @@ function createIntegratedSelectionNode(nodeData) {
         const tierNum = parseInt(String(appState.visualFlowchart?.tierId || '').replace('tier', ''), 10) || 1;
         const program = appState.selectedProgram || 'English';
         const remembered = appState.rememberedMenuFilters || {};
+        const multiSelect = nodeData.options === 'drillDownAssessments';
+        const grade = pathwayContext?.grades?.length ? pathwayContext.grades : normalizeGradeList(remembered.grade);
+        const baseState = { tier: tierNum, program: program, resourceType: itemType,
+            grade, screener: getPathwayScreenerId() || '' };
+        const pillarValues = distinctTagValues(baseState, 'pillar');
+        // Interventions start from the pillars chosen in the preceding drill-down.
+        const drillDownPillars = multiSelect ? null : getPrecedingDrillDownPillars(nodeData.id);
+        const basePillarsKey = (drillDownPillars || []).join('|');
+        const previous = appState.fwState;
+        const reuse = previous?.nodeId === nodeData.id && previous.tier === tierNum && previous.program === program &&
+            previous.basePillarsKey === basePillarsKey;
+        const pillars = reuse ? previous.pillars
+            : (drillDownPillars?.length ? drillDownPillars
+                : (multiSelect && remembered.pillars?.length ? remembered.pillars : [remembered.pillar || 'Phonics']));
         appState.fwState = {
             tier: tierNum,
             program: program,
             resourceType: itemType,
-            pillar: remembered.pillar || 'Phonics',
-            screener: getPathwayScreenerId() || '',
-            grade: pathwayContext?.grades?.length ? pathwayContext.grades : normalizeGradeList(remembered.grade),
+            pillars: pillars.filter(value => typeof value === 'string' && value),
+            screener: baseState.screener,
+            grade,
             nodeId: nodeData.id,
-            handlerName: nodeData.nextHandler
+            handlerName: nodeData.nextHandler,
+            multiSelect,
+            basePillarsKey,
+            // Pillars chosen in the preceding drill-down are fixed for its intervention step.
+            pillarsLocked: !!drillDownPillars?.length,
+            selectedIds: reuse && multiSelect ? (previous.selectedIds || []) : []
         };
         // Remember tier/program too, so the standalone Interventions Menu
         // opens scoped to this same drilldown if visited right afterwards.
         setRememberedMenuFilters({ tier: tierNum, program: program });
 
-        const baseState = { tier: tierNum, program: program, resourceType: itemType,
-            grade: appState.fwState.grade, screener: appState.fwState.screener };
-        const pillarValues = distinctTagValues(baseState, 'pillar');
-        if (appState.fwState.pillar && !pillarValues.includes(appState.fwState.pillar)) pillarValues.unshift(appState.fwState.pillar);
-        const pillarOptionsHtml = buildFacetOptionsHtml(pillarValues, appState.fwState.pillar, translatePillar);
+        appState.fwState.pillars.forEach(value => { if (!pillarValues.includes(value)) pillarValues.unshift(value); });
+        const pillarOptionsHtml = pillarValues.map(value => `
+            <label class="cal-grade-option">
+                <input type="checkbox" value="${escapeAttr(value)}" ${appState.fwState.pillars.includes(value) ? 'checked' : ''} onchange="fwOnPillarToggle(this.value, this.checked)">
+                <span>${escapeHtml(translatePillar(value))}</span>
+            </label>`).join('');
 
         return `
             <div class="step-header">
@@ -4752,21 +4785,16 @@ function createIntegratedSelectionNode(nodeData) {
                 ${infoBoxHTML}
                 ${warningBoxHTML}
                 <div class="fw-wizard">
-                    <div class="fw-context-chips">
-                        <span class="fw-context-chip">${escapeHtml(t('fw_context_tier')(tierNum))}</span>
-                        <span class="fw-context-chip">${escapeHtml(program)}</span>
-                        <span class="fw-context-chip">${escapeHtml(translateResourceType(itemType))}</span>
-                    </div>
-                    <div class="fw-wizard-selects">
-                        <div class="fw-select-group">
-                            <label for="fw-pillar-select">${escapeHtml(t('fw_choose_pillar_label'))}</label>
-                            <select id="fw-pillar-select" class="fw-select" onchange="fwOnPillarChange(this.value)">
-                                ${pillarOptionsHtml}
-                            </select>
-                        </div>
-                    </div>
+                    ${appState.fwState.pillarsLocked ? '' : `<div class="fw-select-group">
+                        <span id="fw-pillar-label" class="fw-select-label">${escapeHtml(t('fw_choose_pillars_label'))}</span>
+                        <details id="fw-pillar-filter" class="cal-grade-dropdown fw-pillar-dropdown" onkeydown="if(event.key==='Escape'){event.preventDefault();this.open=false;this.querySelector('summary').focus();}">
+                            <summary aria-labelledby="fw-pillar-label fw-pillar-value"><span id="fw-pillar-value">${escapeHtml(getFwPillarSummary(appState.fwState.pillars))}</span></summary>
+                            <div class="cal-grade-options" role="group" aria-labelledby="fw-pillar-label">${pillarOptionsHtml}</div>
+                        </details>
+                    </div>`}
                     <div id="fw-results" class="fw-results"></div>
                 </div>
+                <p class="fw-recommended-legend"><span class="fw-recommended-swatch" aria-hidden="true">★</span>${escapeHtml(t('fw_recommended_legend'))}</p>
                 ${getEvidenceLegendTriggerHtml()}
             </div>
         `;
@@ -4812,11 +4840,52 @@ function createIntegratedSelectionNode(nodeData) {
     `;
 }
 
-// Flowchart embedded intervention wizard: pillar change handler
-function fwOnPillarChange(value) {
-    if (!appState.fwState) return;
-    appState.fwState.pillar = value || '';
-    setRememberedMenuFilters({ pillar: value || null });
+// The pillars chosen in the drill-down that leads into `nodeId`, if any.
+function getPrecedingDrillDownPillars(nodeId) {
+    const vf = appState.visualFlowchart;
+    const nodes = getFlowchartDefs()[vf?.tierId]?.nodes || {};
+    const drillDown = Object.values(nodes).find(node => node.options === 'drillDownAssessments' && node.nextNode === nodeId);
+    const pillars = drillDown ? vf.choices?.[drillDown.id]?.pillars : null;
+    return Array.isArray(pillars) && pillars.length ? pillars.slice() : null;
+}
+
+// Multi-resource choices are stored as one comma-separated id list.
+function splitChoiceIds(id) {
+    return String(id || '').split(',').filter(Boolean);
+}
+
+function buildChoicePathway(pillars, name) {
+    const pillarText = (pillars || []).map(translatePillar).join(', ');
+    return pillarText ? [pillarText, name] : [name];
+}
+
+// Selected pillars in the catalogue's pillar order.
+function fwPillarOrder(pillars) {
+    const order = (appState.interventionMenuData?.pillars || []).map(pillar => pillar.name);
+    const rank = pillar => (order.indexOf(pillar) + 1) || order.length + 1;
+    return [...pillars].sort((a, b) => rank(a) - rank(b));
+}
+
+// Close the pillar dropdown when the user clicks anywhere outside it.
+document.addEventListener('click', event => {
+    const dropdown = document.getElementById('fw-pillar-filter');
+    if (dropdown?.open && !dropdown.contains(event.target)) dropdown.open = false;
+});
+
+function getFwPillarSummary(pillars) {
+    return pillars.length ? pillars.map(translatePillar).join(', ') : t('fw_choose_pillars_none');
+}
+
+// Flowchart embedded intervention wizard: pillar toggle handler
+function fwOnPillarToggle(value, checked) {
+    const state = appState.fwState;
+    if (!state || !value || state.pillarsLocked) return;
+    const pillars = state.pillars.filter(pillar => pillar !== value);
+    if (checked) pillars.push(value);
+    state.pillars = pillars;
+    const summary = document.getElementById('fw-pillar-value');
+    if (summary) summary.textContent = getFwPillarSummary(pillars);
+    setRememberedMenuFilters({ pillar: pillars[0] || null, ...(state.multiSelect ? { pillars: pillars.slice() } : {}) });
 
     fwLoadResults();
     savePathwayProgress();
@@ -4829,11 +4898,17 @@ function fwLoadResults() {
     const resultsEl = document.getElementById('fw-results');
     if (!resultsEl) return;
 
-    const { tier, program, resourceType, pillar, screener, grade } = appState.fwState;
-    const wizardState = { tier, program, resourceType, pillar, screener, grade };
+    const { tier, program, resourceType, pillars, screener, grade, multiSelect } = appState.fwState;
+    if (!pillars.length) {
+        appState.fwState.selectedIds = [];
+        resultsEl.innerHTML = `<div class="fw-no-results"><p>${escapeHtml(t('fw_choose_pillar_prompt'))}</p></div>`;
+        return;
+    }
+    const wizardState = { tier, program, resourceType, pillar: pillars, screener, grade };
     const filtered = getFilteredResources(wizardState, null);
 
     if (filtered.length === 0) {
+        appState.fwState.selectedIds = [];
         resultsEl.innerHTML = `<div class="fw-no-results">
             <p>${escapeHtml(t('fw_no_results'))}</p>
             <button type="button" class="fw-skip-btn" onclick="fwSelectItem(NO_RESOURCE_CHOICE_ID, t('fw_no_resource_choice'))">
@@ -4844,46 +4919,102 @@ function fwLoadResults() {
         return;
     }
 
+    if (multiSelect) {
+        const visible = new Set(filtered.map(item => item.id));
+        appState.fwState.selectedIds = (appState.fwState.selectedIds || []).filter(id => visible.has(id));
+    }
+    const selected = new Set(appState.fwState.selectedIds || []);
+    const activate = multiSelect ? 'fwToggleItem(this.dataset.resourceId)' : 'fwSelectItem(this.dataset.resourceId, this.dataset.resourceName)';
     resultsEl.innerHTML = `
-        <div class="fw-results-header">${escapeHtml(t('fw_results_label'))}</div>
-        ${buildResourceGroupsHtml(filtered, wizardState, item => {
-                const matchingTags = getMatchingTags(item, wizardState);
+        ${multiSelect ? `<p class="fw-multi-hint">${escapeHtml(t('fw_select_multiple_hint'))}</p>` : ''}
+        ${fwPillarOrder(pillars).map(pillar => {
+            // One section per selected pillar, recommended resources first.
+            const sectionState = { ...wizardState, pillar };
+            const items = filtered.filter(item => getMatchingTags(item, sectionState).length);
+            if (!items.length) return '';
+            const recommended = items.filter(item => isRecommendedResource(item, sectionState));
+            const ordered = [...recommended, ...items.filter(item => !recommended.includes(item))];
+            return `<div class="fw-results-header resource-list-header">${escapeHtml(translatePillar(pillar))}</div>
+                <div class="fw-results-list">${ordered.map(item => {
+                const matchingTags = getMatchingTags(item, sectionState);
                 const gradeText = uniqueSorted(matchingTags.map(tag => tag.gradeRangeText)).join('; ') ||
                     uniqueSorted(matchingTags.flatMap(tag => tag.gradeFilter || [])).join(', ');
-                const matchingPillars = uniqueSorted(matchingTags.map(tag => tag.pillar));
-                const pillarText = matchingPillars.map(translatePillar).join(', ');
                 const evidenceBadge = getEvidenceBadgeHtml(getResourceEvidenceLevel({ tags: matchingTags }));
-                const linkHtml = getResourceUrls(item, wizardState).map(url => {
+                const linkHtml = getResourceUrls(item, sectionState).map(url => {
                     const lang = getResourceUrlLang(item, url);
                     const title = lang ? `${t('filter_view_resource')} (${lang})` : t('filter_view_resource');
                     return `<a class="fw-result-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="${escapeHtml(title)}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
                 }).join('');
-                return `<div class="fw-result-item${isRecommendedResource(item, wizardState) ? ' is-recommended' : ''}" role="button" tabindex="0" data-resource-id="${escapeAttr(item.id)}" data-resource-name="${escapeAttr(item.name)}" onclick="fwSelectItem(this.dataset.resourceId, this.dataset.resourceName)" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();fwSelectItem(this.dataset.resourceId, this.dataset.resourceName)}">
+                const isSelected = selected.has(item.id);
+                const indicator = multiSelect
+                    ? `<span class="fw-result-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>`
+                    : '<svg class="fw-result-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M9 18l6-6-6-6"/></svg>';
+                return `<div class="fw-result-item${recommended.includes(item) ? ' is-recommended' : ''}${isSelected ? ' is-selected' : ''}" role="${multiSelect ? 'checkbox' : 'button'}"${multiSelect ? ` aria-checked="${isSelected}"` : ''} tabindex="0" data-resource-id="${escapeAttr(item.id)}" data-resource-name="${escapeAttr(item.name)}" onclick="${activate}" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();${activate}}">
+                    ${multiSelect ? indicator : ''}
                     <div class="fw-result-info">
-                        <div class="fw-result-name">${escapeHtml(item.name)}${buildResourceRecommendationBadgeHtml(item, wizardState)}${evidenceBadge}</div>
-                        <div class="fw-result-meta">${escapeHtml(pillarText)}${gradeText ? ` • ${escapeHtml(t('fw_grade_prefix'))} ${escapeHtml(gradeText)}` : ''}</div>
+                        <div class="fw-result-name">${escapeHtml(item.name)}${buildResourceRecommendationBadgeHtml(item, sectionState)}${evidenceBadge}</div>
+                        ${gradeText ? `<div class="fw-result-meta">${escapeHtml(t('fw_grade_prefix'))} ${escapeHtml(gradeText)}</div>` : ''}
                     </div>
                     ${buildFavouriteButtonHtml(item)}
                     ${linkHtml}
-                    <svg class="fw-result-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M9 18l6-6-6-6"/></svg>
+                    ${multiSelect ? '' : indicator}
                 </div>`;
-            }, 'fw-results-list')}
+            }).join('')}</div>`;
+        }).join('')}
+        ${multiSelect ? `<div class="fw-multi-actions">
+            <span class="fw-multi-count" aria-live="polite"></span>
+            <button type="button" class="continue-btn fw-multi-continue" onclick="fwConfirmSelection()">
+                ${escapeHtml(t('guided_continue'))}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+        </div>` : ''}
     `;
+    if (multiSelect) fwSyncSelectionUi();
+}
+
+// Reflect the multi-select state without re-rendering (keeps keyboard focus).
+function fwSyncSelectionUi() {
+    const resultsEl = document.getElementById('fw-results');
+    const state = appState.fwState;
+    if (!resultsEl || !state) return;
+    const selected = new Set(state.selectedIds || []);
+    resultsEl.querySelectorAll('.fw-result-item[data-resource-id]').forEach(item => {
+        const isSelected = selected.has(item.dataset.resourceId);
+        item.classList.toggle('is-selected', isSelected);
+        item.setAttribute('aria-checked', String(isSelected));
+    });
+    const count = resultsEl.querySelector('.fw-multi-count');
+    if (count) count.textContent = t('fw_selected_count')(selected.size);
+    const button = resultsEl.querySelector('.fw-multi-continue');
+    if (button) button.disabled = selected.size === 0;
+}
+
+function fwToggleItem(itemId) {
+    const state = appState.fwState;
+    if (!state?.multiSelect || !itemId) return;
+    const ids = state.selectedIds || [];
+    state.selectedIds = ids.includes(itemId) ? ids.filter(id => id !== itemId) : [...ids, itemId];
+    fwSyncSelectionUi();
+}
+
+// Continue with every resource ticked in a multi-select (drill-down) step.
+function fwConfirmSelection() {
+    const state = appState.fwState;
+    if (!state?.multiSelect) return;
+    const resources = getAllResources();
+    const items = (state.selectedIds || []).map(id => resources.find(item => item.id === id)).filter(Boolean);
+    if (!items.length) return;
+    fwSelectItem(items.map(item => item.id).join(','), items.map(item => item.name).join(', '));
 }
 
 // Flowchart embedded intervention wizard: select an item and advance the flowchart
 function fwSelectItem(itemId, itemName) {
     if (!appState.fwState) return;
-    const { nodeId, handlerName, pillar } = appState.fwState;
+    const { nodeId, handlerName, pillars } = appState.fwState;
     if (nodeId && handlerName) {
         // Build a file-pathway breadcrumb for the completed view and pre-store it
         // so selectIntegratedOption can preserve it when it writes the choice.
-        const pathway = [];
-        if (pillar) pathway.push(translatePillar(pillar));
-        pathway.push(itemName);
-
-        // Pre-populate so selectIntegratedOption can merge it in
-        appState.visualFlowchart._pendingPathway = { nodeId, pathway };
+        appState.visualFlowchart._pendingPathway = { nodeId, pathway: buildChoicePathway(pillars, itemName), pillars: pillars.slice() };
         selectIntegratedOption(nodeId, itemId, itemName, handlerName);
         appState.visualFlowchart._pendingPathway = null;
     }
@@ -5164,7 +5295,7 @@ function selectIntegratedOption(nodeId, optionId, optionName, handlerName) {
     const pending = appState.visualFlowchart._pendingPathway;
     const pathway = (pending && pending.nodeId === nodeId) ? pending.pathway : undefined;
     appState.visualFlowchart.choices[nodeId] = pathway
-        ? { id: optionId, name: optionName, pathway }
+        ? { id: optionId, name: optionName, pathway, ...(pending.pillars ? { pillars: pending.pillars } : {}) }
         : { id: optionId, name: optionName };
     saveSessionResource(nodeId, optionId);
     
@@ -8390,7 +8521,13 @@ function positionEvidenceLegendTooltip(trigger) {
         left = Math.max(margin, window.innerWidth - tooltipWidth - margin);
     }
     tooltip.style.left = `${left}px`;
-    tooltip.style.top = `${rect.bottom + margin}px`;
+    // Open above the trigger when there is not enough room below it.
+    const tooltipHeight = tooltip.offsetHeight || 0;
+    let top = rect.bottom + margin;
+    if (top + tooltipHeight > window.innerHeight - margin && rect.top - margin - tooltipHeight >= margin) {
+        top = rect.top - margin - tooltipHeight;
+    }
+    tooltip.style.top = `${Math.max(margin, Math.min(top, window.innerHeight - tooltipHeight - margin))}px`;
 }
 
 function showEvidenceLegendTooltip(trigger) {
@@ -8656,7 +8793,7 @@ function readPathwaySessions(raw) {
                 grades: getValidPathwayGrades(session.context.program, session.context.grades) },
             choices: (Array.isArray(session.choices) ? session.choices : []).slice(0, 100)
                 .filter(choice => choice && ['tier1', 'tier2', 'tier3'].includes(choice.tierId) &&
-                    validId(choice.nodeId) && validId(choice.choiceId))
+                    validId(choice.nodeId) && typeof choice.choiceId === 'string' && choice.choiceId.length > 0 && choice.choiceId.length <= 1000)
                 .map(({ tierId, nodeId, choiceId }) => ({ tierId, nodeId, choiceId })),
             resources: (Array.isArray(session.resources) ? session.resources : []).slice(0, 100)
                 .filter(resource => resource && getAllResources().some(item => item.id === resource.id))
@@ -8699,31 +8836,36 @@ function savePathwaySession() {
         choices.findLastIndex(item => item.tierId === choice.tierId && item.nodeId === choice.nodeId) === index);
     session.resources = session.choices.flatMap(choice => {
         const node = getFlowchartDefs()[choice.tierId]?.nodes?.[choice.nodeId];
-        if (node?.type !== 'selection' || node.options === 'screeners' ||
-            !getAllResources().some(item => item.id === choice.choiceId)) return [];
-        const previous = session.resources.find(resource => resource.id === choice.choiceId &&
-            (resource.nodeId ? resource.nodeId === choice.nodeId && resource.tierId === choice.tierId
-                : String(resource.filters.tier) === choice.tierId.replace('tier', '')));
-        return [{ id: choice.choiceId, nodeId: choice.nodeId, tierId: choice.tierId,
-            filters: previous?.filters || { program: pathwayContext.program,
-                tier: choice.tierId.replace('tier', ''), screener: getPathwayScreenerId(), grade: pathwayContext.grades } }];
+        if (node?.type !== 'selection' || node.options === 'screeners') return [];
+        return splitChoiceIds(choice.choiceId).filter(id => getAllResources().some(item => item.id === id)).map(id => {
+            const previous = session.resources.find(resource => resource.id === id &&
+                (resource.nodeId ? resource.nodeId === choice.nodeId && resource.tierId === choice.tierId
+                    : String(resource.filters.tier) === choice.tierId.replace('tier', '')));
+            return { id, nodeId: choice.nodeId, tierId: choice.tierId,
+                filters: previous?.filters || { program: pathwayContext.program,
+                    tier: choice.tierId.replace('tier', ''), screener: getPathwayScreenerId(), grade: pathwayContext.grades } };
+        });
     });
 }
 
 function saveSessionResource(nodeId, resourceId) {
-    const item = getAllResources().find(resource => resource.id === resourceId);
+    const items = splitChoiceIds(resourceId).map(id => getAllResources().find(resource => resource.id === id)).filter(Boolean);
     const node = getFlowchartDefs()[appState.visualFlowchart.tierId]?.nodes?.[nodeId];
-    if (!item || node?.type !== 'selection' || node.options === 'screeners') return;
+    if (!items.length || node?.type !== 'selection' || node.options === 'screeners') return;
     const session = getActivePathwaySession();
     if (!session) return;
     const wizard = appState.fwState?.nodeId === nodeId ? appState.fwState : {};
-    const filters = { program: pathwayContext.program,
-        tier: appState.visualFlowchart.tierId.replace('tier', ''),
-        screener: getPathwayScreenerId(), grade: pathwayContext.grades,
-        pillar: wizard.pillar || '', resourceType: wizard.resourceType || '' };
     const tierId = appState.visualFlowchart.tierId;
+    const baseFilters = { program: pathwayContext.program,
+        tier: tierId.replace('tier', ''),
+        screener: getPathwayScreenerId(), grade: pathwayContext.grades,
+        resourceType: wizard.resourceType || '' };
     session.resources = session.resources.filter(resource => resource.nodeId !== nodeId || resource.tierId !== tierId);
-    session.resources.push({ id: resourceId, nodeId, tierId, filters });
+    items.forEach(item => {
+        // Record the chosen pillar this resource covers when it is unambiguous.
+        const pillars = (wizard.pillars || []).filter(pillar => getMatchingTags(item, { ...baseFilters, pillar }).length);
+        session.resources.push({ id: item.id, nodeId, tierId, filters: { ...baseFilters, pillar: pillars.length === 1 ? pillars[0] : '' } });
+    });
     savePathwaySession();
     persistProgressStorage();
     updatePathwaySelections();
@@ -9055,7 +9197,11 @@ function setRememberedMenuFilters(partial) {
 function tagMatches(tag, state, excludeField) {
     if (excludeField !== 'program' && state.program && tag.program !== state.program) return false;
     if (excludeField !== 'tier' && state.tier && String(tag.tier) !== String(state.tier)) return false;
-    if (excludeField !== 'pillar' && state.pillar && tag.pillar !== state.pillar) return false;
+    if (excludeField !== 'pillar' && state.pillar) {
+        // The flowchart wizard may filter by several pillars at once.
+        const pillars = Array.isArray(state.pillar) ? state.pillar : [state.pillar];
+        if (pillars.length && !pillars.includes(tag.pillar)) return false;
+    }
     if (excludeField !== 'resourceType' && state.resourceType && tag.resourceType !== state.resourceType) return false;
     if (excludeField !== 'screener' && state.screener) {
         const tagScreeners = tag.screeners || [];
@@ -9097,10 +9243,9 @@ function buildResourceGroupsHtml(items, state, renderItem, listClass = '') {
     const renderList = resources => listClass
         ? `<div class="${escapeAttr(listClass)}">${resources.map(renderItem).join('')}</div>`
         : resources.map(renderItem).join('');
-    return (recommended.length ? renderList(recommended) : '') +
-        (other.length ? `<details class="more-resources"${recommended.length ? '' : ' open'}>
-            <summary>${escapeHtml(t('resource_more'))}</summary>${renderList(other)}
-        </details>` : '');
+    const renderGroup = (resources, label) => resources.length
+        ? `<div class="fw-results-header resource-list-header">${escapeHtml(label)}</div>${renderList(resources)}` : '';
+    return renderGroup(recommended, t('fw_results_label')) + renderGroup(other, t('resource_more'));
 }
 
 // Filter the full resource list by every field in `state` except the one
@@ -9808,8 +9953,10 @@ window.proceedFromIntegratedChecklist = proceedFromIntegratedChecklist;
 window.proceedFromIntegratedInfo = proceedFromIntegratedInfo;
 window.selectIntegratedOption = selectIntegratedOption;
 window.makeIntegratedDecision = makeIntegratedDecision;
-window.fwOnPillarChange = fwOnPillarChange;
+window.fwOnPillarToggle = fwOnPillarToggle;
 window.fwSelectItem = fwSelectItem;
+window.fwToggleItem = fwToggleItem;
+window.fwConfirmSelection = fwConfirmSelection;
 window.showFinalSummary = showFinalSummary;
 window.showCurrentJourneySummary = showCurrentJourneySummary;
 window.showRouteCompleteGate = showRouteCompleteGate;
