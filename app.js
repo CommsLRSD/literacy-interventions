@@ -8696,8 +8696,8 @@ const menuState = {
 };
 
 const NO_SPECIFIC_SCREENER_VALUE = '__no_specific_screener__';
-const REQUIRED_MENU_FIELDS = ['tier', 'screener', 'resourceType', 'pillar'];
-const MENU_CHIP_FIELDS = [...REQUIRED_MENU_FIELDS, 'subtest', 'grade', 'evidence'];
+const REQUIRED_MENU_FIELDS = ['resourceType', 'pillar', 'tier'];
+const MENU_CHIP_FIELDS = [...REQUIRED_MENU_FIELDS, 'screener', 'subtest', 'grade', 'evidence'];
 // 'search' = the full-panel filter form; 'results' = the results list with
 // independently editable criteria above it.
 const menuUiState = {
@@ -9470,10 +9470,12 @@ function getMenuAvailableScreeners(state) {
 }
 
 function isMenuFieldComplete(field, state = menuState) {
-    if (field === 'screener') {
-        return String(state.screener || '').trim() !== '' || getMenuAvailableScreeners(state).length === 0;
-    }
+    if (field === 'pillar') return getMenuPillars(state.pillar).length > 0;
     return String(state[field] || '').trim() !== '';
+}
+
+function getMenuPillars(value = menuState.pillar) {
+    return [...new Set((Array.isArray(value) ? value : [value]).filter(pillar => typeof pillar === 'string' && pillar.trim()))];
 }
 
 function hasAllRequiredMenuFilters(state = menuState) {
@@ -9589,11 +9591,28 @@ function getAvailableMenuFieldValues(field) {
     return field === 'tier' ? values.map(String) : values;
 }
 
-// Grade is the one multi-select menu filter (an array of grades); every
-// other filter holds a single value.
+// Pillars and grades support multiple selections.
 function isMenuValueSelected(field, value, selected = menuState[field]) {
     if (field === 'grade') return normalizeGradeList(selected).includes(String(value));
+    if (field === 'pillar') return getMenuPillars(selected).includes(value);
     return String(value) === String(selected);
+}
+
+function renderMenuPillarOptions() {
+    const el = document.getElementById('filter-pillar-chips');
+    if (!el) return;
+    const focusedValue = el.contains(document.activeElement) ? document.activeElement.value : null;
+    const available = new Set(getAvailableMenuFieldValues('pillar'));
+    el.innerHTML = fwPillarOrder(getAllMenuFieldValues('pillar')).map(value => `
+        <label class="cal-grade-option">
+            <input type="checkbox" data-menu-pillar value="${escapeAttr(value)}"${isMenuValueSelected('pillar', value) ? ' checked' : ''}${available.has(value) ? '' : ' disabled'}>
+            <span>${escapeHtml(translatePillar(value))}</span>
+        </label>
+    `).join('');
+    document.getElementById('menu-pillar-value').textContent = getMenuPillars().map(translatePillar).join(', ') || t('filter_choose_pillars');
+    if (focusedValue !== null) {
+        Array.from(el.querySelectorAll('input')).find(input => input.value === focusedValue)?.focus();
+    }
 }
 
 function renderMenuChoiceButtons(containerId, field, selected, translate) {
@@ -9626,6 +9645,14 @@ function updateMenuChipSeparators() {
 function sanitizeMenuStateSelections() {
     MENU_CHIP_FIELDS.forEach(field => {
         const value = menuState[field];
+        if (field === 'pillar') {
+            const selected = getMenuPillars(value);
+            const available = getAvailableMenuFieldValues(field);
+            const kept = selected.filter(pillar => available.includes(pillar));
+            menuState.pillar = kept;
+            if (kept.length !== selected.length) setRememberedMenuFilters({ pillar: kept[0] || null, pillars: kept });
+            return;
+        }
         if (field === 'grade') {
             const selected = normalizeGradeList(value);
             const available = getAvailableMenuFieldValues('grade');
@@ -9652,6 +9679,9 @@ function updateMenuSearchHint() {
         const nextField = getNextRequiredMenuField();
         hint.textContent = complete ? '' : `${t('filter_next_label')} ${getMenuFieldLabel(nextField)}`;
     }
+    document.getElementById('filter-pillar-group').hidden = !isMenuFieldComplete('resourceType');
+    document.getElementById('filter-tier-group').hidden = !isMenuFieldComplete('resourceType') || !isMenuFieldComplete('pillar');
+    if (!isMenuFieldComplete('resourceType')) document.getElementById('menu-pillar-filter').open = false;
 }
 
 // Repopulate every chip group in the standalone Interventions Menu so the
@@ -9666,7 +9696,7 @@ function renderMenuFilterOptions() {
     renderMenuChoiceButtons('filter-tier-chips', 'tier', String(menuState.tier || ''), value => t('filter_tier_option')(value));
     renderMenuChoiceButtons('filter-screener-chips', 'screener', menuState.screener, translateScreener);
     renderMenuChoiceButtons('filter-type-chips', 'resourceType', menuState.resourceType, translateResourceType);
-    renderMenuChoiceButtons('filter-pillar-chips', 'pillar', menuState.pillar, translatePillar);
+    renderMenuPillarOptions();
     renderMenuChoiceButtons('filter-subtest-chips', 'subtest', menuState.subtest);
     renderMenuChoiceButtons('filter-grade-chips', 'grade', menuState.grade, translateGrade);
     renderMenuChoiceButtons('filter-evidence-chips', 'evidence', menuState.evidence, translateEvidence);
@@ -9734,10 +9764,10 @@ function buildResourceCardHtml(item, state = menuState) {
 // Fields shown in the criteria summary row above the results, in display
 // order. Their values are buttons so each filter can be changed on its own.
 const MENU_FILTER_CHIP_FIELDS = [
+    { field: 'resourceType', labelKey: 'filter_type_label', format: (v) => translateResourceType(v) },
+    { field: 'pillar', labelKey: 'filter_pillar_label', format: (v) => getMenuPillars(v).map(translatePillar).join(', ') },
     { field: 'tier', labelKey: 'filter_tier_label', format: (v) => t('filter_tier_option')(v) },
     { field: 'screener', labelKey: 'filter_screener_label', format: (v) => translateScreener(v) },
-    { field: 'resourceType', labelKey: 'filter_type_label', format: (v) => translateResourceType(v) },
-    { field: 'pillar', labelKey: 'filter_pillar_label', format: (v) => translatePillar(v) },
     { field: 'subtest', labelKey: 'filter_subtest_label' },
     { field: 'grade', labelKey: 'filter_grade_label', format: (v) => formatGradeList(v) },
     { field: 'evidence', labelKey: 'filter_evidence_label', format: (v) => translateEvidence(v) },
@@ -9845,6 +9875,10 @@ function applyMenuViewState() {
 function showMenuSearchView() {
     menuUiState.view = 'search';
     menuUiState.editingField = '';
+    ['screener', 'subtest', 'grade', 'evidence', 'search'].forEach(field => {
+        menuState[field] = '';
+        if (field !== 'search') setRememberedMenuFilters({ [field]: null });
+    });
     applyMenuViewState();
     refreshMenuUI();
 }
@@ -9883,7 +9917,14 @@ function renderMenuResults() {
     const filtered = getFilteredResources(menuState, null).filter(matchesMenuSearch);
     countEl.textContent = t('filter_results_label')(filtered.length);
     listEl.innerHTML = filtered.length
-        ? buildResourceGroupsHtml(filtered, menuState, item => buildResourceCardHtml(item), 'results-list-compact')
+        ? fwPillarOrder(getMenuPillars()).map(pillar => {
+            const sectionState = { ...menuState, pillar };
+            const items = filtered.filter(item => getMatchingTags(item, sectionState).length);
+            if (!items.length) return '';
+            const ordered = [...items].sort((a, b) => Number(isRecommendedResource(b, sectionState)) - Number(isRecommendedResource(a, sectionState)));
+            return `<div class="fw-results-header resource-list-header">${escapeHtml(translatePillar(pillar))}</div>
+                <div class="results-list-compact">${ordered.map(item => buildResourceCardHtml(item, sectionState)).join('')}</div>`;
+        }).join('')
         : `<p class="results-empty">${escapeHtml(t('filter_results_none'))}</p>`;
 }
 
@@ -9892,6 +9933,9 @@ function onMenuFilterChange(field, value) {
     if (field === 'program') {
         menuState.program = appState.selectedProgram || MENU_LANGUAGE_DEFAULT;
         setRememberedMenuFilters({ program: menuState.program });
+    } else if (field === 'pillar') {
+        menuState.pillar = getMenuPillars(value);
+        setRememberedMenuFilters({ pillar: menuState.pillar[0] || null, pillars: menuState.pillar.slice() });
     } else {
         menuState[field] = field === 'grade' ? normalizeGradeList(value) : value;
         const remembered = field === 'grade' ? (menuState.grade.length ? menuState.grade : null) : (value || null);
@@ -9912,6 +9956,11 @@ function onMenuSearchInput(value) {
 
 function toggleMenuFilterChip(field, value) {
     if (!MENU_CHIP_FIELDS.includes(field)) return;
+    if (field === 'pillar') {
+        const pillars = getMenuPillars();
+        onMenuFilterChange(field, pillars.includes(value) ? pillars.filter(pillar => pillar !== value) : [...pillars, value]);
+        return;
+    }
     if (field === 'grade') {
         const grades = normalizeGradeList(menuState.grade);
         onMenuFilterChange(field, grades.includes(value) ? grades.filter(grade => grade !== value) : [...grades, value]);
@@ -9946,10 +9995,10 @@ function restartMenu() {
 // Pre-fill the standalone menu's filters from whatever the user last chose
 // — either here or during a flowchart drilldown — so context carries over
 // the moment they land on this page. If those remembered filters already
-// satisfy the required fields, jump straight to the results view.
+// satisfy the required fields, Search is ready to use.
 function applyRememberedFiltersToMenu() {
     const remembered = appState.rememberedMenuFilters || {};
-    menuState.pillar = remembered.pillar || '';
+    menuState.pillar = getMenuPillars(remembered.pillars || remembered.pillar);
     menuState.resourceType = remembered.resourceType || '';
     menuState.program = appState.selectedProgram || remembered.program || getStoredMenuLanguage();
     menuState.screener = remembered.screener || '';
@@ -9962,10 +10011,7 @@ function applyRememberedFiltersToMenu() {
     syncMenuFilterControls();
 
     sanitizeMenuStateSelections();
-    menuUiState.view = hasAllRequiredMenuFilters() ? 'results' : 'search';
-    menuUiState.editingField = '';
-    applyMenuViewState();
-    refreshMenuUI();
+    showMenuSearchView();
 }
 
 function initializeInterventionsFilterMenu() {
@@ -9991,9 +10037,11 @@ function initializeInterventionsFilterMenu() {
             const optionBtn = event.target.closest('[data-menu-criteria-option]');
             if (optionBtn) {
                 const field = optionBtn.dataset.menuCriteriaOption;
-                if (field === 'grade') {
-                    // Keep the multi-select grade editor open while choosing grades.
+                if (field === 'grade' || field === 'pillar') {
+                    // Keep multi-select editors open while choosing values.
                     toggleMenuFilterChip(field, optionBtn.dataset.value);
+                    Array.from(document.querySelectorAll('[data-menu-criteria-option]'))
+                        .find(button => button.dataset.value === optionBtn.dataset.value)?.focus();
                     return;
                 }
                 menuUiState.editingField = '';
@@ -10005,8 +10053,11 @@ function initializeInterventionsFilterMenu() {
                 menuUiState.editingField = '';
                 renderMenuCriteriaSummary();
             }
+            const pillarDropdown = document.getElementById('menu-pillar-filter');
+            if (pillarDropdown.open && !pillarDropdown.contains(event.target)) pillarDropdown.open = false;
         });
         document.addEventListener('change', event => {
+            if (event.target.matches('[data-menu-pillar]')) toggleMenuFilterChip('pillar', event.target.value);
             if (event.target.matches('[data-menu-criteria-search]')) onMenuSearchInput(event.target.value);
         });
         menuUiState.initialized = true;

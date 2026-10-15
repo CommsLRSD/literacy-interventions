@@ -95,7 +95,7 @@
             <div class="nav-group-label" role="presentation" data-i18n="nav_reference_resources">Reference resources</div>
             <button class="nav-link" data-page="interventions" role="menuitem" aria-selected="false">
                 <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">checklist</span>
-                <span class="nav-link-label" data-i18n="nav_interventions">Teaching Resources</span>
+                <span class="nav-link-label" data-i18n="nav_interventions">Literacy Toolkit</span>
             </button>
             <button class="nav-link" data-page="schedule" role="menuitem" aria-selected="false">
                 <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">calendar_month</span>
@@ -140,7 +140,7 @@
             <div class="nav-group-label" data-i18n="nav_reference_resources">Reference resources</div>
             <button class="mobile-nav-item" data-page="interventions">
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">checklist</span>
-                <span data-i18n="nav_interventions_mobile">Teaching Resources</span>
+                <span data-i18n="nav_interventions_mobile">Literacy Toolkit</span>
             </button>
             <button class="mobile-nav-item" data-page="schedule">
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">calendar_month</span>
@@ -359,7 +359,7 @@
                     <h3 id="home-reference-title" data-i18n="nav_reference_resources">Reference resources</h3>
                     <p data-i18n="guided_reference_desc">Open a reference when you need it, without starting the guided process.</p>
                     <div class="home-reference-links">
-                        <button type="button" onclick="navigateToPage('interventions')" data-i18n="nav_interventions">Teaching Resources</button>
+                        <button type="button" onclick="navigateToPage('interventions')" data-i18n="nav_interventions">Literacy Toolkit</button>
                         <button type="button" onclick="navigateToPage('schedule')" data-i18n="nav_schedule">Assessment Schedule</button>
                         <button type="button" onclick="navigateToPage('scores')" data-i18n="nav_scores">Understanding Scores &amp; Percentiles</button>
                         <button type="button" onclick="navigateToPage('resources')" data-i18n="nav_resources">Resources</button>
@@ -387,12 +387,12 @@
             </div>
         </section>
 
-        <!-- ── TEACHING RESOURCES ───────────────────────────── -->
+        <!-- ── LITERACY TOOLKIT ─────────────────────────────── -->
         <section id="interventions-section" class="content-section" data-page="interventions">
             <div class="interventions-page-wrapper">
                 <div class="hero-area">
-                    <h2 class="section-title" data-i18n="interventions_section_title">Teaching Resources</h2>
-                    <p class="section-subtitle" data-i18n="interventions_section_subtitle">Quickly filter teaching resources by literacy focus and learner needs</p>
+                    <h2 class="section-title" data-i18n="interventions_section_title">Literacy Toolkit</h2>
+                    <p class="section-subtitle" data-i18n="interventions_section_subtitle">Find resources step by step, then refine your results with advanced filters</p>
                 </div>
 
                 <div class="interventions-page-body">
@@ -407,28 +407,27 @@
                         <div id="menu-criteria-editor" class="menu-criteria-editor" hidden></div>
                     </div><!-- /.menu-criteria-bar -->
 
-                    <div id="menu-search-panel" class="menu-search-panel" aria-label="Teaching resource search">
+                    <div id="menu-search-panel" class="menu-search-panel" aria-labelledby="menu-search-title">
                         <div class="menu-search-panel-header">
-                            <h3 class="wizard-title"><span class="material-symbols-rounded" aria-hidden="true" translate="no">tune</span><span data-i18n="wizard_choose_steps">Filter to find resources</span></h3>
-                            <p class="filter-required-hint" data-i18n="filter_required_hint">Select Tier, a Screener when available, Resource Type, and Literacy Pillar to view resources.</p>
+                            <h3 id="menu-search-title" class="wizard-title"><span class="material-symbols-rounded" aria-hidden="true" translate="no">tune</span><span data-i18n="wizard_choose_steps">Find resources step by step</span></h3>
+                            <p class="filter-required-hint" data-i18n="filter_required_hint">Choose a resource type, one or more literacy pillars, then a tier. Search to see resources and refine them with advanced filters.</p>
                         </div>
 
                         <div class="menu-search-panel-body">
                             <div class="filter-group filter-group-visual">
-                                <span class="filter-group-label" data-i18n="filter_tier_label">Tier</span>
-                                <div id="filter-tier-chips" class="menu-chip-group menu-chip-group-tier" role="group" aria-label="Tier"></div>
-                            </div>
-                            <div class="filter-group filter-group-visual">
-                                <span class="filter-group-label" data-i18n="filter_screener_label">Screener</span>
-                                <div id="filter-screener-chips" class="menu-chip-group" role="group" aria-label="Screener"></div>
-                            </div>
-                            <div class="filter-group filter-group-visual">
-                                <span class="filter-group-label" data-i18n="filter_type_label">Resource Type</span>
+                                <span class="filter-group-label" data-i18n="filter_step_type">1. Choose a resource type</span>
                                 <div id="filter-type-chips" class="menu-chip-group" role="group" aria-label="Resource Type"></div>
                             </div>
-                            <div id="filter-pillar-group" class="filter-group filter-group-visual">
-                                <span class="filter-group-label" data-i18n="filter_pillar_label">Literacy Pillar</span>
-                                <div id="filter-pillar-chips" class="menu-chip-group" role="group" aria-label="Literacy Pillar"></div>
+                            <div id="filter-pillar-group" class="filter-group filter-group-visual" hidden>
+                                <span id="menu-pillar-label" class="filter-group-label" data-i18n="filter_step_pillars">2. Choose one or more literacy pillars</span>
+                                <details id="menu-pillar-filter" class="cal-grade-dropdown menu-pillar-dropdown" onkeydown="if(event.key==='Escape'){event.preventDefault();this.open=false;this.querySelector('summary').focus();}">
+                                    <summary aria-labelledby="menu-pillar-label menu-pillar-value"><span id="menu-pillar-value"></span></summary>
+                                    <div id="filter-pillar-chips" class="cal-grade-options" role="group" aria-labelledby="menu-pillar-label"></div>
+                                </details>
+                            </div>
+                            <div id="filter-tier-group" class="filter-group filter-group-visual" hidden>
+                                <span class="filter-group-label" data-i18n="filter_step_tier">3. Choose a tier</span>
+                                <div id="filter-tier-chips" class="menu-chip-group menu-chip-group-tier" role="group" aria-label="Tier"></div>
                             </div>
 
                             <div class="menu-search-panel-footer">
@@ -439,10 +438,20 @@
                                     <span data-i18n="filter_search_button">Search</span>
                                 </button>
                             </div>
+                        </div><!-- /.menu-search-panel-body -->
+                    </div><!-- /.menu-search-panel -->
 
+                    <div id="dropdown-results" class="dropdown-results interventions-results-panel">
+                        <div class="results-header-compact">
+                            <div id="results-count-compact" class="results-count-compact" aria-live="polite">0 results</div>
+                        </div>
                             <details class="filter-advanced" aria-describedby="filter-advanced-description">
                                 <summary class="filter-advanced-summary" data-i18n="filter_advanced_label">Advanced filters</summary>
-                                <p id="filter-advanced-description" class="sr-only" data-i18n="filter_advanced_description">Contains optional Subtest, Grade Level, Evidence Classification, and Keyword search filters.</p>
+                                <p id="filter-advanced-description" class="sr-only" data-i18n="filter_advanced_description">Refine results by Screener, Subtest, Grade Level, Evidence Classification, or Keyword.</p>
+                                <div class="filter-group filter-group-visual">
+                                    <span class="filter-group-label" data-i18n="filter_screener_label">Screener</span>
+                                    <div id="filter-screener-chips" class="menu-chip-group" role="group" aria-label="Screener"></div>
+                                </div>
                                 <div class="filter-group filter-group-visual">
                                     <span class="filter-group-label" data-i18n="filter_subtest_label">Subtest</span>
                                     <div id="filter-subtest-chips" class="menu-chip-group" role="group" aria-label="Subtest"></div>
@@ -460,13 +469,6 @@
                                     <input id="filter-search" class="filter-search-input" type="search" data-i18n-placeholder="filter_search_placeholder" placeholder="Search by resource name…" oninput="onMenuSearchInput(this.value)">
                                 </div>
                             </details>
-                        </div><!-- /.menu-search-panel-body -->
-                    </div><!-- /.menu-search-panel -->
-
-                    <div id="dropdown-results" class="dropdown-results interventions-results-panel">
-                        <div class="results-header-compact">
-                            <div id="results-count-compact" class="results-count-compact">0 results</div>
-                        </div>
                         <div id="results-list-compact" class="results-list-compact"></div>
                     </div><!-- /.interventions-results-panel -->
 

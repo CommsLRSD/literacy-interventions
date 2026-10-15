@@ -7788,6 +7788,24 @@ body.step-review-modal-open { overflow: hidden; }
   gap: var(--space-md);
 }
 
+.menu-search-panel-body > [hidden] {
+  display: none;
+}
+
+.menu-pillar-dropdown {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.menu-pillar-dropdown .cal-grade-options {
+  left: 0;
+}
+
+.menu-pillar-dropdown .cal-grade-option {
+  white-space: normal;
+}
+
 .menu-search-panel-footer {
   display: flex;
   align-items: center;
@@ -7966,6 +7984,7 @@ body.step-review-modal-open { overflow: hidden; }
   padding-top: var(--space-md);
   display: grid;
   gap: var(--space-md);
+  margin-bottom: var(--space-md);
 }
 
 .filter-advanced-summary {
