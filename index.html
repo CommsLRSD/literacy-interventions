@@ -1349,9 +1349,17 @@
             <div class="favourites-page-wrapper">
                 <div class="hero-area">
                     <h2 class="section-title" data-i18n="nav_favourites">Saved</h2>
-                    <p class="section-subtitle" data-i18n="favourites_intro">Your saved resources, across all programs and filters.</p>
+                    <p class="section-subtitle" data-i18n="favourites_intro">Your sessions and resources, in one place.</p>
                 </div>
-                <div id="favourites-list" class="results-list-compact" aria-live="polite"></div>
+                <section class="saved-group" aria-labelledby="saved-sessions-title">
+                    <h3 id="saved-sessions-title" tabindex="-1" data-i18n="saved_sessions">Sessions</h3>
+                    <p class="saved-sessions-hint" data-i18n="session_autosave_hint">Sessions save automatically on this device. Your 30 most recent sessions are kept.</p>
+                    <div id="saved-sessions-list"></div>
+                </section>
+                <section class="saved-group" aria-labelledby="saved-resources-title">
+                    <h3 id="saved-resources-title" data-i18n="saved_resources">Resources</h3>
+                    <div id="favourites-list" class="results-list-compact" aria-live="polite"></div>
+                </section>
             </div>
         </section>
 
