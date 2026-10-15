@@ -45,6 +45,8 @@ const STORAGE_KEY_PREFIX = 'literacy-interventions';
 const LEGACY_STORAGE_KEY_PREFIX = 'litlab';
 const PROGRAM_ENGLISH = 'English';
 const PROGRAM_FRENCH_IMMERSION = 'French Immersion';
+// Choice id recorded when no drill-down/intervention matches the pathway filters.
+const NO_RESOURCE_CHOICE_ID = 'no-resource-available';
 const PROGRAM_PREFERENCE_KEY = `${STORAGE_KEY_PREFIX}-program-preference`;
 const LEGACY_PROGRAM_PREFERENCE_KEY = `${LEGACY_STORAGE_KEY_PREFIX}-program-preference`;
 const PATHWAY_PREFERENCE_KEY = `${STORAGE_KEY_PREFIX}-pathway`;
@@ -427,6 +429,7 @@ function resolveSavedChoice(node, id, tierId) {
         return choice ? { id, name: choice.label } : null;
     }
     if (node.type === 'selection') {
+        if (node.options !== 'screeners' && id === NO_RESOURCE_CHOICE_ID) return { id, name: t('fw_no_resource_choice') };
         const options = node.options === 'screeners'
             ? (appState.tierFlowchartData?.[tierId]?.screeners || []).filter(item => isScreenerIdForCurrentProgram(item.id))
             : appState.interventionMenuData?.resources || [];
@@ -4783,7 +4786,13 @@ function fwLoadResults() {
     const filtered = getFilteredResources(wizardState, null);
 
     if (filtered.length === 0) {
-        resultsEl.innerHTML = `<p class="fw-no-results">${escapeHtml(t('fw_no_results'))}</p>`;
+        resultsEl.innerHTML = `<div class="fw-no-results">
+            <p>${escapeHtml(t('fw_no_results'))}</p>
+            <button type="button" class="fw-skip-btn" onclick="fwSelectItem(NO_RESOURCE_CHOICE_ID, t('fw_no_resource_choice'))">
+                ${escapeHtml(t('fw_continue_without'))}
+                <span class="material-symbols-rounded" aria-hidden="true" translate="no">arrow_forward</span>
+            </button>
+        </div>`;
         return;
     }
 
@@ -5549,6 +5558,9 @@ function getAnimSummaryText(nodeDef, choice) {
         'tier3-success': isFrench ? 'Envisagez de réduire l’aide supplémentaire et de revenir au palier 1.' : 'Consider reducing extra help and returning to Tier 1 classroom teaching.',
         'tier3-specialist': isFrench ? 'Rencontrez les spécialistes pour décider de la suite.' : 'Meet with specialists to decide what to do next.'
     };
+    if (nodeDef.type === 'selection' && choice?.id === NO_RESOURCE_CHOICE_ID) {
+        return isFrench ? 'Aucune ressource ne correspondait; vous avez poursuivi sans ressource.' : 'No resource matched, so you continued without one.';
+    }
     const chosenName = stripEmoji(choice?.name || choice?.label || '').replace(/^Option\s+[A-Z0-9]+\s*:\s*/i, '').trim();
     if (nodeDef.type === 'selection' && chosenName) {
         return nodeDef.options === 'interventions'
@@ -8668,6 +8680,61 @@ function openPathwaySessions() {
     if (!drawer.open) drawer.showModal();
 }
 
+function getSessionNotes(session) {
+    const defs = getFlowchartDefs();
+    const plain = value => stripEmoji(new DOMParser().parseFromString(String(value || ''), 'text/html').body.textContent || '');
+    const tierNum = tierId => Number(String(tierId).replace('tier', '')) || 1;
+    // An endpoint reached from a step is that tier's outcome; endpoints carry no
+    // saved choice, so they are derived from the choice that leads to them.
+    const steps = session.choices.flatMap(choice => {
+        const nodes = defs[choice.tierId]?.nodes || {};
+        const node = nodes[choice.nodeId];
+        const resolved = node && resolveSavedChoice(node, choice.choiceId, choice.tierId);
+        if (!resolved) return [];
+        const tier = tierNum(choice.tierId);
+        const rows = [{ tier, title: plain(node.title || node.subtitle), response: plain(resolved.name) }];
+        const targetId = node.type === 'decision'
+            ? node.choices.find(item => item.id === choice.choiceId)?.nextNode : node.nextNode;
+        const endpoint = nodes[targetId];
+        if (endpoint?.type === 'endpoint') {
+            rows.push({ tier, outcome: true, continues: ['startTier2Visual', 'startTier3Visual'].includes(endpoint.actionButton?.action),
+                title: t('notes_tier_outcome')(tier), response: plain(endpoint.title || endpoint.subtitle) });
+        }
+        return rows;
+    });
+    const outcomes = steps.filter(step => step.outcome);
+    const lastOutcome = outcomes[outcomes.length - 1];
+    if (lastOutcome && !lastOutcome.continues && steps[steps.length - 1] === lastOutcome) lastOutcome.final = true;
+    let next = '';
+    const vf = appState.visualFlowchart;
+    const lastStep = vf?.selectedPath?.[vf.selectedPath.length - 1];
+    if (session.id === activePathwaySessionId && lastStep && !vf.choices?.[lastStep.nodeId]) {
+        const node = defs[vf.tierId]?.nodes?.[lastStep.nodeId];
+        if (node && node.type !== 'endpoint' && !lastOutcome?.final) next = plain(node.title || node.subtitle);
+    }
+    const resources = session.resources.flatMap(resource => {
+        const item = getAllResources().find(entry => entry.id === resource.id);
+        if (!item) return [];
+        const tags = getMatchingTags(item, resource.filters);
+        const only = field => {
+            const values = uniqueSorted(tags.map(tag => tag[field]).filter(Boolean));
+            return values.length === 1 ? values[0] : '';
+        };
+        return [{ item, filters: resource.filters, tier: Number(resource.filters.tier) || null,
+            pillar: translatePillar(resource.filters.pillar || only('pillar')),
+            type: translateResourceType(resource.filters.resourceType || only('resourceType')),
+            urls: getResourceUrls(item, resource.filters) }];
+    });
+    const screener = (appState.tierFlowchartData?.tier1?.screeners || [])
+        .find(item => item.id === session.context.screener)?.name || '';
+    const tiers = [...new Set([...steps.map(step => step.tier), ...resources.map(entry => entry.tier).filter(Boolean)])].sort();
+    return {
+        date: new Date(session.startedAt),
+        program: t(session.context.program === PROGRAM_FRENCH_IMMERSION ? 'fc_program_french_immersion' : 'fc_program_english'),
+        grade: formatGradeList(session.context.grades), screener, tiers, steps, outcomes, next, resources
+    };
+}
+
 function updatePathwaySelections() {
     const toggle = document.getElementById('pathway-sessions-toggle');
     const list = document.getElementById('pathway-sessions-list');
@@ -8679,21 +8746,191 @@ function updatePathwaySelections() {
     toggle.hidden = appState.currentPage !== 'flowchart';
     const expanded = new Set(Array.from(list.querySelectorAll('details[open]')).map(item => item.dataset.sessionId));
     const rendered = new Set(Array.from(list.querySelectorAll('details')).map(item => item.dataset.sessionId));
+    const locale = appState.language === 'fr' ? 'fr-CA' : 'en-US';
     list.innerHTML = pathwaySessions.slice().reverse().map(session => {
-        const date = new Date(session.startedAt).toLocaleDateString(appState.language === 'fr' ? 'fr-CA' : 'en-US',
-            { month: 'short', day: 'numeric', year: 'numeric' }).replace(/^([A-Za-z]{3}) /, '$1. ');
-        const resources = session.resources.map(resource => {
-            const item = getAllResources().find(item => item.id === resource.id);
-            if (!item) return '';
-            return `<div class="session-resource"><strong>${escapeHtml(item.name)}</strong>
-                <div class="resource-card-links">${buildResourceLinksHtml(item, resource.filters)}</div></div>`;
+        const notes = getSessionNotes(session);
+        const date = notes.date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' })
+            .replace(/^([A-Za-z]{3}) /, '$1. ');
+        const meta = [notes.program, notes.grade, notes.screener, t('notes_step_count')(notes.steps.filter(step => !step.outcome).length)]
+            .filter(Boolean).map(escapeHtml).join(' · ');
+        const resources = notes.resources.map(entry => {
+            const tierLabel = entry.tier ? t('fw_context_tier')(entry.tier) : '';
+            const links = entry.urls.map(url => {
+                const lang = getResourceUrlLang(entry.item, url);
+                const label = `${t('filter_view_resource')}: ${entry.item.name}${lang ? ` (${lang})` : ''}`;
+                return `<a class="session-resource-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(label)}" title="${escapeAttr(label)}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span>${lang && entry.urls.length > 1 ? `<span class="session-resource-lang" aria-hidden="true">${escapeHtml(lang)}</span>` : ''}</a>`;
+            }).join('');
+            return `<li class="session-resource">
+                ${tierLabel ? `<span class="session-tier session-tier-${entry.tier}" title="${escapeAttr(tierLabel)}"><span class="sr-only">${escapeHtml(tierLabel)}</span><span aria-hidden="true">${escapeHtml(t('notes_tier_short')(entry.tier))}</span></span>` : ''}
+                <span class="session-resource-main"><strong>${escapeHtml(entry.item.name)}</strong>${entry.pillar || entry.type
+                    ? `<span class="session-resource-meta">${[entry.pillar, entry.type].filter(Boolean).map(escapeHtml).join(' · ')}</span>` : ''}</span>
+                ${links}
+            </li>`;
         }).join('');
-        return `<details class="pathway-session" data-session-id="${escapeAttr(session.id)}"${expanded.has(session.id) || (!rendered.has(session.id) && session.id === activePathwaySessionId) ? ' open' : ''}>
-            <summary>${escapeHtml(t('pathway_session'))} · ${escapeHtml(date)}${session.id === activePathwaySessionId ? ` · ${escapeHtml(t('pathway_session_current'))}` : ''}</summary>
-            ${resources || `<p>${escapeHtml(t('pathway_session_no_resources'))}</p>`}
+        const isCurrent = session.id === activePathwaySessionId;
+        return `<details class="pathway-session" data-session-id="${escapeAttr(session.id)}"${expanded.has(session.id) || (!rendered.has(session.id) && isCurrent) ? ' open' : ''}>
+            <summary>
+                <span class="pathway-session-title">${escapeHtml(t('pathway_session'))} · ${escapeHtml(date)}${isCurrent ? `<span class="pathway-session-current">${escapeHtml(t('pathway_session_current'))}</span>` : ''}</span>
+                <span class="pathway-session-meta">${meta}</span>
+            </summary>
+            ${notes.outcomes.length ? `<ul class="pathway-session-outcomes">${notes.outcomes.map(outcome => `<li class="pathway-session-outcome${outcome.final ? ' is-final' : ''}">
+                <span class="material-symbols-rounded" aria-hidden="true" translate="no">${outcome.final ? 'sports_score' : 'flag'}</span>
+                <span><span class="pathway-session-label">${outcome.final ? `${escapeHtml(t('notes_final_outcome'))} · ` : ''}${escapeHtml(outcome.title)}:</span> ${escapeHtml(outcome.response)}</span>
+            </li>`).join('')}</ul>` : ''}
+            ${notes.next ? `<p class="pathway-session-next"><span class="material-symbols-rounded" aria-hidden="true" translate="no">arrow_forward</span><span><span class="pathway-session-label">${escapeHtml(t('notes_next'))}:</span> ${escapeHtml(notes.next)}</span></p>` : ''}
+            <p class="pathway-session-label">${escapeHtml(t('notes_resources'))}</p>
+            ${resources ? `<ul class="session-resources">${resources}</ul>` : `<p class="pathway-session-empty">${escapeHtml(t('pathway_session_no_resources'))}</p>`}
+            <button type="button" class="pathway-session-download" data-session-download="${escapeAttr(session.id)}" aria-label="${escapeAttr(t('notes_download_label'))}">
+                <span class="material-symbols-rounded" aria-hidden="true" translate="no">download</span>${escapeHtml(t('notes_download'))}
+            </button>
         </details>`;
-    }).join('') || `<p>${escapeHtml(t('pathway_sessions_empty'))}</p>`;
+    }).join('') || `<p class="pathway-session-empty">${escapeHtml(t('pathway_sessions_empty'))}</p>`;
 }
+
+// Minimal uncompressed ZIP writer, used to package the .docx session summary
+// without pulling in a third-party library.
+const ZIP_CRC_TABLE = (() => {
+    const table = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+        table[n] = c >>> 0;
+    }
+    return table;
+})();
+
+function buildZipBlob(files, type) {
+    const encoder = new TextEncoder();
+    const parts = [];
+    const central = [];
+    let offset = 0;
+    let centralSize = 0;
+    files.forEach(file => {
+        const name = encoder.encode(file.name);
+        const data = encoder.encode(file.data);
+        let crc = 0xFFFFFFFF;
+        for (const byte of data) crc = ZIP_CRC_TABLE[(crc ^ byte) & 0xFF] ^ (crc >>> 8);
+        crc = (crc ^ 0xFFFFFFFF) >>> 0;
+        const local = new DataView(new ArrayBuffer(30));
+        local.setUint32(0, 0x04034b50, true);
+        local.setUint16(4, 20, true);
+        local.setUint16(6, 0x0800, true);
+        local.setUint16(12, 0x21, true);
+        local.setUint32(14, crc, true);
+        local.setUint32(18, data.length, true);
+        local.setUint32(22, data.length, true);
+        local.setUint16(26, name.length, true);
+        const header = new DataView(new ArrayBuffer(46));
+        header.setUint32(0, 0x02014b50, true);
+        header.setUint16(4, 20, true);
+        header.setUint16(6, 20, true);
+        header.setUint16(8, 0x0800, true);
+        header.setUint16(14, 0x21, true);
+        header.setUint32(16, crc, true);
+        header.setUint32(20, data.length, true);
+        header.setUint32(24, data.length, true);
+        header.setUint16(28, name.length, true);
+        header.setUint32(42, offset, true);
+        parts.push(local, name, data);
+        central.push(header, name);
+        offset += 30 + name.length + data.length;
+        centralSize += 46 + name.length;
+    });
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true);
+    end.setUint16(8, files.length, true);
+    end.setUint16(10, files.length, true);
+    end.setUint32(12, centralSize, true);
+    end.setUint32(16, offset, true);
+    return new Blob([...parts, ...central, end], { type });
+}
+
+function buildSessionNotesDocx(notes) {
+    const xml = value => String(value ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]))
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
+    const run = (text, { bold, size, color } = {}) => `<w:r><w:rPr>${bold ? '<w:b/>' : ''}${color ? `<w:color w:val="${color}"/>` : ''}${size ? `<w:sz w:val="${size}"/><w:szCs w:val="${size}"/>` : ''}</w:rPr><w:t xml:space="preserve">${xml(text)}</w:t></w:r>`;
+    const para = (content, { before = 0, after = 80, line = false } = {}) => `<w:p><w:pPr>${line ? '<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="C9D3DF"/></w:pBdr>' : ''}<w:spacing w:before="${before}" w:after="${after}"/></w:pPr>${content}</w:p>`;
+    const heading = text => para(run(text, { bold: true, size: 26, color: '0C315A' }), { before: 280, after: 100 });
+    const rels = [];
+    const link = (url, text) => {
+        const id = `rIdL${rels.length + 1}`;
+        rels.push(`<Relationship Id="${id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="${xml(url)}" TargetMode="External"/>`);
+        return `<w:hyperlink r:id="${id}"><w:r><w:rPr><w:color w:val="0A7F8A"/><w:u w:val="single"/></w:rPr><w:t xml:space="preserve">${xml(text)}</w:t></w:r></w:hyperlink>`;
+    };
+    const cell = (content, width, fill) => `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/>${fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>` : ''}</w:tcPr><w:p><w:pPr><w:spacing w:after="0"/></w:pPr>${content}</w:p></w:tc>`;
+    const table = (widths, rows, header) => {
+        const border = side => `<w:${side} w:val="single" w:sz="4" w:space="0" w:color="D5DDE7"/>`;
+        return `<w:tbl><w:tblPr><w:tblW w:w="${widths.reduce((a, b) => a + b, 0)}" w:type="dxa"/><w:tblBorders>${['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(border).join('')}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="70" w:type="dxa"/><w:left w:w="110" w:type="dxa"/><w:bottom w:w="70" w:type="dxa"/><w:right w:w="110" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${widths.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${
+            header ? `<w:tr><w:trPr><w:tblHeader/></w:trPr>${header.map((text, i) => cell(run(text, { bold: true, color: 'FFFFFF' }), widths[i], '0C315A')).join('')}</w:tr>` : ''}${
+            rows.map(row => `<w:tr><w:trPr><w:cantSplit/></w:trPr>${row.map((content, i) => cell(content, widths[i], !header && i === 0 ? 'EEF3F8' : '')).join('')}</w:tr>`).join('')}</w:tbl>`;
+    };
+    const tierLabel = n => (n ? t('fw_context_tier')(n) : '');
+    const locale = appState.language === 'fr' ? 'fr-CA' : 'en-CA';
+    const dateText = notes.date.toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const details = [
+        [t('notes_date'), dateText], [t('notes_program'), notes.program], [t('notes_grade'), notes.grade],
+        [t('notes_screener'), notes.screener], [t('notes_tiers'), notes.tiers.map(tierLabel).join(', ')],
+        [t('notes_final_outcome'), notes.outcomes.find(outcome => outcome.final)?.response || ''],
+        [t('notes_student'), '']
+    ].filter(([, value], index, rows) => value || index === rows.length - 1)
+        .map(([label, value]) => [run(label, { bold: true, color: '0C315A' }), run(value)]);
+    const body = [
+        para(run(t('notes_doc_title'), { bold: true, size: 34, color: '0C315A' }), { after: 40 }),
+        para(run(dateText, { color: '5B6B7F' }), { after: 200 }),
+        table([2400, 7680], details),
+        heading(t('notes_steps')),
+        notes.steps.length
+            ? table([1300, 4390, 4390], notes.steps.map(step => {
+                const title = step.final ? `${t('notes_final_outcome')} · ${step.title}` : step.title;
+                const style = step.outcome ? { bold: true, color: step.final ? '0A7F8A' : '0C315A' } : {};
+                return [run(tierLabel(step.tier), style), run(title, style), run(step.response, style)];
+            }), [t('filter_tier_label'), t('notes_step'), t('notes_response')])
+            : para(run('—')),
+        notes.next ? para(`${run(`${t('notes_next')}: `, { bold: true })}${run(notes.next)}`, { before: 120 }) : '',
+        heading(t('notes_resources')),
+        notes.resources.length
+            ? table([1300, 3700, 3380, 1700], notes.resources.map(entry => [
+                run(tierLabel(entry.tier)), run(entry.item.name, { bold: true }),
+                run([entry.pillar, entry.type].filter(Boolean).join(' · ')),
+                entry.urls.length ? entry.urls.map(url => link(url, getResourceUrlLang(entry.item, url) || t('notes_link'))).join(run(' · ')) : run(t('filter_no_link'))
+            ]), [t('filter_tier_label'), t('notes_resource'), `${t('filter_pillar_label')} · ${t('filter_type_label')}`, t('notes_link')])
+            : para(run(t('pathway_session_no_resources'))),
+        heading(t('notes_your_notes')),
+        ...Array.from({ length: 6 }, () => para('', { before: 220, after: 0, line: true }))
+    ].join('');
+    const ns = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+    const head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+    const lang = appState.language === 'fr' ? 'fr-CA' : 'en-CA';
+    return buildZipBlob([
+        { name: '[Content_Types].xml', data: `${head}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>` },
+        { name: '_rels/.rels', data: `${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>` },
+        { name: 'word/_rels/document.xml.rels', data: `${head}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdS" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>${rels.join('')}</Relationships>` },
+        { name: 'word/styles.xml', data: `${head}<w:styles ${ns}><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Calibri" w:cs="Calibri"/><w:color w:val="1F2937"/><w:sz w:val="21"/><w:szCs w:val="21"/><w:lang w:val="${lang}"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="80" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults></w:styles>` },
+        { name: 'word/document.xml', data: `${head}<w:document ${ns}><w:body>${body}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>` }
+    ], 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+}
+
+function downloadSessionNotes(sessionId) {
+    if (sessionId === activePathwaySessionId) savePathwaySession();
+    const session = pathwaySessions.find(item => item.id === sessionId);
+    if (!session) return;
+    const notes = getSessionNotes(session);
+    const date = notes.date;
+    const stamp = [date.getFullYear(), date.getMonth() + 1, date.getDate()].map(part => String(part).padStart(2, '0')).join('-');
+    const url = URL.createObjectURL(buildSessionNotesDocx(notes));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${appState.language === 'fr' ? 'notes-de-seance' : 'session-notes'}-${stamp}.docx`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+document.getElementById('pathway-sessions-list')?.addEventListener('click', event => {
+    const button = event.target.closest?.('[data-session-download]');
+    if (button) downloadSessionNotes(button.dataset.sessionDownload);
+});
 
 document.addEventListener('fullscreenchange', updatePathwaySelections);
 document.getElementById('pathway-sessions-drawer')?.addEventListener('close', () => {
