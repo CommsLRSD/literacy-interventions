@@ -121,7 +121,9 @@ function persistProgressStorage() {
             }
         } catch (e) {
             if (epoch !== progressStorageEpoch) return;
-            try { sessionStorage.setItem(PATHWAY_SESSION_KEY, payload); } catch (error) { /* Current visit still works. */ }
+            try {
+                if (sessionStorage.getItem(PATHWAY_SESSION_KEY) === null) sessionStorage.setItem(PATHWAY_SESSION_KEY, payload);
+            } catch (error) { /* Current visit still works. */ }
         }
     });
 }
@@ -5256,8 +5258,7 @@ function createIntegratedEndpointNode(nodeData) {
         </button>
     ` : '';
 
-    // For pure terminal endpoints (no tier-transition actions), always provide
-    // Done so the user is never left without a next action.
+    // Terminal routes can be officially ended without discarding their notes.
     const defaultActionsHTML = isTerminalEndpoint ? `
         <button class="action-btn action-secondary" onclick="closePathwaySession(true)">
             ${escapeHtml(t('session_end'))}

@@ -8294,6 +8294,7 @@ body.step-review-modal-open { overflow: hidden; }
      browser refuses the Fullscreen API request. */
   .visual-flowchart-dialog {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto auto minmax(0, 1fr);
     width: 100vw;
     height: 100vh;
@@ -8319,7 +8320,7 @@ body.step-review-modal-open { overflow: hidden; }
 
   .visual-flowchart-header {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-md);
@@ -8331,7 +8332,7 @@ body.step-review-modal-open { overflow: hidden; }
   /* Title and short description share a single row to keep the header short. */
   .visual-flowchart-header-text {
     display: flex;
-    flex: 0 1 auto;
+    flex: 1 1 16rem;
     align-items: baseline;
     gap: 14px;
     min-width: 0;
