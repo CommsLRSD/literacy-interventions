@@ -2293,7 +2293,7 @@ const FLOWCHART_DEFINITIONS = {
             'tier2-screener': {
                 id: 'tier2-screener',
                 type: 'info',
-                title: 'Step 4: Administer Divisional literacy screener',
+                title: 'Step 4: Administer divisional literacy screener',
                 subtitle: 'Administer Divisional literacy screener',
                 description: 'After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2).',
                 nextNode: 'tier2-progress',
@@ -2343,7 +2343,7 @@ const FLOWCHART_DEFINITIONS = {
             'tier2-cycle2-screener': {
                 id: 'tier2-cycle2-screener',
                 type: 'info',
-                title: 'Step 8: Administer Divisional literacy screener',
+                title: 'Step 8: Administer divisional literacy screener',
                 subtitle: 'Administer Divisional literacy screener',
                 description: 'After the 8-week period, administer the regularly scheduled progress monitoring literacy screener (DIBELS, CTOPP-2).',
                 nextNode: 'tier2-cycle2-progress',
@@ -2854,9 +2854,13 @@ function getStepTypeLabel(type) {
 // The answer the user gave at a step, shown on its completed trail card
 function getStepAnswerText(nodeId, nodeDef) {
     const choice = appState.visualFlowchart.choices[nodeId];
-    if (choice && choice.name) return choice.name;
-    if (nodeDef?.type === 'checklist') return t('step_type_reviewed');
-    return '';
+    const answer = choice?.name || (nodeDef?.type === 'checklist' ? t('step_type_reviewed') : '');
+    return isDuplicateStepSummary(answer, getStepShortTitle(nodeDef)) ? '' : answer;
+}
+
+function isDuplicateStepSummary(summary, title) {
+    const normalize = value => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    return !!normalize(summary) && normalize(summary) === normalize(title);
 }
 
 // Look ahead from the current node so the user can see what is still to come.
@@ -3783,7 +3787,9 @@ function buildVisualFlowchartDisplayItems(entries) {
     const pendingTierTransition = appState.visualFlowchart?.pendingTierTransition;
     const hasTier1TransitionCard = pendingTierTransition === 'tier2'
         && entries.some(entry => entry.isCurrent && entry.node.id === 'tier1-move-tier2');
-    if (pendingTierTransition && !hasTier1TransitionCard) {
+    const hasTier2TransitionCard = pendingTierTransition === 'tier3'
+        && entries.some(entry => entry.isCurrent && entry.node.id === 'tier2-move-tier3');
+    if (pendingTierTransition && !hasTier1TransitionCard && !hasTier2TransitionCard) {
         items.push({ type: 'tier-review', targetTierId: pendingTierTransition, variant: 'step1' });
     }
     return items;
@@ -3966,6 +3972,8 @@ function refreshVisualFlowchartModal() {
             ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="restartTier1VisualIntegrated()">${escapeHtml(entry.node.actionButton.text)}</button>`
             : entry.isCurrent && entry.node.id === 'tier1-move-tier2' && appState.visualFlowchart?.pendingTierTransition === 'tier2'
                 ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="confirmVisualFlowchartTierTransition()">${escapeHtml(t('continue_to_tier'))} 2</button>`
+                : entry.isCurrent && entry.node.id === 'tier2-move-tier3' && appState.visualFlowchart?.pendingTierTransition === 'tier3'
+                    ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="confirmVisualFlowchartTierTransition()">${escapeHtml(t('continue_to_tier'))} 3</button>`
             : '';
         const summaryAction = entry.isCurrent && entry.node.type === 'endpoint'
             && appState.visualFlowchart?.summaryEndpointNodeData?.id === entry.node.id
@@ -3978,7 +3986,7 @@ function refreshVisualFlowchartModal() {
                 <span class="visual-flowchart-card-copy">
                     <span class="visual-flowchart-card-meta">${escapeHtml(getStepTypeLabel(entry.node.type))}${entry.isCurrent ? ` · ${escapeHtml(t('fc_in_progress'))}` : ''}</span>
                     <strong>${escapeHtml(displayTitle)}</strong>
-                    ${!usesChoiceAsTitle && answer ? `<span class="visual-flowchart-card-answer">${escapeHtml(answer)}</span>` : ''}
+                    ${!usesChoiceAsTitle && answer && !isDuplicateStepSummary(answer, displayTitle) ? `<span class="visual-flowchart-card-answer">${escapeHtml(answer)}</span>` : ''}
                     ${entry.node.type === 'endpoint' && endpointDescription ? `<span class="visual-flowchart-card-answer">${endpointDescription}</span>` : ''}
                     ${entry.node.type === 'endpoint' ? endpointAction + summaryAction : ''}
                 </span>
