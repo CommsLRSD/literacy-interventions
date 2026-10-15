@@ -4515,7 +4515,8 @@ details > p {
 
 .step-content-resource-picker > .evidence-legend-trigger {
   display: block;
-  margin-top: var(--space-lg);
+  margin: var(--space-sm) 0 0 auto;
+  text-align: right;
 }
 
 .fw-results-list {
@@ -4598,7 +4599,7 @@ details > p {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: var(--space-sm) 0 0;
+  margin: var(--space-lg) 0 0;
   font-size: 0.75rem;
   color: var(--text-secondary);
 }

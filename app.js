@@ -4794,8 +4794,8 @@ function createIntegratedSelectionNode(nodeData) {
                     </div>`}
                     <div id="fw-results" class="fw-results"></div>
                 </div>
-                ${getEvidenceLegendTriggerHtml()}
                 <p class="fw-recommended-legend"><span class="fw-recommended-swatch" aria-hidden="true">★</span>${escapeHtml(t('fw_recommended_legend'))}</p>
+                ${getEvidenceLegendTriggerHtml()}
             </div>
         `;
     }
@@ -8521,7 +8521,13 @@ function positionEvidenceLegendTooltip(trigger) {
         left = Math.max(margin, window.innerWidth - tooltipWidth - margin);
     }
     tooltip.style.left = `${left}px`;
-    tooltip.style.top = `${rect.bottom + margin}px`;
+    // Open above the trigger when there is not enough room below it.
+    const tooltipHeight = tooltip.offsetHeight || 0;
+    let top = rect.bottom + margin;
+    if (top + tooltipHeight > window.innerHeight - margin && rect.top - margin - tooltipHeight >= margin) {
+        top = rect.top - margin - tooltipHeight;
+    }
+    tooltip.style.top = `${Math.max(margin, Math.min(top, window.innerHeight - tooltipHeight - margin))}px`;
 }
 
 function showEvidenceLegendTooltip(trigger) {
