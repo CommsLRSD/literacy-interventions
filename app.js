@@ -9322,6 +9322,9 @@ document.addEventListener('click', event => {
 // Remember whatever filters were last touched — here or in a flowchart
 // drilldown — so the other one can pre-fill from the same context.
 function setRememberedMenuFilters(partial) {
+    if (Object.hasOwn(partial, 'pillar') && !Object.hasOwn(partial, 'pillars')) {
+        partial = { ...partial, pillars: getMenuPillars(partial.pillar) };
+    }
     appState.rememberedMenuFilters = { ...(appState.rememberedMenuFilters || {}), ...partial };
     if (appReady && appState.selectedProgram && Object.hasOwn(partial, 'pillar') && typeof partial.pillar === 'string' && partial.pillar) {
         pathwayDefaults[appState.selectedProgram] = { ...getPathwaySetupDefaults(), pillar: partial.pillar };
