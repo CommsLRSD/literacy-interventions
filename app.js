@@ -8649,8 +8649,9 @@ function readPathwaySessions(raw) {
         [PROGRAM_ENGLISH, PROGRAM_FRENCH_IMMERSION].includes(session.context?.program) &&
         getPathwayGrades(session.context.program).includes(session.context.grades?.[0]) &&
         (appState.tierFlowchartData?.tier1?.screeners || []).some(item => item.id === session.context.screener))
-        .map(session => ({
+        .map((session, index) => ({
             id: session.id, startedAt: session.startedAt,
+            number: Number.isSafeInteger(session.number) && session.number > 0 ? session.number : index + 1,
             context: { program: session.context.program, screener: session.context.screener,
                 grades: getValidPathwayGrades(session.context.program, session.context.grades) },
             choices: (Array.isArray(session.choices) ? session.choices : []).slice(0, 100)
@@ -8676,6 +8677,7 @@ function getActivePathwaySession() {
     let session = pathwaySessions.find(item => item.id === activePathwaySessionId);
     if (!session) {
         session = { id: crypto.randomUUID(), startedAt: Date.now(), context: { ...pathwayContext },
+            number: (pathwaySessions.at(-1)?.number || 0) + 1,
             choices: [], resources: [] };
         activePathwaySessionId = session.id;
         pathwaySessions.push(session);
@@ -8783,7 +8785,7 @@ function getSessionNotes(session) {
         .find(item => item.id === session.context.screener)?.name || '';
     const tiers = [...new Set([...steps.map(step => step.tier), ...resources.map(entry => entry.tier).filter(Boolean)])].sort();
     return {
-        number: pathwaySessions.findIndex(item => item.id === session.id) + 1,
+        number: session.number,
         date: new Date(session.startedAt),
         program: t(session.context.program === PROGRAM_FRENCH_IMMERSION ? 'fc_program_french_immersion' : 'fc_program_english'),
         grade: formatGradeList(session.context.grades), screener, tiers, steps, outcomes, next, resources

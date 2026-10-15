@@ -8396,7 +8396,7 @@ body.step-review-modal-open { overflow: hidden; }
   .visual-flowchart-tier-bar-chip,
   .visual-flowchart-tier-tabs .tier-tab {
     background: var(--visual-tier-colour);
-    color: #0c3259;
+    color: #071e35;
     border-color: var(--visual-tier-colour);
   }
 
