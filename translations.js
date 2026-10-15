@@ -217,6 +217,10 @@ const TRANSLATIONS = {
         filter_notes_label: 'Notes',
         filter_screeners_label: 'Screeners',
         fw_choose_pillar_label: 'Literacy Pillar',
+        fw_choose_pillars_label: 'Literacy Pillars (select all that apply)',
+        fw_choose_pillar_prompt: 'Select at least one literacy pillar to see matching resources.',
+        fw_select_multiple_hint: 'Select every resource you plan to use, then continue.',
+        fw_selected_count: (n) => n === 1 ? '1 resource selected' : `${n} resources selected`,
         fw_choose_screener_label: 'Screener',
         fw_context_tier: (n) => `Tier ${n}`,
 
@@ -668,6 +672,10 @@ const TRANSLATIONS = {
         filter_notes_label: 'Remarques',
         filter_screeners_label: 'Outils de dépistage',
         fw_choose_pillar_label: 'Pilier de littératie',
+        fw_choose_pillars_label: 'Piliers de littératie (cochez tout ce qui s’applique)',
+        fw_choose_pillar_prompt: 'Sélectionnez au moins un pilier de littératie pour voir les ressources correspondantes.',
+        fw_select_multiple_hint: 'Sélectionnez toutes les ressources que vous prévoyez utiliser, puis continuez.',
+        fw_selected_count: (n) => n === 1 ? '1 ressource sélectionnée' : `${n} ressources sélectionnées`,
         fw_choose_screener_label: 'Outil de dépistage',
         fw_context_tier: (n) => `Niveau ${n}`,
 
