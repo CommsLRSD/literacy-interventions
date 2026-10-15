@@ -9601,10 +9601,10 @@ function getAvailableMenuFieldValues(field) {
     return field === 'tier' ? values.map(String) : values;
 }
 
-// Resource types, pillars and grades support multiple selections.
+// Pillars and grades support multiple selections.
 function isMenuValueSelected(field, value, selected = menuState[field]) {
     if (field === 'grade') return normalizeGradeList(selected).includes(String(value));
-    if (field === 'pillar' || field === 'resourceType') return getMenuSelections(selected).includes(value);
+    if (field === 'pillar') return getMenuSelections(selected).includes(value);
     return String(value) === String(selected);
 }
 
@@ -9656,15 +9656,19 @@ function updateMenuChipSeparators() {
 function sanitizeMenuStateSelections() {
     MENU_CHIP_FIELDS.forEach(field => {
         const value = menuState[field];
-        if (field === 'pillar' || field === 'resourceType') {
+        if (field === 'resourceType') {
+            const available = getAvailableMenuFieldValues(field);
+            menuState.resourceType = getMenuSelections(value).find(type => available.includes(type)) || '';
+            if (menuState.resourceType !== value) setRememberedMenuFilters({ resourceType: menuState.resourceType || null });
+            return;
+        }
+        if (field === 'pillar') {
             const selected = getMenuSelections(value);
             const available = getAvailableMenuFieldValues(field);
             const kept = selected.filter(item => available.includes(item));
             menuState[field] = kept;
             if (kept.length !== selected.length) {
-                setRememberedMenuFilters(field === 'pillar'
-                    ? { pillar: kept[0] || null, pillars: kept }
-                    : { resourceType: kept.length ? kept : null });
+                setRememberedMenuFilters({ pillar: kept[0] || null, pillars: kept });
             }
             return;
         }
@@ -9710,7 +9714,11 @@ function renderMenuFilterOptions() {
 
     renderMenuChoiceButtons('filter-tier-chips', 'tier', String(menuState.tier || ''), value => t('filter_tier_option')(value));
     renderMenuChoiceButtons('filter-screener-chips', 'screener', menuState.screener, translateScreener);
-    renderMenuMultiselectOptions('resourceType', 'type', translateResourceType, 'filter_choose_types');
+    document.getElementById('menu-type-filter').innerHTML =
+        `<option value="">${escapeHtml(t('filter_choose_types'))}</option>` +
+        getAvailableMenuFieldValues('resourceType').map(value =>
+            `<option value="${escapeAttr(value)}"${value === menuState.resourceType ? ' selected' : ''}>${escapeHtml(translateResourceType(value))}</option>`
+        ).join('');
     renderMenuMultiselectOptions('pillar', 'pillar', translatePillar, 'filter_choose_pillars');
     renderMenuChoiceButtons('filter-subtest-chips', 'subtest', menuState.subtest);
     renderMenuChoiceButtons('filter-grade-chips', 'grade', menuState.grade, translateGrade);
@@ -9746,14 +9754,10 @@ function buildResourceLinksHtml(item, state) {
     }).join('');
 }
 
-function buildResourceMetaPillsHtml(matchingTags, showResourceTypes = false) {
+function buildResourceMetaPillsHtml(matchingTags) {
     const gradeText = uniqueSorted(matchingTags.map(tag => tag.gradeRangeText)).join('; ');
     const screenerText = uniqueSorted(matchingTags.flatMap(tag => (tag.screeners || []).length ? tag.screeners : [NO_SPECIFIC_SCREENER_VALUE])).map(translateScreener).join(', ');
     const pills = [];
-    if (showResourceTypes) {
-        const types = uniqueSorted(matchingTags.map(tag => tag.resourceType)).map(translateResourceType).join(', ');
-        if (types) pills.push(`<span class="resource-card-pill"><strong>${escapeHtml(t('filter_type_label'))}:</strong> ${escapeHtml(types)}</span>`);
-    }
     if (gradeText) pills.push(`<span class="resource-card-pill"><strong>${escapeHtml(t('filter_grades_label'))}:</strong> ${escapeHtml(gradeText)}</span>`);
     if (screenerText) pills.push(`<span class="resource-card-pill"><strong>${escapeHtml(t('filter_screeners_label'))}:</strong> ${escapeHtml(screenerText)}</span>`);
     return pills.join('');
@@ -9772,7 +9776,7 @@ function buildResourceCardHtml(item, state = menuState) {
                     ${buildResourceRecommendationBadgeHtml(item, state)}
                     ${getEvidenceBadgeHtml(evidenceLevel)}
                 </div>
-                <div class="resource-card-pill-row">${buildResourceMetaPillsHtml(matchingTags, getMenuSelections(state.resourceType).length > 1)}</div>
+                <div class="resource-card-pill-row">${buildResourceMetaPillsHtml(matchingTags)}</div>
                 ${notes ? `<div class="resource-card-note-block"><span class="resource-card-note-label">${escapeHtml(t('filter_notes_label'))}</span><div class="resource-card-meta resource-card-notes">${escapeHtml(notes)}</div></div>` : ''}
             </div>
             <div class="resource-card-links">${buildFavouriteButtonHtml(item)}${buildResourceLinksHtml(item, state)}</div>
@@ -9783,7 +9787,7 @@ function buildResourceCardHtml(item, state = menuState) {
 // Fields shown in the criteria summary row above the results, in display
 // order. Their values are buttons so each filter can be changed on its own.
 const MENU_FILTER_CHIP_FIELDS = [
-    { field: 'resourceType', labelKey: 'filter_type_label', format: (v) => getMenuSelections(v).map(translateResourceType).join(', ') },
+    { field: 'resourceType', labelKey: 'filter_type_label', format: (v) => translateResourceType(v) },
     { field: 'pillar', labelKey: 'filter_pillar_label', format: (v) => getMenuPillars(v).map(translatePillar).join(', ') },
     { field: 'tier', labelKey: 'filter_tier_label', format: (v) => t('filter_tier_option')(v) },
     { field: 'screener', labelKey: 'filter_screener_label', format: (v) => translateScreener(v) },
@@ -9955,9 +9959,6 @@ function onMenuFilterChange(field, value) {
     } else if (field === 'pillar') {
         menuState.pillar = getMenuPillars(value);
         setRememberedMenuFilters({ pillar: menuState.pillar[0] || null, pillars: menuState.pillar.slice() });
-    } else if (field === 'resourceType') {
-        menuState.resourceType = getMenuSelections(value);
-        setRememberedMenuFilters({ resourceType: menuState.resourceType.length ? menuState.resourceType.slice() : null });
     } else {
         menuState[field] = field === 'grade' ? normalizeGradeList(value) : value;
         const remembered = field === 'grade' ? (menuState.grade.length ? menuState.grade : null) : (value || null);
@@ -9978,7 +9979,7 @@ function onMenuSearchInput(value) {
 
 function toggleMenuFilterChip(field, value) {
     if (!MENU_CHIP_FIELDS.includes(field)) return;
-    if (field === 'pillar' || field === 'resourceType') {
+    if (field === 'pillar') {
         const selected = getMenuSelections(menuState[field]);
         onMenuFilterChange(field, selected.includes(value) ? selected.filter(item => item !== value) : [...selected, value]);
         return;
@@ -10021,7 +10022,7 @@ function restartMenu() {
 function applyRememberedFiltersToMenu() {
     const remembered = appState.rememberedMenuFilters || {};
     menuState.pillar = getMenuPillars(remembered.pillars || remembered.pillar);
-    menuState.resourceType = getMenuSelections(remembered.resourceType);
+    menuState.resourceType = remembered.resourceType || '';
     menuState.program = appState.selectedProgram || remembered.program || getStoredMenuLanguage();
     menuState.screener = remembered.screener || '';
     menuState.subtest = remembered.subtest || '';
@@ -10059,7 +10060,7 @@ function initializeInterventionsFilterMenu() {
             const optionBtn = event.target.closest('[data-menu-criteria-option]');
             if (optionBtn) {
                 const field = optionBtn.dataset.menuCriteriaOption;
-                if (field === 'grade' || field === 'pillar' || field === 'resourceType') {
+                if (field === 'grade' || field === 'pillar') {
                     // Keep multi-select editors open while choosing values.
                     toggleMenuFilterChip(field, optionBtn.dataset.value);
                     Array.from(document.querySelectorAll('[data-menu-criteria-option]'))
@@ -10075,10 +10076,8 @@ function initializeInterventionsFilterMenu() {
                 menuUiState.editingField = '';
                 renderMenuCriteriaSummary();
             }
-            ['menu-pillar-filter', 'menu-type-filter'].forEach(id => {
-                const dropdown = document.getElementById(id);
-                if (dropdown.open && !dropdown.contains(event.target)) dropdown.open = false;
-            });
+            const dropdown = document.getElementById('menu-pillar-filter');
+            if (dropdown.open && !dropdown.contains(event.target)) dropdown.open = false;
         });
         document.addEventListener('change', event => {
             if (event.target.matches('[data-menu-multiselect]')) toggleMenuFilterChip(event.target.dataset.menuMultiselect, event.target.value);

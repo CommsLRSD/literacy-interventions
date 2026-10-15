@@ -410,16 +410,13 @@
                     <div id="menu-search-panel" class="menu-search-panel" aria-labelledby="menu-search-title">
                         <div class="menu-search-panel-header">
                             <h3 id="menu-search-title" class="wizard-title"><span class="material-symbols-rounded" aria-hidden="true" translate="no">tune</span><span data-i18n="wizard_choose_steps">Find resources step by step</span></h3>
-                            <p class="filter-required-hint" data-i18n="filter_required_hint">Choose one or more resource types, one or more literacy pillars, then a tier. Search to see resources and refine them with advanced filters.</p>
+                            <p class="filter-required-hint" data-i18n="filter_required_hint">Choose a resource type, one or more literacy pillars, then a tier. Search to see resources and refine them with advanced filters.</p>
                         </div>
 
                         <div class="menu-search-panel-body">
                             <div class="filter-group filter-group-visual">
-                                <span id="menu-type-label" class="filter-group-label" data-i18n="filter_step_type">1. Choose one or more resource types</span>
-                                <details id="menu-type-filter" class="cal-grade-dropdown menu-pillar-dropdown" onkeydown="if(event.key==='Escape'){event.preventDefault();this.open=false;this.querySelector('summary').focus();}">
-                                    <summary aria-labelledby="menu-type-label menu-type-value"><span id="menu-type-value"></span></summary>
-                                    <div id="filter-type-chips" class="cal-grade-options" role="group" aria-labelledby="menu-type-label"></div>
-                                </details>
+                                <label for="menu-type-filter" class="filter-group-label" data-i18n="filter_step_type">1. Choose a resource type</label>
+                                <select id="menu-type-filter" class="fw-select" onchange="onMenuFilterChange('resourceType', this.value)"></select>
                             </div>
                             <div id="filter-pillar-group" class="filter-group filter-group-visual" hidden>
                                 <span id="menu-pillar-label" class="filter-group-label" data-i18n="filter_step_pillars">2. Choose one or more literacy pillars</span>
