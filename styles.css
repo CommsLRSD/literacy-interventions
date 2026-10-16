@@ -12377,3 +12377,99 @@ details.pathway-session[open] { box-shadow: none; }
   }
   body[data-page="flowchart"] .flowchart-page-wrapper { padding-bottom: 5rem; }
 }
+
+/* Manual progress transfer */
+.progress-transfer-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(640px, calc(100% - 2rem));
+  max-width: calc(100% - 2rem);
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  padding: 1.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: var(--shadow-md);
+}
+.progress-transfer-dialog:not([open]),
+.progress-transfer-dialog[hidden],
+.progress-transfer-dialog [hidden] { display: none !important; }
+.progress-transfer-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+.transfer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.transfer-header h2 { margin: 0; }
+.progress-transfer-dialog p { margin: 0.75rem 0; }
+.transfer-notice {
+  padding: 0.75rem;
+  border-left: 3px solid var(--warning-text);
+  background: var(--warning-light);
+}
+.transfer-section {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.progress-transfer-dialog label {
+  display: block;
+  margin: 0.75rem 0 0.4rem;
+  font-weight: 600;
+}
+.progress-transfer-dialog textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+  resize: vertical;
+}
+.transfer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+.progress-transfer-dialog button {
+  min-height: 44px;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.progress-transfer-dialog button:hover:not(:disabled) { background: var(--primary-faint); }
+.progress-transfer-dialog button:disabled { opacity: 0.6; cursor: not-allowed; }
+.progress-transfer-dialog button:focus-visible,
+.progress-transfer-dialog textarea:focus-visible {
+  outline: 3px solid var(--border-focus);
+  outline-offset: 3px;
+}
+#transfer-restore { background: var(--primary); color: #fff; }
+#transfer-restore:hover:not(:disabled) { background: var(--primary-light); }
+.transfer-preview,
+#transfer-status { overflow-wrap: anywhere; }
+.transfer-preview:not(:empty) { padding: 0.75rem; background: var(--primary-faint); }
+@media (max-width: 480px) {
+  .progress-transfer-dialog {
+    padding: 1rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .transfer-actions { flex-direction: column; }
+  .transfer-actions button { width: 100%; }
+}

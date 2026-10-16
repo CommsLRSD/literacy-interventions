@@ -1011,6 +1011,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.favourites-page-wrapper, .interventions-page-wrapper').forEach(ensureFavouriteFeedback);
 
     console.log('Literacy Interventions - Ready!');
+    receiveProgressTransferLink();
 });
 
 // ============================================
