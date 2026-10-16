@@ -11785,6 +11785,33 @@ body.program-prompt-open { overflow: hidden; }
   font-size: 0.9rem;
 }
 .home-resource-shortcut { margin-top: 0.65rem; }
+.home-feedback { margin-top: 1rem; }
+.home-feedback-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0.25rem 0;
+  color: #8edbd1;
+  border-radius: var(--radius-sm);
+}
+.home-feedback-lettering {
+  width: 190px;
+  max-width: calc(100% - 2rem);
+  transform: rotate(-3deg);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.home-feedback-lettering-fr { display: none; }
+.home-feedback-lettering:lang(fr) .home-feedback-lettering-en { display: none; }
+.home-feedback-lettering:lang(fr) .home-feedback-lettering-fr { display: inline; }
+.home-feedback-link .material-symbols-rounded { font-size: 18px; }
+.home-feedback-link:hover { color: #c0f2eb; }
+.home-feedback-link:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
 .home-progress-privacy { margin-top: 0.75rem; max-width: 650px; color: #e0eaf5; font-size: 0.8rem; }
 .guided-home-hero button:focus-visible,
 .guided-home-hero select:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
