@@ -13,8 +13,8 @@ function setup() {
     const listeners = new Map();
     const storage = new Map();
     const element = () => ({
-        hidden: false, disabled: false, textContent: '', children: [],
-        addEventListener() {},
+        hidden: false, disabled: false, textContent: '', value: '', children: [], handlers: new Map(),
+        addEventListener(name, callback) { this.handlers.set(name, callback); },
         replaceChildren(...children) { this.children = children; },
         append(...children) { this.children.push(...children); },
         appendChild(child) { this.children.push(child); },
@@ -234,6 +234,83 @@ test('closing invalidates a preview and the interface offers only email', async 
     assert.equal(run('pathwaySessions.length'), 2);
     const html = read('index.html');
     assert.match(html, /onclick="emailProgressTransfer\(\)"/);
-    assert.doesNotMatch(html, /transfer-(?:input|output|copy-link|session|share)|copyProgressHistory|shareProgressTransfer/);
+    assert.doesNotMatch(html, /transfer-(?:output|copy-link|session|share)|copyProgressHistory|shareProgressTransfer/);
     assert.doesNotMatch(read('app.js'), /data-session-transfer/);
+});
+
+test('an installed app can restore the emailed snapshot independently of the default browser', async () => {
+    const sender = setup();
+    await sender.context.prepareTransferLink();
+    sender.context.emailProgressTransfer();
+    const body = new URL(sender.context.window.location.href).searchParams.get('body');
+    const link = body.match(/https:\/\/\S+/)[0];
+    assert.match(body, /inside that app/);
+
+    const browser = setup();
+    browser.run(`pathwaySessions = [{ ...session, id: 'browser-only' }];`);
+    const app = setup();
+    app.run(`pathwaySessions = [{ ...session, id: 'app-only' }];`);
+    app.context.openProgressTransfer();
+    assert.equal(app.getElement('transfer-receive').hidden, false);
+    app.getElement('transfer-link-input').value = `  ${link}\n`;
+    await app.context.previewEmailedProgressLink();
+    assert.equal(app.getElement('transfer-restore').hidden, false);
+    assert.equal(app.run('pathwaySessions[0].id'), 'app-only');
+    app.context.window.confirm = () => false;
+    await app.context.restoreProgressTransfer();
+    assert.equal(app.run('pathwaySessions[0].id'), 'app-only');
+    app.context.window.confirm = () => true;
+    await app.context.restoreProgressTransfer();
+    assert.equal(app.run('pathwaySessions[0].id'), 'active-session');
+    assert.equal(app.context.window.location.reloads, 1);
+    assert.equal(browser.run('pathwaySessions[0].id'), 'browser-only');
+    assert.equal(browser.context.window.location.reloads, 0);
+    assert.equal(app.context.window.location.href, 'https://example.org/literacy-interventions/');
+});
+
+test('pasted links are validated locally without navigating or changing saved data', async () => {
+    const { context, run, getElement } = setup();
+    const code = await context.encodeProgressTransfer(context.captureProgressTransfer());
+    const base = 'https://example.org/literacy-interventions/';
+    for (const url of [
+        'javascript:alert(1)', `${base}#other=${code}`, `https://other.example/#progress=${code}`,
+        `https://example.org/other/#progress=${code}`, `${base}#progress=truncated`,
+        `https://user@example.org/literacy-interventions/#progress=${code}`, 'x'.repeat(1400001)
+    ]) {
+        getElement('transfer-link-input').value = url;
+        await context.previewEmailedProgressLink();
+        await context.restoreProgressTransfer();
+        assert.equal(getElement('transfer-restore').hidden, true);
+        assert.equal(run('pathwaySessions.length'), 2);
+        assert.equal(context.window.location.reloads, 0);
+        assert.equal(context.window.location.href, base);
+    }
+    getElement('transfer-link-input').value = `${base}index.html#progress=${code}`;
+    await context.previewEmailedProgressLink();
+    assert.equal(getElement('transfer-restore').hidden, false);
+});
+
+test('editing or closing the pasted link cancels stale and in-flight previews', async () => {
+    const { context, getElement } = setup();
+    const code = await context.encodeProgressTransfer(context.captureProgressTransfer());
+    const input = getElement('transfer-link-input');
+    const link = `https://example.org/literacy-interventions/#progress=${code}`;
+    input.value = link;
+    await context.previewEmailedProgressLink();
+    input.value = 'changed';
+    input.handlers.get('input')();
+    await context.restoreProgressTransfer();
+    assert.equal(getElement('transfer-restore').hidden, true);
+    assert.equal(context.window.location.reloads, 0);
+    input.value = link;
+    const pending = context.previewEmailedProgressLink();
+    input.handlers.get('input')();
+    await pending;
+    assert.equal(getElement('transfer-restore').hidden, true);
+    input.value = link;
+    await context.previewEmailedProgressLink();
+    getElement('progress-transfer-dialog').handlers.get('close')();
+    assert.equal(input.value, '');
+    await context.restoreProgressTransfer();
+    assert.equal(context.window.location.reloads, 0);
 });

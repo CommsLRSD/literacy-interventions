@@ -18,6 +18,7 @@ function clearProgressTransfer() {
     document.getElementById('transfer-preview').replaceChildren();
     document.getElementById('transfer-restore').hidden = true;
     document.getElementById('transfer-email').disabled = true;
+    document.getElementById('transfer-link-input').value = '';
 }
 
 async function readTransferBytes(stream) {
@@ -155,7 +156,7 @@ function openProgressTransfer() {
     closeMobileMenu();
     savePathwayProgress();
     clearProgressTransfer();
-    document.getElementById('transfer-receive').hidden = true;
+    document.getElementById('transfer-receive').hidden = false;
     document.getElementById('transfer-send').hidden = false;
     const dialog = document.getElementById('progress-transfer-dialog');
     if (!dialog.open) dialog.showModal();
@@ -167,6 +168,24 @@ function emailProgressTransfer() {
     const email = buildTransferEmail();
     if (email.length <= TRANSFER_MAX_EMAIL) window.location.href = email;
     else transferStatus('transfer_too_large');
+}
+
+async function previewEmailedProgressLink() {
+    if (!appReady) return;
+    const input = document.getElementById('transfer-link-input').value.trim();
+    let code;
+    try {
+        if (input.length > TRANSFER_MAX_CODE) throw new Error('Transfer too large');
+        const url = new URL(input);
+        const base = new URL(document.baseURI);
+        if (url.origin !== base.origin || ![base.pathname, `${base.pathname}index.html`].includes(url.pathname) ||
+            url.username || url.password || !url.hash.startsWith('#progress=')) throw new Error('Invalid restore link');
+        code = url.hash.slice('#progress='.length);
+    } catch (error) {
+        clearProgressTransfer();
+        return transferStatus('transfer_invalid_link');
+    }
+    await previewProgressTransfer(code);
 }
 
 async function previewProgressTransfer(code) {
@@ -275,4 +294,12 @@ function receiveProgressTransferLink() {
 }
 
 document.getElementById('progress-transfer-dialog').addEventListener('close', clearProgressTransfer);
+document.getElementById('transfer-link-input').addEventListener('input', () => {
+    // An edited link must never leave a previously previewed snapshot available to restore.
+    transferEpoch++;
+    transferPreview = null;
+    document.getElementById('transfer-preview').replaceChildren();
+    document.getElementById('transfer-restore').hidden = true;
+    document.getElementById('transfer-status').textContent = '';
+});
 window.addEventListener('hashchange', receiveProgressTransferLink);

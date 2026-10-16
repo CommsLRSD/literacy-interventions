@@ -233,8 +233,14 @@
             </div>
             <p data-i18n="transfer_email_hint">Email opens a draft in your email app; you choose whether to send it. Your email provider can see the contents.</p>
         </section>
-        <section id="transfer-receive" class="transfer-section" aria-labelledby="transfer-receive-title" hidden>
-            <h3 id="transfer-receive-title" data-i18n="transfer_receive_title">Receive progress</h3>
+        <section id="transfer-receive" class="transfer-section" aria-labelledby="transfer-receive-title">
+            <h3 id="transfer-receive-title" data-i18n="transfer_receive_title">Restore from email link</h3>
+            <p id="transfer-app-hint" data-i18n="transfer_app_hint">Using the installed mobile or desktop app? Copy the restore link from your email, open this menu inside that app, and paste it below. Restoring in a different browser may not update the installed app.</p>
+            <label for="transfer-link-input" data-i18n="transfer_link_label">Emailed restore link</label>
+            <textarea id="transfer-link-input" rows="3" maxlength="1400000" aria-describedby="transfer-app-hint" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+            <div class="transfer-actions">
+                <button type="button" onclick="previewEmailedProgressLink()" data-i18n="transfer_preview_link">Preview emailed link</button>
+            </div>
             <p data-i18n="transfer_restore_hint">Restoring replaces this device’s saved sessions, current progress, favourites, and preferences with the emailed snapshot. Email this device’s progress first if you want to keep a backup.</p>
             <div class="transfer-actions">
                 <button type="button" id="transfer-restore" hidden onclick="restoreProgressTransfer()" data-i18n="transfer_restore">Restore progress</button>
