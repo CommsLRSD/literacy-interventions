@@ -158,6 +158,7 @@ function openProgressTransfer() {
     clearProgressTransfer();
     document.getElementById('transfer-receive').hidden = false;
     document.getElementById('transfer-send').hidden = false;
+    document.getElementById('settings-transfer').open = false;
     const dialog = document.getElementById('progress-transfer-dialog');
     if (!dialog.open) dialog.showModal();
     prepareTransferLink();
@@ -288,6 +289,7 @@ function receiveProgressTransferLink() {
     clearProgressTransfer();
     document.getElementById('transfer-send').hidden = true;
     document.getElementById('transfer-receive').hidden = false;
+    document.getElementById('settings-transfer').open = true;
     const dialog = document.getElementById('progress-transfer-dialog');
     if (!dialog.open) dialog.showModal();
     previewProgressTransfer(code);

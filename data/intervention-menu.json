@@ -1292,11 +1292,65 @@
     },
     {
       "id": "RES-0005",
-      "name": "DIBELS Maze Progress Monitoring",
+      "name": "DIBELS Progress Monitoring Charts (Excel Sheets)",
       "urls": [
-        "https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?csf=1&web=1&e=RMQG7y&CID=2b4cc833%2D6eee%2D4304%2D8025%2D610cfaf221e3&FolderCTID=0x012000F20499129962D74E9046ECDF35332B03&id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLRSD%20Literacy%20Assessments%2FDIBELS%20%2D%20English%2FProgress%20Monitoring"
+        "https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLRSD%20Literacy%20Assessments%2FIntervention%20Materials%2FEnglish%2FDIBELS%20Intervention%20and%20Tracking&viewid=46f2e15a%2D621a%2D4c2d%2Da473%2D2d8c27980932"
       ],
       "tags": [
+        {
+          "program": "English",
+          "tier": 2,
+          "pillar": "Reading Fluency",
+          "resourceType": "Progress Monitoring",
+          "screeners": [
+            "DIBELS",
+            "CTOPP-2"
+          ],
+          "subtests": [],
+          "gradeRangeText": "(2-8)",
+          "gradeFilter": [
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8"
+          ],
+          "notes": "",
+          "evidence": "",
+          "recommended": false,
+          "urls": [
+            "https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLRSD%20Literacy%20Assessments%2FIntervention%20Materials%2FEnglish%2FDIBELS%20Intervention%20and%20Tracking&viewid=46f2e15a%2D621a%2D4c2d%2Da473%2D2d8c27980932"
+          ]
+        },
+        {
+          "program": "English",
+          "tier": 3,
+          "pillar": "Reading Fluency",
+          "resourceType": "Progress Monitoring",
+          "screeners": [
+            "DIBELS",
+            "CTOPP-2"
+          ],
+          "subtests": [],
+          "gradeRangeText": "(2-8)",
+          "gradeFilter": [
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8"
+          ],
+          "notes": "",
+          "evidence": "",
+          "recommended": true,
+          "urls": [
+            "https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLRSD%20Literacy%20Assessments%2FIntervention%20Materials%2FEnglish%2FDIBELS%20Intervention%20and%20Tracking&viewid=46f2e15a%2D621a%2D4c2d%2Da473%2D2d8c27980932"
+          ]
+        },
         {
           "program": "English",
           "tier": 2,
@@ -1321,7 +1375,7 @@
           "evidence": "",
           "recommended": false,
           "urls": [
-            "https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?csf=1&web=1&e=RMQG7y&CID=2b4cc833%2D6eee%2D4304%2D8025%2D610cfaf221e3&FolderCTID=0x012000F20499129962D74E9046ECDF35332B03&id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLRSD%20Literacy%20Assessments%2FDIBELS%20%2D%20English%2FProgress%20Monitoring"
+            "https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLRSD%20Literacy%20Assessments%2FIntervention%20Materials%2FEnglish%2FDIBELS%20Intervention%20and%20Tracking&viewid=46f2e15a%2D621a%2D4c2d%2Da473%2D2d8c27980932"
           ]
         },
         {
@@ -1348,7 +1402,7 @@
           "evidence": "",
           "recommended": true,
           "urls": [
-            "https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?csf=1&web=1&e=RMQG7y&CID=2b4cc833%2D6eee%2D4304%2D8025%2D610cfaf221e3&FolderCTID=0x012000F20499129962D74E9046ECDF35332B03&id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLRSD%20Literacy%20Assessments%2FDIBELS%20%2D%20English%2FProgress%20Monitoring"
+            "https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLRSD%20Literacy%20Assessments%2FIntervention%20Materials%2FEnglish%2FDIBELS%20Intervention%20and%20Tracking&viewid=46f2e15a%2D621a%2D4c2d%2Da473%2D2d8c27980932"
           ]
         }
       ],
@@ -1365,15 +1419,69 @@
         "8"
       ],
       "gradeRangeText": "(2-8)",
-      "url": "https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?csf=1&web=1&e=RMQG7y&CID=2b4cc833%2D6eee%2D4304%2D8025%2D610cfaf221e3&FolderCTID=0x012000F20499129962D74E9046ECDF35332B03&id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLRSD%20Literacy%20Assessments%2FDIBELS%20%2D%20English%2FProgress%20Monitoring"
+      "url": "https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLRSD%20Literacy%20Assessments%2FIntervention%20Materials%2FEnglish%2FDIBELS%20Intervention%20and%20Tracking&viewid=46f2e15a%2D621a%2D4c2d%2Da473%2D2d8c27980932"
     },
     {
       "id": "RES-0006",
-      "name": "DIBELS Oral Reading Fluency Progress Monitoring",
+      "name": "DIBELS Progress Monitoring Forms",
       "urls": [
-        "https://lrsdcdn.sharepoint.com/:f:/r/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/LRSD%20Literacy%20Assessments/DIBELS%20-%20English/Progress%20Monitoring?csf=1&web=1&e=RMQG7y"
+        "https://lrsdcdn.sharepoint.com/:f:/r/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/LRSD%20Literacy%20Assessments/DIBELS%20-%20English/Progress%20Monitoring?d=w9f0016a4415a47b59c2ae08f59485ee1&csf=1&web=1&e=DinOuP"
       ],
       "tags": [
+        {
+          "program": "English",
+          "tier": 2,
+          "pillar": "Reading Comprehension",
+          "resourceType": "Progress Monitoring",
+          "screeners": [
+            "DIBELS",
+            "CTOPP-2"
+          ],
+          "subtests": [],
+          "gradeRangeText": "(2-8)",
+          "gradeFilter": [
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8"
+          ],
+          "notes": "",
+          "evidence": "",
+          "recommended": false,
+          "urls": [
+            "https://lrsdcdn.sharepoint.com/:f:/r/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/LRSD%20Literacy%20Assessments/DIBELS%20-%20English/Progress%20Monitoring?d=w9f0016a4415a47b59c2ae08f59485ee1&csf=1&web=1&e=DinOuP"
+          ]
+        },
+        {
+          "program": "English",
+          "tier": 3,
+          "pillar": "Reading Comprehension",
+          "resourceType": "Progress Monitoring",
+          "screeners": [
+            "DIBELS",
+            "CTOPP-2"
+          ],
+          "subtests": [],
+          "gradeRangeText": "(2-8)",
+          "gradeFilter": [
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8"
+          ],
+          "notes": "",
+          "evidence": "",
+          "recommended": true,
+          "urls": [
+            "https://lrsdcdn.sharepoint.com/:f:/r/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/LRSD%20Literacy%20Assessments/DIBELS%20-%20English/Progress%20Monitoring?d=w9f0016a4415a47b59c2ae08f59485ee1&csf=1&web=1&e=DinOuP"
+          ]
+        },
         {
           "program": "English",
           "tier": 2,
@@ -1398,7 +1506,7 @@
           "evidence": "",
           "recommended": false,
           "urls": [
-            "https://lrsdcdn.sharepoint.com/:f:/r/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/LRSD%20Literacy%20Assessments/DIBELS%20-%20English/Progress%20Monitoring?csf=1&web=1&e=RMQG7y"
+            "https://lrsdcdn.sharepoint.com/:f:/r/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/LRSD%20Literacy%20Assessments/DIBELS%20-%20English/Progress%20Monitoring?d=w9f0016a4415a47b59c2ae08f59485ee1&csf=1&web=1&e=DinOuP"
           ]
         },
         {
@@ -1425,7 +1533,7 @@
           "evidence": "",
           "recommended": true,
           "urls": [
-            "https://lrsdcdn.sharepoint.com/:f:/r/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/LRSD%20Literacy%20Assessments/DIBELS%20-%20English/Progress%20Monitoring?csf=1&web=1&e=RMQG7y"
+            "https://lrsdcdn.sharepoint.com/:f:/r/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/LRSD%20Literacy%20Assessments/DIBELS%20-%20English/Progress%20Monitoring?d=w9f0016a4415a47b59c2ae08f59485ee1&csf=1&web=1&e=DinOuP"
           ]
         }
       ],
@@ -1442,7 +1550,7 @@
         "8"
       ],
       "gradeRangeText": "(2-8)",
-      "url": "https://lrsdcdn.sharepoint.com/:f:/r/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/LRSD%20Literacy%20Assessments/DIBELS%20-%20English/Progress%20Monitoring?csf=1&web=1&e=RMQG7y"
+      "url": "https://lrsdcdn.sharepoint.com/:f:/r/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/LRSD%20Literacy%20Assessments/DIBELS%20-%20English/Progress%20Monitoring?d=w9f0016a4415a47b59c2ae08f59485ee1&csf=1&web=1&e=DinOuP"
     },
     {
       "id": "RES-0008",
