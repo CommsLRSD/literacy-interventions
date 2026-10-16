@@ -1011,6 +1011,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.favourites-page-wrapper, .interventions-page-wrapper').forEach(ensureFavouriteFeedback);
 
     console.log('Literacy Interventions - Ready!');
+    receiveProgressTransferLink();
 });
 
 // ============================================
@@ -9099,6 +9100,7 @@ function renderPathwaySessionList(list) {
                     ${isCurrent ? `<button type="button" class="pathway-session-download" onclick="closePathwaySession()">${escapeHtml(t('session_end'))}</button>` : ''}
                     <button type="button" class="pathway-session-download" data-session-notes="${escapeAttr(session.id)}">${escapeHtml(t('session_open_notes'))}</button>
                     <button type="button" class="pathway-session-download" data-session-download="${escapeAttr(session.id)}">${escapeHtml(t('notes_download'))}</button>
+                    <button type="button" class="pathway-session-download" data-session-transfer="${escapeAttr(session.id)}">${escapeHtml(t('transfer_title'))}</button>
                     <button type="button" class="pathway-session-download session-delete" data-session-delete="${escapeAttr(session.id)}">${escapeHtml(t('session_delete'))}</button>
                 </div>
             </article>`;
@@ -9118,6 +9120,7 @@ function renderPathwaySessionList(list) {
             <p class="pathway-session-label">${escapeHtml(t('notes_resources'))}</p>
             ${resources ? `<ul class="session-resources">${resources}</ul>` : `<p class="pathway-session-empty">${escapeHtml(t('pathway_session_no_resources'))}</p>`}
             <div class="pathway-session-actions">
+            <button type="button" class="pathway-session-download" data-session-transfer="${escapeAttr(session.id)}">${escapeHtml(t('transfer_title'))}</button>
             ${session.pathway && session.status !== 'completed' ? `<button type="button" class="pathway-session-download" data-session-resume="${escapeAttr(session.id)}">${escapeHtml(t('session_resume'))}</button>` : ''}
             <button type="button" class="pathway-session-download" data-session-download="${escapeAttr(session.id)}" aria-label="${escapeAttr(t('notes_download_label'))}">
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">download</span>${escapeHtml(t('notes_download'))}
@@ -9268,11 +9271,12 @@ function downloadSessionNotes(sessionId) {
 }
 
 document.addEventListener('click', event => {
-    const button = event.target.closest?.('[data-session-download], [data-session-resume], [data-session-notes], [data-session-delete]');
+    const button = event.target.closest?.('[data-session-download], [data-session-resume], [data-session-notes], [data-session-delete], [data-session-transfer]');
     if (!button) return;
     if (button.dataset.sessionDownload) downloadSessionNotes(button.dataset.sessionDownload);
     else if (button.dataset.sessionNotes) openSavedSessionNotes(button.dataset.sessionNotes);
     else if (button.dataset.sessionDelete) deletePathwaySession(button.dataset.sessionDelete);
+    else if (button.dataset.sessionTransfer) openProgressTransfer(button.dataset.sessionTransfer);
     else resumePathwaySession(button.dataset.sessionResume);
 });
 

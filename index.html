@@ -122,6 +122,10 @@
                 <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">info</span>
                 <span class="nav-link-label" data-i18n="nav_about">About</span>
             </button>
+            <button class="nav-link" type="button" role="menuitem" onclick="openProgressTransfer()" aria-haspopup="dialog" aria-controls="progress-transfer-dialog">
+                <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">swap_horiz</span>
+                <span class="nav-link-label" data-i18n="transfer_title">Transfer progress</span>
+            </button>
             <button class="nav-link menu-hard-reset" type="button" role="menuitem" onclick="hardResetApp()">
                 <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">restart_alt</span>
                 <span class="nav-link-label" data-i18n="guided_hard_reset">Reset saved data</span>
@@ -188,6 +192,10 @@
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">install_mobile</span>
                 <span data-i18n="install_btn">Install App</span>
             </button>
+            <button class="mobile-nav-item" type="button" onclick="openProgressTransfer()" aria-haspopup="dialog" aria-controls="progress-transfer-dialog">
+                <span class="material-symbols-rounded" aria-hidden="true" translate="no">swap_horiz</span>
+                <span data-i18n="transfer_title">Transfer progress</span>
+            </button>
             <button class="mobile-nav-item menu-hard-reset" type="button" onclick="hardResetApp()">
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">restart_alt</span>
                 <span data-i18n="guided_hard_reset">Reset saved data</span>
@@ -209,6 +217,43 @@
             </button>
         </header>
         <div id="pathway-sessions-list"></div>
+    </dialog>
+
+    <dialog id="progress-transfer-dialog" class="progress-transfer-dialog" aria-labelledby="transfer-title" aria-describedby="transfer-description transfer-privacy" onkeydown="event.stopPropagation()">
+        <header class="transfer-header">
+            <h2 id="transfer-title" data-i18n="transfer_title">Transfer progress</h2>
+            <button type="button" onclick="document.getElementById('progress-transfer-dialog').close()" data-i18n="transfer_close" autofocus>Close</button>
+        </header>
+        <p id="transfer-description" data-i18n="transfer_description">Transfer a manual snapshot of your progress to another device. This is not automatic syncing; later changes stay on the device where you make them.</p>
+        <p id="transfer-privacy" class="transfer-notice" data-i18n="transfer_privacy">Transfer contents are not encrypted. Anyone with the link or copied history can restore it. Share only with someone you trust, and avoid including sensitive information.</p>
+        <section class="transfer-section" aria-labelledby="transfer-send-title">
+            <h3 id="transfer-send-title" data-i18n="transfer_send_title">Send progress</h3>
+            <p data-i18n="transfer_send_hint">Choose a session for a link, or copy your saved history for manual transfer.</p>
+            <label for="transfer-session" data-i18n="transfer_session">Session to transfer</label>
+            <select id="transfer-session"></select>
+            <div class="transfer-actions">
+                <button type="button" id="transfer-copy-link" onclick="shareProgressTransfer('copy')" data-i18n="transfer_copy_link">Copy session link</button>
+                <button type="button" id="transfer-email" onclick="shareProgressTransfer('email')" data-i18n="transfer_email">Email session link</button>
+                <button type="button" id="transfer-share" onclick="shareProgressTransfer('share')" data-i18n="transfer_share">Share session link</button>
+            </div>
+            <p data-i18n="transfer_email_hint">Email opens a draft in your email app; you choose whether to send it. Your email provider can see the contents.</p>
+            <button type="button" onclick="copyProgressHistory()" data-i18n="transfer_copy_history">Copy saved history</button>
+            <label for="transfer-output" data-i18n="transfer_output">Transfer contents — manual copy</label>
+            <p id="transfer-output-hint" data-i18n="transfer_output_hint">If copying is unavailable, select and copy the text below, then paste it on the other device.</p>
+            <textarea id="transfer-output" rows="4" readonly aria-describedby="transfer-output-hint" spellcheck="false" autocapitalize="off"></textarea>
+        </section>
+        <section class="transfer-section" aria-labelledby="transfer-receive-title">
+            <h3 id="transfer-receive-title" data-i18n="transfer_receive_title">Receive progress</h3>
+            <label for="transfer-input" data-i18n="transfer_input">Paste a transfer link or saved history</label>
+            <p id="transfer-input-hint" data-i18n="transfer_input_hint">Preview the contents before restoring them on this device.</p>
+            <textarea id="transfer-input" rows="4" maxlength="1400000" aria-describedby="transfer-input-hint" spellcheck="false" autocapitalize="off"></textarea>
+            <div class="transfer-actions">
+                <button type="button" onclick="previewProgressTransfer()" data-i18n="transfer_preview_button">Preview transfer</button>
+                <button type="button" id="transfer-restore" hidden onclick="restoreProgressTransfer()" data-i18n="transfer_restore">Restore progress</button>
+            </div>
+            <div id="transfer-preview" class="transfer-preview" aria-live="polite"></div>
+        </section>
+        <p id="transfer-status" role="status" aria-atomic="true"></p>
     </dialog>
 
     <!-- Main Content -->
@@ -1516,6 +1561,7 @@
     <script src="translations.js"></script>
     <script src="auth-gate.js"></script>
     <script src="app.js"></script>
+    <script src="transfer.js"></script>
 
     <script>
     (function() {
