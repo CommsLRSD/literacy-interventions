@@ -394,7 +394,7 @@ function setStoredValue(storage, key, value) {
 function normalizeProgramLanguage(program, language) {
     const normalizedProgram = program === PROGRAM_FRENCH_IMMERSION ? PROGRAM_FRENCH_IMMERSION : PROGRAM_ENGLISH;
     if (normalizedProgram === PROGRAM_ENGLISH) return 'en';
-    return language === 'fr' ? 'fr' : 'en';
+    return language === 'en' ? 'en' : 'fr';
 }
 
 function restoreProgramPreference() {
@@ -894,11 +894,18 @@ function updateTopProgramLangControls() {
     document.querySelectorAll('#top-program-select, #mobile-program-select, #home-program-select').forEach(select => {
         select.value = appState.selectedProgram || '';
     });
-    document.querySelectorAll('#top-language-select, #mobile-language-select, #home-language-select').forEach(select => {
+    document.querySelectorAll('#top-language-select, #mobile-language-select').forEach(select => {
         select.value = selectedLanguage;
         const languageField = select.closest('.top-program-lang-field');
         if (languageField) languageField.hidden = !showLanguage;
     });
+    const homeLanguage = document.getElementById('home-display-language');
+    if (homeLanguage) {
+        homeLanguage.hidden = !showLanguage;
+        homeLanguage.querySelectorAll('[data-language]').forEach(button => {
+            button.setAttribute('aria-pressed', String(button.dataset.language === selectedLanguage));
+        });
+    }
     updateGuidedHome();
 }
 
@@ -4883,7 +4890,7 @@ function createIntegratedSelectionNode(nodeData) {
                         <span id="fw-pillar-label" class="fw-select-label">${escapeHtml(t('fw_choose_pillars_label'))}</span>
                         <details id="fw-pillar-filter" class="cal-grade-dropdown fw-pillar-dropdown" onkeydown="if(event.key==='Escape'){event.preventDefault();this.open=false;this.querySelector('summary').focus();}">
                             <summary aria-labelledby="fw-pillar-label fw-pillar-value"><span id="fw-pillar-value">${escapeHtml(getFwPillarSummary(appState.fwState.pillars))}</span></summary>
-                            <div class="cal-grade-options" role="group" aria-labelledby="fw-pillar-label">${pillarOptionsHtml}</div>
+                            <div class="cal-grade-options" role="group" aria-labelledby="fw-pillar-label"><div class="multiselect-options-list">${pillarOptionsHtml}</div>${buildMultiselectDoneButtonHtml()}</div>
                         </details>
                     </div>`}
                     <div id="fw-results" class="fw-results"></div>
@@ -5037,7 +5044,7 @@ function fwLoadResults() {
                 const linkHtml = getResourceUrls(item, sectionState).map(url => {
                     const lang = getResourceUrlLang(item, url);
                     const title = lang ? `${t('filter_view_resource')} (${lang})` : t('filter_view_resource');
-                    return `<a class="fw-result-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="${escapeHtml(title)}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
+                    return `<a class="fw-result-link resource-action" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" aria-label="${escapeAttr(title)}" data-tooltip="${escapeAttr(title)}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
                 }).join('');
                 const isSelected = selected.has(item.id);
                 const indicator = multiSelect
@@ -8170,7 +8177,7 @@ function getFlowchartResourceState(tier, mode) {
 
 function buildLegacyResourceOptionHtml(item, state, handler, nodeData = null, buttonClass = 'screener-option') {
     const matchingTags = getMatchingTags(item, state);
-    const notes = uniqueSorted(matchingTags.map(tag => tag.notes)).join('; ');
+    const notes = uniqueSorted(matchingTags.map(tag => tag.notes).filter(note => note !== 'MLL')).join('; ');
     const contentClass = buttonClass === 'vf-selection-option' ? 'vf-option-content' : 'option-details';
     const args = nodeData
         ? 'this.dataset.nodeId, this.dataset.resourceId, this.dataset.resourceName, this.dataset.handler'
@@ -8419,7 +8426,7 @@ function requestFlowchartProgramChange(program, options = {}) {
     clearPathwayProgress();
     setRememberedMenuFilters({ pillar: '', screener: '' });
     closeVisualFlowchartModal({ immediate: true });
-    const lang = program === PROGRAM_FRENCH_IMMERSION ? (appState.language === 'fr' ? 'fr' : 'en') : 'en';
+    const lang = program === PROGRAM_FRENCH_IMMERSION ? 'fr' : 'en';
     finalizeProgramSelection(program, lang);
     const setup = getHomeSetup();
     if (isHomeSetupComplete(setup)) applyPathwaySetupToFilters(setup);
@@ -8836,8 +8843,8 @@ function buildFavouriteButtonHtml(item) {
     if (!getAllResources().some(resource => resource.id === item.id)) return '';
     const selected = getFavouriteIds().has(item.id);
     const label = `${t(selected ? 'favourite_remove' : 'favourite_add')}: ${item.name}`;
-    return `<button type="button" class="favourite-toggle" data-favourite-id="${escapeAttr(item.id)}"
-        aria-pressed="${selected}" aria-label="${escapeAttr(label)}" title="${escapeAttr(label)}">
+    return `<button type="button" class="favourite-toggle resource-action" data-favourite-id="${escapeAttr(item.id)}"
+        aria-pressed="${selected}" aria-label="${escapeAttr(label)}" data-tooltip="${escapeAttr(t(selected ? 'favourite_remove' : 'favourite_add'))}">
         <span class="material-symbols-rounded" aria-hidden="true" translate="no">${selected ? 'bookmark' : 'bookmark_border'}</span>
     </button>`;
 }
@@ -9304,7 +9311,7 @@ document.addEventListener('click', event => {
         const label = `${t(selected ? 'favourite_remove' : 'favourite_add')}: ${item?.name || ''}`;
         toggle.setAttribute('aria-pressed', String(selected));
         toggle.setAttribute('aria-label', label);
-        toggle.title = label;
+        toggle.dataset.tooltip = t(selected ? 'favourite_remove' : 'favourite_add');
         toggle.querySelector('.material-symbols-rounded').textContent = selected ? 'bookmark' : 'bookmark_border';
     });
     const target = (button.isConnected ? button : null) ||
@@ -9608,18 +9615,22 @@ function isMenuValueSelected(field, value, selected = menuState[field]) {
     return String(value) === String(selected);
 }
 
+function buildMultiselectDoneButtonHtml() {
+    return `<div class="multiselect-footer"><button type="button" class="multiselect-done-btn" onclick="event.stopPropagation();const dropdown=this.closest('details');dropdown.open=false;dropdown.querySelector('summary').focus();">${escapeHtml(t('multiselect_done'))}</button></div>`;
+}
+
 function renderMenuMultiselectOptions(field, id, translate, placeholderKey) {
     const el = document.getElementById(`filter-${id}-chips`);
     if (!el) return;
     const focusedValue = el.contains(document.activeElement) ? document.activeElement.value : null;
     const available = new Set(getAvailableMenuFieldValues(field));
     const values = getAllMenuFieldValues(field);
-    el.innerHTML = (field === 'pillar' ? fwPillarOrder(values) : values).map(value => `
+    el.innerHTML = '<div class="multiselect-options-list">' + (field === 'pillar' ? fwPillarOrder(values) : values).map(value => `
         <label class="cal-grade-option">
             <input type="checkbox" data-menu-multiselect="${escapeAttr(field)}" value="${escapeAttr(value)}"${isMenuValueSelected(field, value) ? ' checked' : ''}${available.has(value) ? '' : ' disabled'}>
             <span>${escapeHtml(translate(value))}</span>
         </label>
-    `).join('');
+    `).join('') + '</div>' + buildMultiselectDoneButtonHtml();
     document.getElementById(`menu-${id}-value`).textContent = getMenuSelections(menuState[field]).map(translate).join(', ') || t(placeholderKey);
     if (focusedValue !== null) {
         Array.from(el.querySelectorAll('input')).find(input => input.value === focusedValue)?.focus();
@@ -9749,8 +9760,7 @@ function buildResourceLinksHtml(item, state) {
     return urls.map(url => {
         const lang = getResourceUrlLang(item, url);
         const title = lang ? `${t('filter_view_resource')} (${lang})` : t('filter_view_resource');
-        const label = lang || t('filter_view_resource');
-        return `<a class="resource-link-btn" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(title)}" title="${escapeAttr(title)}">${escapeHtml(label)}<span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
+        return `<a class="resource-link-btn resource-action" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(title)}" data-tooltip="${escapeAttr(title)}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
     }).join('');
 }
 
@@ -9760,12 +9770,13 @@ function buildResourceMetaPillsHtml(matchingTags) {
     const pills = [];
     if (gradeText) pills.push(`<span class="resource-card-pill"><strong>${escapeHtml(t('filter_grades_label'))}:</strong> ${escapeHtml(gradeText)}</span>`);
     if (screenerText) pills.push(`<span class="resource-card-pill"><strong>${escapeHtml(t('filter_screeners_label'))}:</strong> ${escapeHtml(screenerText)}</span>`);
+    if (matchingTags.some(tag => tag.notes === 'MLL')) pills.push('<span class="resource-card-pill">MLL</span>');
     return pills.join('');
 }
 
 function buildResourceCardHtml(item, state = menuState) {
     const matchingTags = getMatchingTags(item, state);
-    const notes = uniqueSorted(matchingTags.map(tag => tag.notes)).join('; ');
+    const notes = uniqueSorted(matchingTags.map(tag => tag.notes).filter(note => note !== 'MLL')).join('; ');
     const evidenceLevel = getResourceEvidenceLevel({ tags: matchingTags });
 
     return `
@@ -10570,7 +10581,7 @@ function renderScheduleCalendar(data) {
                         <span class="cal-filter-label" id="schedule-grade-filter-label">${t('schedule_grade_filter_label')}</span>
                         <details id="schedule-grade-filter" class="cal-grade-dropdown">
                             <summary aria-labelledby="schedule-grade-filter-label schedule-grade-filter-value"><span id="schedule-grade-filter-value">${safeText(gradeFilterSummary)}</span></summary>
-                            <div class="cal-grade-options" role="group" aria-labelledby="schedule-grade-filter-label">${gradeFilterHtml}</div>
+                            <div class="cal-grade-options" role="group" aria-labelledby="schedule-grade-filter-label"><div class="multiselect-options-list">${gradeFilterHtml}</div>${buildMultiselectDoneButtonHtml()}</div>
                         </details>
                     </div>
                 </div>

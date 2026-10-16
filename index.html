@@ -294,13 +294,6 @@
                                     <option value="French Immersion" data-i18n-opt="fc_program_french_immersion">French Immersion</option>
                                 </select>
                             </label>
-                            <label class="top-program-lang-field" for="home-language-select" hidden>
-                                <span data-i18n="fc_language_mini_label">Language</span>
-                                <select id="home-language-select" onchange="requestTopLanguageChange(this.value)">
-                                    <option value="en" data-i18n-opt="fc_language_english">English</option>
-                                    <option value="fr" data-i18n-opt="fc_language_french">French</option>
-                                </select>
-                            </label>
                             <label class="top-program-lang-field" for="home-screener-select">
                                 <span data-i18n="guided_screener_label">Screener</span>
                                 <select id="home-screener-select" onchange="updateHomeSetup({ screener: this.value })" aria-describedby="home-program-status" disabled>
@@ -313,6 +306,13 @@
                                     <option value="" data-i18n-opt="guided_choose_grade">Choose a grade</option>
                                 </select>
                             </label>
+                            <div class="top-program-lang-field" id="home-display-language" hidden>
+                                <span id="home-display-language-label" data-i18n="guided_display_language">Display Language</span>
+                                <div class="home-language-toggle" role="group" aria-labelledby="home-display-language-label">
+                                    <button type="button" data-language="en" aria-pressed="false" onclick="requestTopLanguageChange('en')" lang="en">English</button>
+                                    <button type="button" data-language="fr" aria-pressed="true" onclick="requestTopLanguageChange('fr')" lang="fr">Français</button>
+                                </div>
+                            </div>
                         </div>
                         <p class="home-program-status" id="home-program-status" aria-live="polite" data-i18n="guided_choose_program_hint">Choose a program to tailor your guided process. You can browse reference resources at any time.</p>
                         <div class="home-guided-actions">
@@ -337,6 +337,48 @@
             </div>
 
             <div class="home-content guided-home-content">
+                <a class="home-feedback" href="https://forms.office.com/r/ZQFqkNDpmG?origin=lprLink" target="_blank" rel="noopener noreferrer" aria-labelledby="home-feedback-title home-feedback-action">
+                    <div>
+                        <h3 id="home-feedback-title" class="home-feedback-heading">
+                                <span class="sr-only" data-i18n="home_feedback_title">Feedback</span>
+                                <svg class="home-feedback-lettering" viewBox="0 0 250 60" aria-hidden="true" focusable="false">
+                                    <defs>
+                                        <path id="home-marker-F" d="M4 40 L8 5 L31 3 M6 22 L25 20"/>
+                                        <path id="home-marker-d" d="M21 20 C7 8 -3 36 9 39 Q21 39 21 20 L25 2 L21 39"/>
+                                        <path id="home-marker-b" d="M8 3 L3 39 M6 24 C28 4 31 39 9 39 L3 37"/>
+                                        <path id="home-marker-k" d="M8 3 L3 39 M25 17 L6 29 L24 39"/>
+                                        <path id="home-marker-V" d="M3 4 L11 40 L33 3"/>
+                                        <path id="home-marker-v" d="M3 18 L10 39 L25 17"/>
+                                        <path id="home-marker-s" d="M23 19 C7 9 -2 27 13 28 C31 31 15 46 2 36"/>
+                                    </defs>
+                                    <g class="home-feedback-lettering-en" transform="translate(4 5)">
+                                        <use href="#home-marker-F"/>
+                                        <use href="#home-marker-e" x="33" y="1"/>
+                                        <use href="#home-marker-e" x="61" y="-1"/>
+                                        <use href="#home-marker-d" x="89"/>
+                                        <use href="#home-marker-b" x="120" y="1"/>
+                                        <use href="#home-marker-a" x="151"/>
+                                        <use href="#home-marker-c" x="180" y="-1"/>
+                                        <use href="#home-marker-k" x="210"/>
+                                    </g>
+                                    <g class="home-feedback-lettering-fr" transform="translate(4 7) scale(0.85)">
+                                        <use href="#home-marker-V"/>
+                                        <use href="#home-marker-o" x="35"/>
+                                        <use href="#home-marker-t" x="65" y="1"/>
+                                        <use href="#home-marker-r" x="92"/>
+                                        <use href="#home-marker-e" x="120" y="-1"/>
+                                        <use href="#home-marker-a" x="164"/>
+                                        <use href="#home-marker-v" x="192" y="1"/>
+                                        <use href="#home-marker-i" x="222"/>
+                                        <use href="#home-marker-s" x="241"/>
+                                    </g>
+                                    <path d="M5 54 Q120 48 240 53"/>
+                                </svg>
+                        </h3>
+                        <p data-i18n="home_feedback_cta">Help shape this resource. Tell us what’s working and what we can improve.</p>
+                    </div>
+                    <span class="home-feedback-link" id="home-feedback-action" data-i18n="about_feedback_btn">Provide your feedback</span>
+                </a>
                 <section class="journey-overview" aria-labelledby="journey-overview-title">
                     <h3 id="journey-overview-title" data-i18n="guided_overview_title">How the process works</h3>
                     <p data-i18n="guided_overview_desc">This is an overview, not a fixed checklist. Your answers and your learners’ needs determine the next branch; you may revisit instruction or adjust support along the way.</p>
@@ -677,15 +719,6 @@
                         </button>
                         <div class="faq-answer">
                           <p>Begin with the first item of every subtest regardless of age.</p>
-                        </div>
-                      </div>
-                      <div class="faq-item">
-                        <button class="faq-question" onclick="toggleFAQ(this)" aria-expanded="false">
-                          <span>What skills are measured by DIBELS and why are they important?</span>
-                          <span class="faq-icon"><span class="plus"></span></span>
-                        </button>
-                        <div class="faq-answer">
-                          <p>Yes, it is advised to administer them is the listed order and to not deviate from this sequence.</p>
                         </div>
                       </div>
                       <div class="faq-item">
