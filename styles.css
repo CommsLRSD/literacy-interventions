@@ -389,13 +389,16 @@ strong { font-weight: 600; }
 
 .progress-monitoring-tools {
   margin-top: var(--space-lg);
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--border);
+  padding: var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--primary-faint);
 }
 
 .progress-monitoring-tools ul {
   padding-left: 1.25rem;
   margin-bottom: 0;
+  list-style: disc outside;
 }
 
 .progress-monitoring-tools li + li { margin-top: var(--space-sm); }
@@ -12448,6 +12451,21 @@ details.pathway-session[open] { box-shadow: none; }
 }
 .transfer-header h2 { margin: 0; }
 .progress-transfer-dialog p { margin: 0.75rem 0; }
+.settings-card {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-muted);
+}
+.settings-card > summary {
+  min-height: 44px;
+  align-content: center;
+  font-weight: 700;
+  cursor: pointer;
+}
+.settings-card > summary::marker { color: var(--primary); }
+.settings-reset h3 { margin: 0; }
 .transfer-notice {
   padding: 0.75rem;
   border-left: 3px solid var(--warning-text);
@@ -12495,6 +12513,7 @@ details.pathway-session[open] { box-shadow: none; }
 .progress-transfer-dialog button:hover:not(:disabled) { background: var(--primary-faint); }
 .progress-transfer-dialog button:disabled { opacity: 0.6; cursor: not-allowed; }
 .progress-transfer-dialog button:focus-visible,
+.settings-card > summary:focus-visible,
 .progress-transfer-dialog textarea:focus-visible {
   outline: 3px solid var(--border-focus);
   outline-offset: 3px;

@@ -216,33 +216,36 @@
             <h2 id="transfer-title" data-i18n="settings_title">Settings</h2>
             <button type="button" onclick="document.getElementById('progress-transfer-dialog').close()" data-i18n="transfer_close" autofocus>Close</button>
         </header>
-        <p id="transfer-description" data-i18n="transfer_description">Email yourself one restore link for all saved sessions, current progress, favourites, and preferences. Open it on your other device to sync manually.</p>
-        <p id="transfer-privacy" class="transfer-notice" data-i18n="transfer_privacy">The link is not encrypted. Anyone with it can restore your data, and your email provider can see it. Later changes require a new email.</p>
-        <section id="transfer-send" class="transfer-section" aria-labelledby="transfer-send-title">
-            <h3 id="transfer-send-title" data-i18n="transfer_title">Email my progress</h3>
-            <div class="transfer-actions">
-                <button type="button" id="transfer-email" disabled onclick="emailProgressTransfer()" data-i18n="transfer_email">Email all progress</button>
-            </div>
-            <p data-i18n="transfer_email_hint">Email opens a draft in your email app; you choose whether to send it. Your email provider can see the contents.</p>
-        </section>
-        <section id="transfer-receive" class="transfer-section" aria-labelledby="transfer-receive-title">
-            <h3 id="transfer-receive-title" data-i18n="transfer_receive_title">Restore from email link</h3>
-            <p id="transfer-app-hint" data-i18n="transfer_app_hint">Using the installed mobile or desktop app? Copy the restore link from your email, open this menu inside that app, and paste it below. Restoring in a different browser may not update the installed app.</p>
-            <label for="transfer-link-input" data-i18n="transfer_link_label">Emailed restore link</label>
-            <textarea id="transfer-link-input" rows="3" maxlength="1400000" aria-describedby="transfer-app-hint" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
-            <div class="transfer-actions">
-                <button type="button" onclick="previewEmailedProgressLink()" data-i18n="transfer_preview_link">Preview emailed link</button>
-            </div>
-            <p data-i18n="transfer_restore_hint">Restoring replaces this device’s saved sessions, current progress, favourites, and preferences with the emailed snapshot. Email this device’s progress first if you want to keep a backup.</p>
-            <div class="transfer-actions">
-                <button type="button" id="transfer-restore" hidden onclick="restoreProgressTransfer()" data-i18n="transfer_restore">Restore progress</button>
-            </div>
-            <div id="transfer-preview" class="transfer-preview" aria-live="polite"></div>
-        </section>
-        <p id="transfer-status" role="status" aria-atomic="true"></p>
-        <section class="transfer-section" aria-labelledby="settings-reset-title">
+        <details id="settings-transfer" class="settings-card">
+            <summary data-i18n="settings_transfer_title">Transfer saved data</summary>
+            <p id="transfer-description" data-i18n="transfer_description">Move all saved progress, sessions, favourites, and preferences to another device by email.</p>
+            <p id="transfer-privacy" class="transfer-notice" data-i18n="transfer_privacy">Not encrypted: anyone with the link, including your email provider, can access your data. Later changes need a new email.</p>
+            <section id="transfer-send" class="transfer-section" aria-labelledby="transfer-send-title">
+                <h3 id="transfer-send-title" data-i18n="transfer_title">Email my progress</h3>
+                <div class="transfer-actions">
+                    <button type="button" id="transfer-email" disabled onclick="emailProgressTransfer()" data-i18n="transfer_email">Email all progress</button>
+                </div>
+                <p data-i18n="transfer_email_hint">Opens a draft in your email app. Send it to yourself.</p>
+            </section>
+            <section id="transfer-receive" class="transfer-section" aria-labelledby="transfer-receive-title">
+                <h3 id="transfer-receive-title" data-i18n="transfer_receive_title">Restore from email link</h3>
+                <p id="transfer-app-hint" data-i18n="transfer_app_hint">Paste your emailed link here. Using the installed app? Paste it inside that app, not another browser.</p>
+                <label for="transfer-link-input" data-i18n="transfer_link_label">Emailed restore link</label>
+                <textarea id="transfer-link-input" rows="3" maxlength="1400000" aria-describedby="transfer-app-hint" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+                <div class="transfer-actions">
+                    <button type="button" onclick="previewEmailedProgressLink()" data-i18n="transfer_preview_link">Preview emailed link</button>
+                </div>
+                <p data-i18n="transfer_restore_hint">Replaces all saved data on this device. Email a backup first if needed.</p>
+                <div class="transfer-actions">
+                    <button type="button" id="transfer-restore" hidden onclick="restoreProgressTransfer()" data-i18n="transfer_restore">Restore progress</button>
+                </div>
+                <div id="transfer-preview" class="transfer-preview" aria-live="polite"></div>
+            </section>
+            <p id="transfer-status" role="status" aria-atomic="true"></p>
+        </details>
+        <section class="settings-card settings-reset" aria-labelledby="settings-reset-title">
             <h3 id="settings-reset-title" data-i18n="guided_hard_reset">Reset saved data</h3>
-            <p data-i18n="settings_reset_description">Delete this device’s saved progress, sessions, favourites, and preferences. Email your progress first if you want a backup.</p>
+            <p data-i18n="settings_reset_description">Permanently delete all saved data on this device.</p>
             <div class="transfer-actions">
                 <button class="menu-hard-reset" type="button" onclick="hardResetApp()" data-i18n="guided_hard_reset">Reset saved data</button>
             </div>

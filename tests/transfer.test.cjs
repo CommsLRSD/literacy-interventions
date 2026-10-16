@@ -105,6 +105,19 @@ test('Settings combines email, restore and reset behind one gear in each navigat
     for (const handler of ['emailProgressTransfer', 'previewEmailedProgressLink', 'restoreProgressTransfer', 'hardResetApp']) {
         assert.ok(dialog.includes(`onclick="${handler}()"`));
     }
+    assert.match(dialog, /<details id="settings-transfer" class="settings-card">/);
+    assert.match(dialog, /<summary data-i18n="settings_transfer_title">Transfer saved data<\/summary>/);
+    assert.ok(dialog.indexOf('</details>') < dialog.indexOf('id="settings-reset-title"'));
+});
+
+test('Settings opens with transfer controls collapsed, including after a previous expansion', () => {
+    const { context, getElement } = setup();
+    getElement('settings-transfer').open = true;
+    context.openProgressTransfer();
+    assert.equal(getElement('progress-transfer-dialog').open, true);
+    assert.equal(getElement('settings-transfer').open, false);
+    assert.equal(getElement('transfer-send').hidden, false);
+    assert.equal(getElement('transfer-receive').hidden, false);
 });
 
 test('both replacement monitoring tools retain the original searchable tag coverage', () => {
@@ -209,6 +222,7 @@ test('opening link only previews; canceled confirmation preserves data; restore 
     await context.previewProgressTransfer(code);
     assert.equal(getElement('transfer-send').hidden, true);
     assert.equal(getElement('transfer-receive').hidden, false);
+    assert.equal(getElement('settings-transfer').open, true);
     assert.equal(getElement('transfer-restore').hidden, false);
     assert.equal(run('pathwaySessions[0].id'), 'destination-only');
     context.window.confirm = () => false;
