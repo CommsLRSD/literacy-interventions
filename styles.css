@@ -12419,28 +12419,6 @@ details.pathway-session[open] { box-shadow: none; }
   padding-top: 1rem;
   border-top: 1px solid var(--border);
 }
-.progress-transfer-dialog label {
-  display: block;
-  margin: 1rem 0 0.4rem;
-  font-weight: 600;
-}
-.progress-transfer-dialog select,
-.progress-transfer-dialog textarea {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  padding: 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
-  font-size: 1rem;
-}
-.progress-transfer-dialog textarea {
-  resize: vertical;
-  min-height: 6rem;
-}
 .transfer-actions {
   display: flex;
   flex-wrap: wrap;
@@ -12460,9 +12438,7 @@ details.pathway-session[open] { box-shadow: none; }
 }
 .progress-transfer-dialog button:hover:not(:disabled) { background: var(--primary-faint); }
 .progress-transfer-dialog button:disabled { opacity: 0.6; cursor: not-allowed; }
-.progress-transfer-dialog button:focus-visible,
-.progress-transfer-dialog select:focus-visible,
-.progress-transfer-dialog textarea:focus-visible {
+.progress-transfer-dialog button:focus-visible {
   outline: 3px solid var(--border-focus);
   outline-offset: 3px;
 }
