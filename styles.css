@@ -365,6 +365,45 @@ strong { font-weight: 600; }
   flex-direction: column;
   gap: 2px;
   padding: var(--space-md) var(--space-sm);
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.side-nav .nav-settings {
+  margin-top: auto;
+}
+
+.side-nav.collapsed .nav-link[data-page="flowchart"]::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 12px;
+  right: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.side-nav.collapsed .nav-link[data-page="flowchart"] {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.progress-monitoring-tools {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border);
+}
+
+.progress-monitoring-tools ul {
+  padding-left: 1.25rem;
+  margin-bottom: 0;
+}
+
+.progress-monitoring-tools li + li { margin-top: var(--space-sm); }
+.progress-monitoring-tools a { overflow-wrap: anywhere; }
+.progress-monitoring-tools a .material-symbols-rounded {
+  font-size: 1em;
+  margin-left: 0.35em;
+  vertical-align: middle;
 }
 
 .side-nav .nav-link {

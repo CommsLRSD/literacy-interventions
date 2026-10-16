@@ -14,6 +14,9 @@ function setup() {
     const storage = new Map();
     const element = () => ({
         hidden: false, disabled: false, textContent: '', value: '', children: [], handlers: new Map(),
+        get innerHTML() {
+            return String(this.textContent).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        },
         addEventListener(name, callback) { this.handlers.set(name, callback); },
         replaceChildren(...children) { this.children = children; },
         append(...children) { this.children.push(...children); },
@@ -86,6 +89,75 @@ function setup() {
     `);
     return { context, run, getElement, storage, listeners };
 }
+
+test('Settings combines email, restore and reset behind one gear in each navigation', () => {
+    const html = read('index.html');
+    const desktop = html.slice(html.indexOf('<nav class="side-nav"'), html.indexOf('<!-- Mobile nav overlay'));
+    const mobile = html.slice(html.indexOf('<!-- Mobile nav overlay'), html.indexOf('<!-- Backdrop'));
+    for (const navigation of [desktop, mobile]) {
+        assert.equal((navigation.match(/onclick="openProgressTransfer\(\)"/g) || []).length, 1);
+        assert.match(navigation, /translate="no">settings<\/span>/);
+        assert.match(navigation, /data-i18n="settings_title">Settings/);
+        assert.doesNotMatch(navigation, /onclick="hardResetApp\(\)"/);
+    }
+    const dialog = html.slice(html.indexOf('<dialog id="progress-transfer-dialog"'), html.indexOf('<!-- Main Content'));
+    assert.match(dialog, /data-i18n="settings_title">Settings/);
+    for (const handler of ['emailProgressTransfer', 'previewEmailedProgressLink', 'restoreProgressTransfer', 'hardResetApp']) {
+        assert.ok(dialog.includes(`onclick="${handler}()"`));
+    }
+});
+
+test('both replacement monitoring tools retain the original searchable tag coverage', () => {
+    const { context } = setup();
+    for (const tier of [2, 3]) {
+        for (const pillar of ['Reading Fluency', 'Reading Comprehension']) {
+            for (const screener of ['DIBELS', 'CTOPP-2']) {
+                const resources = context.getFilteredResources({
+                    program: 'English', tier, pillar, screener, grade: ['2', '8'], resourceType: 'Progress Monitoring'
+                });
+                assert.equal(resources.length, 2);
+                assert.deepEqual(Array.from(resources, item => item.name).sort(), [
+                    'DIBELS Progress Monitoring Charts (Excel Sheets)', 'DIBELS Progress Monitoring Forms'
+                ]);
+                for (const item of resources) {
+                    assert.equal(context.isRecommendedResource(item, { tier }), tier === 3);
+                    assert.equal(context.getResourceUrls(item, { tier }).length, 1);
+                    assert.equal(item.url, item.urls[0]);
+                    assert.ok(read(`EN_Tier-${tier}.csv`).includes(`${item.name},Reading Fluency; Reading Comprehension,`));
+                    assert.ok(read(`EN_Tier-${tier}.csv`).includes(item.url));
+                }
+            }
+        }
+    }
+    assert.doesNotMatch(read('data/intervention-menu.json'), /DIBELS (Maze|Oral Reading Fluency) Progress Monitoring/);
+});
+
+test('every intervention step appends monitoring links after existing card content', () => {
+    const { context, run } = setup();
+    run(`appReady = false; pathwayContext = { program: 'English', screener: 'dibels', grades: ['K'] };`);
+    let count = 0;
+    for (const [tierId, tier] of Object.entries(context.getFlowchartDefs())) {
+        for (const node of Object.values(tier.nodes)) {
+            if (node.options !== 'interventions') continue;
+            run(`appState.visualFlowchart = { tierId: '${tierId}', selectedPath: [], choices: {} };`);
+            for (const render of [context.createIntegratedSelectionNode, context.createSelectionNode]) {
+                const html = render(node);
+                assert.equal((html.match(/class="progress-monitoring-tools"/g) || []).length, 1);
+                assert.ok(html.indexOf('progress-monitoring-tools') > html.indexOf(node.description));
+                assert.match(html, /DIBELS Progress Monitoring Forms/);
+                assert.match(html, /DIBELS Progress Monitoring Charts \(Excel Sheets\)/);
+                assert.equal((html.match(/rel="noopener noreferrer"/g) || []).length >= 2, true);
+                assert.match(html, /d=w9f0016a4415a47b59c2ae08f59485ee1&amp;csf=1&amp;web=1&amp;e=DinOuP/);
+                assert.match(html, /DIBELS%20Intervention%20and%20Tracking&amp;viewid=/);
+            }
+            count++;
+        }
+    }
+    assert.equal(count, 3);
+    assert.equal(context.buildProgressMonitoringLinksHtml('tier1'), '');
+    run(`appState.selectedProgram = PROGRAM_FRENCH_IMMERSION;`);
+    assert.equal(context.buildProgressMonitoringLinksHtml('tier2'), '');
+});
 
 test('whole saved snapshot round-trips with and without compression', async () => {
     const { context, run } = setup();

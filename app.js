@@ -317,6 +317,7 @@ async function hardResetApp() {
     const resetConfirmation = window.prompt(t('guided_hard_reset_type'));
     if (resetConfirmation?.trim().toLowerCase() !== 'reset') return;
     closeMobileMenu();
+    document.getElementById('progress-transfer-dialog')?.close();
     appReady = false;
     pathwayDefaults = {};
     pathwaySessions = [];
@@ -4898,6 +4899,7 @@ function createIntegratedSelectionNode(nodeData) {
                 </div>
                 <p class="fw-recommended-legend"><span class="fw-recommended-swatch" aria-hidden="true">★</span>${escapeHtml(t('fw_recommended_legend'))}</p>
                 ${getEvidenceLegendTriggerHtml()}
+                ${nodeData.options === 'interventions' ? buildProgressMonitoringLinksHtml(tierId) : ''}
             </div>
         `;
     }
@@ -6805,6 +6807,7 @@ function createSelectionNode(nodeData) {
             <div${isScreenerNode ? ' class="vf-selection-grid"' : ''}>
                 ${optionsHTML}
             </div>
+            ${nodeData.options === 'interventions' ? buildProgressMonitoringLinksHtml(tierId) : ''}
         </div>
     `;
 }
@@ -7752,6 +7755,7 @@ function proceedToTier2Intervention() {
                             </svg>
                             View All Tier 2 Interventions
                         </button>
+                        ${buildProgressMonitoringLinksHtml(2)}
                     </div>
                 </div>
             </div>
@@ -8021,6 +8025,7 @@ function proceedToTier3Intervention() {
                             </svg>
                             View All Tier 3 Interventions
                         </button>
+                        ${buildProgressMonitoringLinksHtml(3)}
                     </div>
                 </div>
             </div>
@@ -8201,6 +8206,24 @@ function buildFlowchartResourceOptionsHtml(tier, mode, handler) {
     const state = getFlowchartResourceState(tier, mode);
     return buildResourceGroupsHtml(getFilteredResources(state), state,
         item => buildLegacyResourceOptionHtml(item, state, handler), 'screener-selection-grid');
+}
+
+function buildProgressMonitoringLinksHtml(tier) {
+    const state = {
+        tier: String(tier).replace(/^tier/, ''),
+        program: appState.selectedProgram || PROGRAM_ENGLISH,
+        resourceType: 'Progress Monitoring'
+    };
+    const links = getFilteredResources(state).flatMap(item =>
+        getResourceUrls(item, state).map(url =>
+            `<li><a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.name)}<span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a></li>`
+        )).join('');
+    if (!links) return '';
+    return `<section class="progress-monitoring-tools">
+        <h4>${escapeHtml(t('progress_monitoring_tools'))}</h4>
+        <p>${escapeHtml(t('progress_monitoring_tools_hint'))}</p>
+        <ul>${links}</ul>
+    </section>`;
 }
 
 function openInterventionsMenu(tier, mode = 'interventions') {

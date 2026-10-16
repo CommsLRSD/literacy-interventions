@@ -24,6 +24,10 @@ const TRANSLATIONS = {
         nav_schedule: 'Assessment Schedule',
         nav_favourites: 'Saved',
         // ── Manual progress transfer ──
+        settings_title: 'Settings',
+        settings_reset_description: 'Delete this device’s saved progress, sessions, favourites, and preferences. Email your progress first if you want a backup.',
+        progress_monitoring_tools: 'Progress Monitoring tools',
+        progress_monitoring_tools_hint: 'Use these tools to monitor student response to intervention.',
         transfer_title: 'Email my progress',
         transfer_close: 'Close',
         transfer_description: 'Email yourself one restore link for all saved sessions, current progress, favourites, and preferences. Open it on your other device to sync manually.',
@@ -523,6 +527,10 @@ const TRANSLATIONS = {
         nav_schedule: 'Calendrier d\'évaluation',
         nav_favourites: 'Sauvegardées',
         // ── Transfert manuel de la progression ──
+        settings_title: 'Paramètres',
+        settings_reset_description: 'Supprimez la progression, les séances, les favoris et les préférences enregistrés sur cet appareil. Envoyez d’abord votre progression par courriel pour en conserver une copie.',
+        progress_monitoring_tools: 'Outils de suivi des progrès',
+        progress_monitoring_tools_hint: 'Utilisez ces outils pour suivre la réponse de l’élève à l’intervention.',
         transfer_title: 'Envoyer ma progression par courriel',
         transfer_close: 'Fermer',
         transfer_description: 'Envoyez-vous un seul lien pour restaurer toutes les séances sauvegardées, la progression en cours, les favoris et les préférences. Ouvrez-le sur votre autre appareil pour synchroniser manuellement.',
