@@ -5044,7 +5044,7 @@ function fwLoadResults() {
                 const linkHtml = getResourceUrls(item, sectionState).map(url => {
                     const lang = getResourceUrlLang(item, url);
                     const title = lang ? `${t('filter_view_resource')} (${lang})` : t('filter_view_resource');
-                    return `<a class="fw-result-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="${escapeHtml(title)}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
+                    return `<a class="fw-result-link resource-action" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" aria-label="${escapeAttr(title)}" data-tooltip="${escapeAttr(title)}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
                 }).join('');
                 const isSelected = selected.has(item.id);
                 const indicator = multiSelect
@@ -8177,7 +8177,7 @@ function getFlowchartResourceState(tier, mode) {
 
 function buildLegacyResourceOptionHtml(item, state, handler, nodeData = null, buttonClass = 'screener-option') {
     const matchingTags = getMatchingTags(item, state);
-    const notes = uniqueSorted(matchingTags.map(tag => tag.notes)).join('; ');
+    const notes = uniqueSorted(matchingTags.map(tag => tag.notes).filter(note => note !== 'MLL')).join('; ');
     const contentClass = buttonClass === 'vf-selection-option' ? 'vf-option-content' : 'option-details';
     const args = nodeData
         ? 'this.dataset.nodeId, this.dataset.resourceId, this.dataset.resourceName, this.dataset.handler'
@@ -8843,8 +8843,8 @@ function buildFavouriteButtonHtml(item) {
     if (!getAllResources().some(resource => resource.id === item.id)) return '';
     const selected = getFavouriteIds().has(item.id);
     const label = `${t(selected ? 'favourite_remove' : 'favourite_add')}: ${item.name}`;
-    return `<button type="button" class="favourite-toggle" data-favourite-id="${escapeAttr(item.id)}"
-        aria-pressed="${selected}" aria-label="${escapeAttr(label)}" title="${escapeAttr(label)}">
+    return `<button type="button" class="favourite-toggle resource-action" data-favourite-id="${escapeAttr(item.id)}"
+        aria-pressed="${selected}" aria-label="${escapeAttr(label)}" data-tooltip="${escapeAttr(t(selected ? 'favourite_remove' : 'favourite_add'))}">
         <span class="material-symbols-rounded" aria-hidden="true" translate="no">${selected ? 'bookmark' : 'bookmark_border'}</span>
     </button>`;
 }
@@ -9311,7 +9311,7 @@ document.addEventListener('click', event => {
         const label = `${t(selected ? 'favourite_remove' : 'favourite_add')}: ${item?.name || ''}`;
         toggle.setAttribute('aria-pressed', String(selected));
         toggle.setAttribute('aria-label', label);
-        toggle.title = label;
+        toggle.dataset.tooltip = t(selected ? 'favourite_remove' : 'favourite_add');
         toggle.querySelector('.material-symbols-rounded').textContent = selected ? 'bookmark' : 'bookmark_border';
     });
     const target = (button.isConnected ? button : null) ||
@@ -9756,8 +9756,7 @@ function buildResourceLinksHtml(item, state) {
     return urls.map(url => {
         const lang = getResourceUrlLang(item, url);
         const title = lang ? `${t('filter_view_resource')} (${lang})` : t('filter_view_resource');
-        const label = lang || t('filter_view_resource');
-        return `<a class="resource-link-btn" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(title)}" title="${escapeAttr(title)}">${escapeHtml(label)}<span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
+        return `<a class="resource-link-btn resource-action" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttr(title)}" data-tooltip="${escapeAttr(title)}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
     }).join('');
 }
 
@@ -9767,12 +9766,13 @@ function buildResourceMetaPillsHtml(matchingTags) {
     const pills = [];
     if (gradeText) pills.push(`<span class="resource-card-pill"><strong>${escapeHtml(t('filter_grades_label'))}:</strong> ${escapeHtml(gradeText)}</span>`);
     if (screenerText) pills.push(`<span class="resource-card-pill"><strong>${escapeHtml(t('filter_screeners_label'))}:</strong> ${escapeHtml(screenerText)}</span>`);
+    if (matchingTags.some(tag => tag.notes === 'MLL')) pills.push('<span class="resource-card-pill">MLL</span>');
     return pills.join('');
 }
 
 function buildResourceCardHtml(item, state = menuState) {
     const matchingTags = getMatchingTags(item, state);
-    const notes = uniqueSorted(matchingTags.map(tag => tag.notes)).join('; ');
+    const notes = uniqueSorted(matchingTags.map(tag => tag.notes).filter(note => note !== 'MLL')).join('; ');
     const evidenceLevel = getResourceEvidenceLevel({ tags: matchingTags });
 
     return `
