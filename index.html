@@ -294,13 +294,6 @@
                                     <option value="French Immersion" data-i18n-opt="fc_program_french_immersion">French Immersion</option>
                                 </select>
                             </label>
-                            <label class="top-program-lang-field" for="home-language-select" hidden>
-                                <span data-i18n="fc_language_mini_label">Language</span>
-                                <select id="home-language-select" onchange="requestTopLanguageChange(this.value)">
-                                    <option value="en" data-i18n-opt="fc_language_english">English</option>
-                                    <option value="fr" data-i18n-opt="fc_language_french">French</option>
-                                </select>
-                            </label>
                             <label class="top-program-lang-field" for="home-screener-select">
                                 <span data-i18n="guided_screener_label">Screener</span>
                                 <select id="home-screener-select" onchange="updateHomeSetup({ screener: this.value })" aria-describedby="home-program-status" disabled>
@@ -313,6 +306,13 @@
                                     <option value="" data-i18n-opt="guided_choose_grade">Choose a grade</option>
                                 </select>
                             </label>
+                            <div class="top-program-lang-field" id="home-display-language" hidden>
+                                <span id="home-display-language-label" data-i18n="guided_display_language">Display Language</span>
+                                <div class="home-language-toggle" role="group" aria-labelledby="home-display-language-label">
+                                    <button type="button" data-language="en" aria-pressed="false" onclick="requestTopLanguageChange('en')" lang="en">English</button>
+                                    <button type="button" data-language="fr" aria-pressed="true" onclick="requestTopLanguageChange('fr')" lang="fr">Français</button>
+                                </div>
+                            </div>
                         </div>
                         <p class="home-program-status" id="home-program-status" aria-live="polite" data-i18n="guided_choose_program_hint">Choose a program to tailor your guided process. You can browse reference resources at any time.</p>
                         <div class="home-guided-actions">
@@ -327,9 +327,20 @@
                         </div>
                         <p class="home-progress-privacy" id="home-reset-hint" data-i18n="guided_progress_privacy" hidden>To reset the flowchart, select the refresh button. This clears your progress, screener and grade, but keeps your program.</p>
                         <button type="button" class="home-resource-shortcut" onclick="navigateToPage('interventions')" data-i18n="guided_resource_shortcut">I’m looking for a specific teaching resource</button>
-                        <div class="home-feedback">
-                            <a class="home-feedback-link" href="https://forms.office.com/r/ZQFqkNDpmG?origin=lprLink" target="_blank" rel="noopener noreferrer">
-                                <span class="sr-only" data-i18n="about_feedback_btn">Provide your feedback</span>
+                    </div>
+                    <div class="hero-photo-wrap" aria-hidden="true">
+                        <img class="hero-photo" src="images/COD_0667.jpg" alt="Three students reading together in a library" loading="eager">
+                        <div class="hero-blob hero-blob-yellow"></div>
+                        <div class="hero-blob hero-blob-pink"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="home-content guided-home-content">
+                <section class="home-feedback" aria-labelledby="home-feedback-title">
+                    <div>
+                        <h3 id="home-feedback-title" class="home-feedback-heading">
+                                <span class="sr-only" data-i18n="home_feedback_title">Feedback</span>
                                 <svg class="home-feedback-lettering" viewBox="0 0 250 60" aria-hidden="true" focusable="false">
                                     <defs>
                                         <path id="home-marker-F" d="M4 40 L8 5 L31 3 M6 22 L25 20"/>
@@ -363,19 +374,14 @@
                                     </g>
                                     <path d="M5 54 Q120 48 240 53"/>
                                 </svg>
-                                <span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span>
-                            </a>
-                        </div>
+                        </h3>
+                        <p data-i18n="home_feedback_cta">Help shape this resource. Tell us what’s working and what we can improve.</p>
                     </div>
-                    <div class="hero-photo-wrap" aria-hidden="true">
-                        <img class="hero-photo" src="images/COD_0667.jpg" alt="Three students reading together in a library" loading="eager">
-                        <div class="hero-blob hero-blob-yellow"></div>
-                        <div class="hero-blob hero-blob-pink"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="home-content guided-home-content">
+                    <a class="home-feedback-link" href="https://forms.office.com/r/ZQFqkNDpmG?origin=lprLink" target="_blank" rel="noopener noreferrer">
+                        <span data-i18n="about_feedback_btn">Provide your feedback</span>
+                        <span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span>
+                    </a>
+                </section>
                 <section class="journey-overview" aria-labelledby="journey-overview-title">
                     <h3 id="journey-overview-title" data-i18n="guided_overview_title">How the process works</h3>
                     <p data-i18n="guided_overview_desc">This is an overview, not a fixed checklist. Your answers and your learners’ needs determine the next branch; you may revisit instruction or adjust support along the way.</p>

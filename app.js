@@ -394,7 +394,7 @@ function setStoredValue(storage, key, value) {
 function normalizeProgramLanguage(program, language) {
     const normalizedProgram = program === PROGRAM_FRENCH_IMMERSION ? PROGRAM_FRENCH_IMMERSION : PROGRAM_ENGLISH;
     if (normalizedProgram === PROGRAM_ENGLISH) return 'en';
-    return language === 'fr' ? 'fr' : 'en';
+    return language === 'en' ? 'en' : 'fr';
 }
 
 function restoreProgramPreference() {
@@ -894,11 +894,18 @@ function updateTopProgramLangControls() {
     document.querySelectorAll('#top-program-select, #mobile-program-select, #home-program-select').forEach(select => {
         select.value = appState.selectedProgram || '';
     });
-    document.querySelectorAll('#top-language-select, #mobile-language-select, #home-language-select').forEach(select => {
+    document.querySelectorAll('#top-language-select, #mobile-language-select').forEach(select => {
         select.value = selectedLanguage;
         const languageField = select.closest('.top-program-lang-field');
         if (languageField) languageField.hidden = !showLanguage;
     });
+    const homeLanguage = document.getElementById('home-display-language');
+    if (homeLanguage) {
+        homeLanguage.hidden = !showLanguage;
+        homeLanguage.querySelectorAll('[data-language]').forEach(button => {
+            button.setAttribute('aria-pressed', String(button.dataset.language === selectedLanguage));
+        });
+    }
     updateGuidedHome();
 }
 
@@ -8419,7 +8426,7 @@ function requestFlowchartProgramChange(program, options = {}) {
     clearPathwayProgress();
     setRememberedMenuFilters({ pillar: '', screener: '' });
     closeVisualFlowchartModal({ immediate: true });
-    const lang = program === PROGRAM_FRENCH_IMMERSION ? (appState.language === 'fr' ? 'fr' : 'en') : 'en';
+    const lang = program === PROGRAM_FRENCH_IMMERSION ? 'fr' : 'en';
     finalizeProgramSelection(program, lang);
     const setup = getHomeSetup();
     if (isHomeSetupComplete(setup)) applyPathwaySetupToFilters(setup);
