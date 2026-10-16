@@ -4890,7 +4890,7 @@ function createIntegratedSelectionNode(nodeData) {
                         <span id="fw-pillar-label" class="fw-select-label">${escapeHtml(t('fw_choose_pillars_label'))}</span>
                         <details id="fw-pillar-filter" class="cal-grade-dropdown fw-pillar-dropdown" onkeydown="if(event.key==='Escape'){event.preventDefault();this.open=false;this.querySelector('summary').focus();}">
                             <summary aria-labelledby="fw-pillar-label fw-pillar-value"><span id="fw-pillar-value">${escapeHtml(getFwPillarSummary(appState.fwState.pillars))}</span></summary>
-                            <div class="cal-grade-options" role="group" aria-labelledby="fw-pillar-label">${pillarOptionsHtml}</div>
+                            <div class="cal-grade-options" role="group" aria-labelledby="fw-pillar-label">${pillarOptionsHtml}${buildMultiselectDoneButtonHtml()}</div>
                         </details>
                     </div>`}
                     <div id="fw-results" class="fw-results"></div>
@@ -9615,6 +9615,10 @@ function isMenuValueSelected(field, value, selected = menuState[field]) {
     return String(value) === String(selected);
 }
 
+function buildMultiselectDoneButtonHtml() {
+    return `<button type="button" class="multiselect-done-btn" onclick="event.stopPropagation();const dropdown=this.closest('details');dropdown.open=false;dropdown.querySelector('summary').focus();">${escapeHtml(t('multiselect_done'))}</button>`;
+}
+
 function renderMenuMultiselectOptions(field, id, translate, placeholderKey) {
     const el = document.getElementById(`filter-${id}-chips`);
     if (!el) return;
@@ -9626,7 +9630,7 @@ function renderMenuMultiselectOptions(field, id, translate, placeholderKey) {
             <input type="checkbox" data-menu-multiselect="${escapeAttr(field)}" value="${escapeAttr(value)}"${isMenuValueSelected(field, value) ? ' checked' : ''}${available.has(value) ? '' : ' disabled'}>
             <span>${escapeHtml(translate(value))}</span>
         </label>
-    `).join('');
+    `).join('') + buildMultiselectDoneButtonHtml();
     document.getElementById(`menu-${id}-value`).textContent = getMenuSelections(menuState[field]).map(translate).join(', ') || t(placeholderKey);
     if (focusedValue !== null) {
         Array.from(el.querySelectorAll('input')).find(input => input.value === focusedValue)?.focus();
@@ -10577,7 +10581,7 @@ function renderScheduleCalendar(data) {
                         <span class="cal-filter-label" id="schedule-grade-filter-label">${t('schedule_grade_filter_label')}</span>
                         <details id="schedule-grade-filter" class="cal-grade-dropdown">
                             <summary aria-labelledby="schedule-grade-filter-label schedule-grade-filter-value"><span id="schedule-grade-filter-value">${safeText(gradeFilterSummary)}</span></summary>
-                            <div class="cal-grade-options" role="group" aria-labelledby="schedule-grade-filter-label">${gradeFilterHtml}</div>
+                            <div class="cal-grade-options" role="group" aria-labelledby="schedule-grade-filter-label">${gradeFilterHtml}${buildMultiselectDoneButtonHtml()}</div>
                         </details>
                     </div>
                 </div>

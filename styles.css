@@ -4711,15 +4711,18 @@ details > p {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  color: var(--step);
+  background: var(--primary);
+  color: #fff;
   transition: background var(--duration) var(--ease);
 }
 
 .fw-result-link:hover {
-  background: var(--bg);
+  background: var(--primary-light);
+  color: #fff;
 }
 
 .fw-result-link .material-symbols-rounded {
@@ -7828,6 +7831,18 @@ body.step-review-modal-open { overflow: hidden; }
 .menu-pillar-dropdown .cal-grade-option {
   white-space: normal;
 }
+.multiselect-done-btn {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+.multiselect-done-btn:hover { background: var(--primary-light); }
 
 .menu-search-panel-footer {
   display: flex;
@@ -11856,8 +11871,7 @@ body.program-prompt-open { overflow: hidden; }
 .home-feedback-lettering-fr { display: none; }
 .home-feedback-lettering:lang(fr) .home-feedback-lettering-en { display: none; }
 .home-feedback-lettering:lang(fr) .home-feedback-lettering-fr { display: inline; }
-.home-feedback-link .material-symbols-rounded { font-size: 18px; }
-.home-feedback-link:hover { background: #184b45; color: #fff; }
+.home-feedback-link:hover { background: #b9e7df; color: #163e39; }
 .home-feedback-link:focus-visible { outline: 3px solid var(--primary); outline-offset: 4px; }
 .home-progress-privacy { margin-top: 0.75rem; max-width: 650px; color: #e0eaf5; font-size: 0.8rem; }
 .guided-home-hero button:focus-visible,
