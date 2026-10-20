@@ -5013,7 +5013,7 @@ function fwLoadResults() {
     if (filtered.length === 0) {
         appState.fwState.selectedIds = [];
         resultsEl.innerHTML = `<div class="fw-no-results">
-            <p>${escapeHtml(t('fw_no_results'))}</p>
+            <p>${escapeHtml(t('fw_no_results')(formatGradeList(grade), pillars.map(translatePillar).join(', ')))}</p>
             <button type="button" class="fw-skip-btn" onclick="fwSelectItem(NO_RESOURCE_CHOICE_ID, t('fw_no_resource_choice'))">
                 ${escapeHtml(t('fw_continue_without'))}
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">arrow_forward</span>

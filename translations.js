@@ -501,7 +501,7 @@ const TRANSLATIONS = {
         evidence_legend_aria: 'Evidence and research based definitions',
 
         // ── FW results ──
-        fw_no_results: 'No matching items found for the selected criteria.',
+        fw_no_results: (grade, pillars) => `No matching items found for ${[grade, pillars].filter(Boolean).join(' ')}.`,
         fw_continue_without: 'Continue without a resource',
         fw_no_resource_choice: 'No resource available',
         fw_results_label: 'Recommended Resources',
@@ -1005,7 +1005,7 @@ const TRANSLATIONS = {
         evidence_legend_aria: 'Définitions fondées sur des données probantes et la recherche',
 
         // ── FW results ──
-        fw_no_results: 'Aucun élément correspondant aux critères sélectionnés.',
+        fw_no_results: (grade, pillars) => `Aucun élément correspondant pour ${[grade, pillars].filter(Boolean).join(' ')}.`,
         fw_continue_without: 'Continuer sans ressource',
         fw_no_resource_choice: 'Aucune ressource disponible',
         fw_results_label: 'Ressources recommandées',
