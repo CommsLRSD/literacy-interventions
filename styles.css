@@ -3675,6 +3675,24 @@ details > p {
   color: var(--text);
   margin-bottom: var(--space-xs);
 }
+.benchmark-guidance-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.benchmark-guidance-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+
 .step-content > p {
   font-size: 0.9rem;
   color: var(--text-secondary);

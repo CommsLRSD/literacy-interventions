@@ -120,6 +120,44 @@ test('Settings opens with transfer controls collapsed, including after a previou
     assert.equal(getElement('transfer-receive').hidden, false);
 });
 
+test('Tier 1 benchmark question opens the existing guidance in either pathway view', () => {
+    const { context, run, getElement } = setup();
+    for (const language of ['en', 'fr']) {
+        run(`appState.language = '${language}';`);
+        const node = context.getFlowchartDefs().tier1.nodes['tier1-percentage'];
+        const html = context.createIntegratedDecisionNode(node);
+        if (language === 'en') {
+            assert.equal(node.subtitle, 'Based on screener results, what percentage of students are below the benchmark?');
+        }
+        assert.match(html, /<h3><button[^>]+class="benchmark-guidance-link"/);
+        assert.match(html, /aria-haspopup="dialog"/);
+        assert.equal(node.description, undefined);
+        assert.doesNotMatch(html, /<p>/);
+        assert.equal((html.match(/onclick="makeIntegratedDecision/g) || []).length, 2);
+        const handler = html.match(/class="benchmark-guidance-link" onclick="([^"]+)"/)[1];
+        for (const visual of [false, true]) {
+            const prefix = visual ? 'visual-flowchart' : 'flowchart';
+            const popup = getElement(`${prefix}-guidance-popup`);
+            const button = getElement(`${prefix}-guidance-btn`);
+            let focused = false;
+            let expanded;
+            popup.hidden = true;
+            popup.querySelector = () => ({ focus() { focused = true; } });
+            button.setAttribute = (name, value) => { if (name === 'aria-expanded') expanded = value; };
+            run(`appState.visualFlowchartModal = ${visual ? '{ guidanceOpen: false }' : 'null'};`);
+            const trigger = { closest(selector) {
+                assert.equal(selector, '#visual-flowchart-modal');
+                return visual ? {} : null;
+            } };
+            run(`(function () { ${handler} })`).call(trigger);
+            assert.equal(popup.hidden, false);
+            assert.equal(expanded, 'true');
+            assert.equal(focused, true);
+            if (visual) assert.equal(run('appState.visualFlowchartModal.guidanceOpen'), true);
+        }
+    }
+});
+
 test('both replacement monitoring tools retain the original searchable tag coverage', () => {
     const { context } = setup();
     for (const tier of [2, 3]) {
