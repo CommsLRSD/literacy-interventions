@@ -1064,8 +1064,7 @@ const FLOWCHART_DEFINITIONS_FR = {
                 id: 'tier1-percentage',
                 type: 'decision',
                 title: '\u00c9tape 4\u00a0: Enseignement inefficace',
-                subtitle: 'Quel pourcentage d\u2019\u00e9l\u00e8ves est en difficult\u00e9\u00a0?',
-                description: 'D\u2019apr\u00e8s les r\u00e9sultats du d\u00e9pistage, combien d\u2019\u00e9l\u00e8ves sont en dessous du niveau de r\u00e9f\u00e9rence\u00a0?',
+                subtitle: 'D’après les résultats du dépistage, quel pourcentage d’élèves sont en dessous du niveau de référence\u00a0?',
                 choices: [
                     { id: 'more-20', label: '20\u00a0% ou plus', icon: '▲', sublabel: '', type: 'warning', nextNode: 'tier1-reteach' },
                     { id: 'less-20', label: 'Moins de 20\u00a0%', icon: '▼', sublabel: '', type: 'warning', nextNode: 'tier1-move-tier2' }
