@@ -1065,6 +1065,7 @@ const FLOWCHART_DEFINITIONS_FR = {
                 type: 'decision',
                 title: '\u00c9tape 4\u00a0: Enseignement inefficace',
                 subtitle: 'D’après les résultats du dépistage, quel pourcentage d’élèves sont en dessous du niveau de référence\u00a0?',
+                guidancePhrase: 'en dessous du niveau de référence',
                 choices: [
                     { id: 'more-20', label: '20\u00a0% ou plus', icon: '▲', sublabel: '', type: 'warning', nextNode: 'tier1-reteach' },
                     { id: 'less-20', label: 'Moins de 20\u00a0%', icon: '▼', sublabel: '', type: 'warning', nextNode: 'tier1-move-tier2' }

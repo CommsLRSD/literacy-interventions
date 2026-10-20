@@ -3679,13 +3679,16 @@ details > p {
   padding: 0;
   border: 0;
   background: none;
-  color: inherit;
+  color: var(--info-text);
   font: inherit;
   letter-spacing: inherit;
   text-align: inherit;
-  text-decoration: underline;
-  text-underline-offset: 0.15em;
+  text-decoration: none;
   cursor: pointer;
+}
+
+.benchmark-guidance-link:hover {
+  color: inherit;
 }
 
 .benchmark-guidance-link:focus-visible {
@@ -8565,12 +8568,14 @@ body.step-review-modal-open { overflow: hidden; }
     --visual-tier-colour: #0ea8b2;
   }
 
+  .visual-flowchart-dialog:has(.visual-flowchart-tier-bar-chip[data-tier="tier2"]) .visual-flowchart-viewport,
   .visual-flowchart-tier-bar-chip[data-tier="tier2"],
   .visual-flowchart-card[data-tier="tier2"],
   .visual-flowchart-tier-tabs .tier-tab[data-tier="tier2"] {
     --visual-tier-colour: #f9aa0e;
   }
 
+  .visual-flowchart-dialog:has(.visual-flowchart-tier-bar-chip[data-tier="tier3"]) .visual-flowchart-viewport,
   .visual-flowchart-tier-bar-chip[data-tier="tier3"],
   .visual-flowchart-card[data-tier="tier3"],
   .visual-flowchart-tier-tabs .tier-tab[data-tier="tier3"] {
@@ -8656,6 +8661,11 @@ body.step-review-modal-open { overflow: hidden; }
 
   .visual-flowchart-viewport.is-panning {
     cursor: grabbing;
+  }
+
+  .visual-flowchart-dialog:has(.visual-flowchart-tier-bar-chip[data-tier="tier2"]) .visual-flowchart-viewport,
+  .visual-flowchart-dialog:has(.visual-flowchart-tier-bar-chip[data-tier="tier3"]) .visual-flowchart-viewport {
+    background-color: color-mix(in srgb, var(--visual-tier-colour) 8%, white);
   }
 
   .visual-flowchart-viewport:focus-visible {
@@ -8957,6 +8967,18 @@ body.step-review-modal-open { overflow: hidden; }
 
   .visual-flowchart-active-host .step-header {
     display: none;
+  }
+
+  .visual-flowchart-active-host .flowchart-step[data-node-id="tier1-percentage"] {
+    padding-top: 8px;
+  }
+
+  .flowchart-step[data-node-id="tier1-percentage"] .step-content {
+    padding-top: 0;
+  }
+
+  .flowchart-step[data-node-id="tier1-percentage"] .step-content > h3 {
+    margin-bottom: var(--space-lg);
   }
 
   .visual-flowchart-active-host .decision-grid,
