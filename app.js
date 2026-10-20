@@ -3580,7 +3580,7 @@ function openVisualFlowchartModal() {
     document.body.classList.add('visual-flowchart-modal-open');
     // Clicking anywhere outside the Tier 1 guidance popup closes it.
     modal.addEventListener('pointerdown', event => {
-        if (appState.visualFlowchartModal?.guidanceOpen && !event.target.closest('.tier1-guidance')) {
+        if (appState.visualFlowchartModal?.guidanceOpen && !event.target.closest('.tier1-guidance, .benchmark-guidance-link')) {
             setTier1GuidanceOpen('visual-flowchart', false);
         }
     });
@@ -3794,7 +3794,7 @@ function toggleTier1Guidance(idPrefix) {
 // The summary view's popup closes on Escape or a click outside it. (The visual
 // pathway handles its own copy in its modal key/pointer handlers.)
 document.addEventListener('pointerdown', event => {
-    if (isTier1GuidanceOpen('flowchart') && !event.target.closest('.flowchart-glass-header .tier1-guidance')) {
+    if (isTier1GuidanceOpen('flowchart') && !event.target.closest('.flowchart-glass-header .tier1-guidance, .benchmark-guidance-link')) {
         setTier1GuidanceOpen('flowchart', false);
     }
 });
@@ -5129,7 +5129,7 @@ function fwSelectItem(itemId, itemName) {
 function createIntegratedDecisionNode(nodeData) {
     const questionHTML = nodeData.id === 'tier1-percentage' && nodeData.guidancePhrase
         ? escapeHtml(nodeData.subtitle).replace(escapeHtml(nodeData.guidancePhrase), () =>
-            `<button type="button" class="benchmark-guidance-link" onclick="setTier1GuidanceOpen(this.closest('#visual-flowchart-modal') ? 'visual-flowchart' : 'flowchart', true)" aria-haspopup="dialog">${escapeHtml(nodeData.guidancePhrase)}</button>`)
+            `<button type="button" class="benchmark-guidance-link" onclick="toggleTier1Guidance(this.closest('#visual-flowchart-modal') ? 'visual-flowchart' : 'flowchart')" aria-haspopup="dialog">${escapeHtml(nodeData.guidancePhrase)}</button>`)
         : nodeData.subtitle;
     const choicesHTML = nodeData.choices.map(choice => `
         <button class="decision-btn decision-${choice.type} ${choice.sublabel ? '' : 'decision-single-line'}" onclick="makeIntegratedDecision('${nodeData.id}', '${choice.id}', '${choice.nextNode}')">

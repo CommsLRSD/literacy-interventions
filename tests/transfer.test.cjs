@@ -120,7 +120,7 @@ test('Settings opens with transfer controls collapsed, including after a previou
     assert.equal(getElement('transfer-receive').hidden, false);
 });
 
-test('only the Tier 1 benchmark phrase opens the existing guidance in either pathway view', () => {
+test('only the Tier 1 benchmark phrase toggles the existing guidance in either pathway view', () => {
     const { context, run, getElement } = setup();
     for (const language of ['en', 'fr']) {
         run(`appState.language = '${language}';`);
@@ -159,6 +159,23 @@ test('only the Tier 1 benchmark phrase opens the existing guidance in either pat
             assert.equal(expanded, 'true');
             assert.equal(focused, true);
             if (visual) assert.equal(run('appState.visualFlowchartModal.guidanceOpen'), true);
+            const pointerHandler = read('app.js').match(visual
+                ? /modal\.addEventListener\('pointerdown', event => \{([\s\S]*?)\n    \}\);/
+                : /document\.addEventListener\('pointerdown', event => \{([\s\S]*?)\n\}\);/)[1];
+            const pointerdown = run(`(event => { ${pointerHandler} })`);
+            pointerdown({ target: { closest(selector) {
+                assert.ok(selector.includes('.benchmark-guidance-link'));
+                return trigger;
+            } } });
+            assert.equal(popup.hidden, false);
+            run(`(function () { ${handler} })`).call(trigger);
+            assert.equal(popup.hidden, true);
+            assert.equal(expanded, 'false');
+            if (visual) assert.equal(run('appState.visualFlowchartModal.guidanceOpen'), false);
+            run(`(function () { ${handler} })`).call(trigger);
+            assert.equal(popup.hidden, false);
+            pointerdown({ target: { closest: () => null } });
+            assert.equal(popup.hidden, true);
         }
     }
 });
