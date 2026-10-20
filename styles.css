@@ -3678,9 +3678,8 @@ details > p {
 .benchmark-guidance-link {
   padding: 0;
   border: 0;
-  background: color-mix(in srgb, var(--primary) 9%, transparent);
-  border-radius: 3px;
-  color: inherit;
+  background: none;
+  color: var(--info-text);
   font: inherit;
   letter-spacing: inherit;
   text-align: inherit;
@@ -3689,7 +3688,7 @@ details > p {
 }
 
 .benchmark-guidance-link:hover {
-  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: inherit;
 }
 
 .benchmark-guidance-link:focus-visible {
