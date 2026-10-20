@@ -2273,6 +2273,7 @@ const FLOWCHART_DEFINITIONS = {
                 type: 'decision',
                 title: 'Step 4: Instruction Ineffective',
                 subtitle: 'Based on screener results, what percentage of students are below the benchmark?',
+                guidancePhrase: 'below the benchmark',
                 choices: [
                     { id: 'more-20', label: '20% or more', icon: '▲', sublabel: '', type: 'warning', nextNode: 'tier1-reteach' },
                     { id: 'less-20', label: 'Fewer than 20%', icon: '▼', sublabel: '', type: 'warning', nextNode: 'tier1-move-tier2' }
@@ -5126,8 +5127,9 @@ function fwSelectItem(itemId, itemName) {
 
 // Create integrated decision node
 function createIntegratedDecisionNode(nodeData) {
-    const questionHTML = nodeData.id === 'tier1-percentage'
-        ? `<button type="button" class="benchmark-guidance-link" onclick="setTier1GuidanceOpen(this.closest('#visual-flowchart-modal') ? 'visual-flowchart' : 'flowchart', true)" aria-haspopup="dialog">${escapeHtml(nodeData.subtitle)}</button>`
+    const questionHTML = nodeData.id === 'tier1-percentage' && nodeData.guidancePhrase
+        ? escapeHtml(nodeData.subtitle).replace(escapeHtml(nodeData.guidancePhrase), () =>
+            `<button type="button" class="benchmark-guidance-link" onclick="setTier1GuidanceOpen(this.closest('#visual-flowchart-modal') ? 'visual-flowchart' : 'flowchart', true)" aria-haspopup="dialog">${escapeHtml(nodeData.guidancePhrase)}</button>`)
         : nodeData.subtitle;
     const choicesHTML = nodeData.choices.map(choice => `
         <button class="decision-btn decision-${choice.type} ${choice.sublabel ? '' : 'decision-single-line'}" onclick="makeIntegratedDecision('${nodeData.id}', '${choice.id}', '${choice.nextNode}')">

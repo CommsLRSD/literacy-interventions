@@ -3678,14 +3678,18 @@ details > p {
 .benchmark-guidance-link {
   padding: 0;
   border: 0;
-  background: none;
+  background: color-mix(in srgb, var(--primary) 9%, transparent);
+  border-radius: 3px;
   color: inherit;
   font: inherit;
   letter-spacing: inherit;
   text-align: inherit;
-  text-decoration: underline;
-  text-underline-offset: 0.15em;
+  text-decoration: none;
   cursor: pointer;
+}
+
+.benchmark-guidance-link:hover {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 .benchmark-guidance-link:focus-visible {
@@ -8964,6 +8968,18 @@ body.step-review-modal-open { overflow: hidden; }
 
   .visual-flowchart-active-host .step-header {
     display: none;
+  }
+
+  .visual-flowchart-active-host .flowchart-step[data-node-id="tier1-percentage"] {
+    padding-top: 8px;
+  }
+
+  .flowchart-step[data-node-id="tier1-percentage"] .step-content {
+    padding-top: 0;
+  }
+
+  .flowchart-step[data-node-id="tier1-percentage"] .step-content > h3 {
+    margin-bottom: var(--space-lg);
   }
 
   .visual-flowchart-active-host .decision-grid,

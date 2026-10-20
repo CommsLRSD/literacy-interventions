@@ -120,7 +120,7 @@ test('Settings opens with transfer controls collapsed, including after a previou
     assert.equal(getElement('transfer-receive').hidden, false);
 });
 
-test('Tier 1 benchmark question opens the existing guidance in either pathway view', () => {
+test('only the Tier 1 benchmark phrase opens the existing guidance in either pathway view', () => {
     const { context, run, getElement } = setup();
     for (const language of ['en', 'fr']) {
         run(`appState.language = '${language}';`);
@@ -129,7 +129,12 @@ test('Tier 1 benchmark question opens the existing guidance in either pathway vi
         if (language === 'en') {
             assert.equal(node.subtitle, 'Based on screener results, what percentage of students are below the benchmark?');
         }
-        assert.match(html, /<h3><button[^>]+class="benchmark-guidance-link"/);
+        const question = html.match(/<h3>([\s\S]*?)<\/h3>/)[1];
+        const trigger = question.match(/<button[^>]*>([^<]+)<\/button>/);
+        assert.equal(trigger[1], language === 'en' ? 'below the benchmark' : 'en dessous du niveau de référence');
+        assert.equal(question.replace(trigger[0], trigger[1]), node.subtitle);
+        assert.ok(question.indexOf('<button') > 0);
+        assert.equal((question.match(/<button/g) || []).length, 1);
         assert.match(html, /aria-haspopup="dialog"/);
         assert.equal(node.description, undefined);
         assert.doesNotMatch(html, /<p>/);
