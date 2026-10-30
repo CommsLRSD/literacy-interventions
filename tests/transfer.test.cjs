@@ -24,7 +24,6 @@ function setup() {
         showModal() { this.open = true; }
     });
     const getElement = id => {
-        if (id === 'authGate') return null;
         if (!elements.has(id)) elements.set(id, element());
         return elements.get(id);
     };
@@ -248,8 +247,6 @@ test('whole saved snapshot round-trips with and without compression', async () =
         assert.match(code, compressed ? /^LIP2\.g\./ : /^LIP2\.j\./);
         assert.equal(JSON.stringify(await context.decodeProgressTransfer(code)), JSON.stringify(snapshot));
     }
-    run(`localStorage.setItem('literacy-interventions-auth', 'device-only');`);
-    assert.ok(!JSON.stringify(context.captureProgressTransfer()).includes('device-only'));
 });
 
 test('one email link includes all saved data, not a selected session', async () => {
@@ -275,7 +272,6 @@ test('opening link only previews; canceled confirmation preserves data; restore 
     const source = context.captureProgressTransfer();
     const code = await context.encodeProgressTransfer(source);
     run(`pathwaySessions = [{ ...session, id: 'destination-only' }]; favouriteIds = new Set();`);
-    storage.set('literacy-interventions-auth', 'local-auth');
     context.window.location.hash = `#progress=${code}`;
     context.receiveProgressTransferLink();
     // Wait for the asynchronous streamed preview started by the link handler.
@@ -295,7 +291,6 @@ test('opening link only previews; canceled confirmation preserves data; restore 
     assert.equal(run('activePathwaySessionId'), 'active-session');
     assert.equal(run('savedPathway.context.screener'), 'dibels');
     assert.equal(context.window.location.reloads, 1);
-    assert.equal(storage.get('literacy-interventions-auth'), 'local-auth');
     assert.equal(storage.get('literacy-interventions-favourites'), JSON.stringify(source.favourites));
     assert.equal(storage.get('literacy-interventions-menu-language'), source.menuLanguage);
     const progress = JSON.parse(storage.get('session:literacy-interventions-progress-session'));

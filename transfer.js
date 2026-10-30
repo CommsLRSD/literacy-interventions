@@ -5,7 +5,6 @@ const TRANSFER_MAX_EMAIL = 32000;
 let transferPreview = null;
 let transferEpoch = 0;
 let transferLink = '';
-let transferAuthObserver = null;
 
 function transferStatus(key) {
     document.getElementById('transfer-status').textContent = t(key);
@@ -271,18 +270,6 @@ async function restoreProgressTransfer() {
 
 function receiveProgressTransferLink() {
     if (!appReady || !window.location.hash.startsWith('#progress=')) return;
-    if (document.getElementById('authGate')) {
-        if (!transferAuthObserver) {
-            transferAuthObserver = new MutationObserver(() => {
-                if (document.getElementById('authGate')) return;
-                transferAuthObserver.disconnect();
-                transferAuthObserver = null;
-                receiveProgressTransferLink();
-            });
-            transferAuthObserver.observe(document.body, { childList: true });
-        }
-        return;
-    }
     const code = window.location.hash.slice('#progress='.length);
     // Remove the snapshot from the address bar without navigating or sending it to the server.
     history.replaceState(history.state, '', window.location.pathname + window.location.search);
