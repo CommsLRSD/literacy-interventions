@@ -931,6 +931,7 @@ function rerenderForLanguage() {
         renderScheduleCalendar(schedulesData);
     }
     renderFAQ();
+    renderLiteracyPillars();
 }
 
 // Refresh the programmatically-set option/placeholder text in the
@@ -971,6 +972,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Load intervention menu data
     await loadInterventionMenuData();
+    renderLiteracyPillars();
     
     // Setup navigation
     setupNavigation();
@@ -1055,6 +1057,43 @@ async function loadInterventionMenuData() {
         appState.interventionMenuDataLoaded = false;
         appState.interventionMenuData = { screeners: [], pillars: [], resourceTypes: [], resources: [] };
     }
+}
+
+// ============================================
+// Literacy pillar guide
+// ============================================
+function getPillarDefinitionsHtml(selectedPillars = []) {
+    const pillars = appState.interventionMenuData?.pillars;
+    if (!pillars?.length) {
+        return `<p role="alert">${escapeHtml(t('pillars_load_error'))}</p>`;
+    }
+    return pillars.map(pillar => `
+        <details class="pillar-definition" data-pillar="${escapeAttr(pillar.name)}"${selectedPillars.includes(pillar.name) ? ' open' : ''}>
+            <summary>${escapeHtml(translatePillar(pillar.name))}</summary>
+            <p>${escapeHtml(appState.language === 'fr' ? pillar.definition_fr : pillar.definition)}</p>
+        </details>`).join('');
+}
+
+function renderLiteracyPillars() {
+    ['literacy-pillars-reference', 'literacy-pillars-context'].forEach(id => {
+        const host = document.getElementById(id);
+        if (!host) return;
+        const expanded = Array.from(host.querySelectorAll('details[open]'), item => item.dataset.pillar);
+        host.innerHTML = getPillarDefinitionsHtml(expanded);
+    });
+}
+
+function getPillarHelpTriggerHtml() {
+    return `<button type="button" class="pillar-help-button" aria-haspopup="dialog" aria-controls="literacy-pillars-dialog" onclick="event.stopPropagation(); openLiteracyPillars(this)">${escapeHtml(t('pillars_help'))}</button>`;
+}
+
+function openLiteracyPillars(trigger, source = 'flowchart') {
+    const selectedPillars = source === 'toolkit' ? getMenuPillars() : (appState.fwState?.pillars || []);
+    document.getElementById('literacy-pillars-context').innerHTML = getPillarDefinitionsHtml(selectedPillars);
+    const dialog = document.getElementById('literacy-pillars-dialog');
+    trigger.focus({ preventScroll: true });
+    dialog.showModal();
+    dialog.querySelector('.pillar-dialog-body').scrollTop = 0;
 }
 
 // ============================================
@@ -4738,7 +4777,10 @@ function renderChecklistBody(nodeData, readOnly = false) {
         `).join('')
         : '';
 
-    return `${nodeData.entryTitle ? `<h4 class="checklist-post-section-title">${escapeHtml(nodeData.entryTitle)}</h4>` : ''}${bodyHTML}${postSectionsHTML}`;
+    const mentionsPillars = /pillars|piliers/i.test([
+        ...items, ...(nodeData.postSections || []).flatMap(section => section.items)
+    ].join(' '));
+    return `${nodeData.entryTitle ? `<h4 class="checklist-post-section-title">${escapeHtml(nodeData.entryTitle)}</h4>` : ''}${bodyHTML}${postSectionsHTML}${mentionsPillars ? getPillarHelpTriggerHtml() : ''}`;
 }
 
 // Every point stays visible and must be ticked off before continuing.
@@ -4888,8 +4930,11 @@ function createIntegratedSelectionNode(nodeData) {
                 ${infoBoxHTML}
                 ${warningBoxHTML}
                 <div class="fw-wizard">
-                    ${appState.fwState.pillarsLocked ? '' : `<div class="fw-select-group">
+                    <div class="pillar-help-heading">
                         <span id="fw-pillar-label" class="fw-select-label">${escapeHtml(t('fw_choose_pillars_label'))}</span>
+                        ${getPillarHelpTriggerHtml()}
+                    </div>
+                    ${appState.fwState.pillarsLocked ? '' : `<div class="fw-select-group">
                         <details id="fw-pillar-filter" class="cal-grade-dropdown fw-pillar-dropdown" onkeydown="if(event.key==='Escape'){event.preventDefault();this.open=false;this.querySelector('summary').focus();}">
                             <summary aria-labelledby="fw-pillar-label fw-pillar-value"><span id="fw-pillar-value">${escapeHtml(getFwPillarSummary(appState.fwState.pillars))}</span></summary>
                             <div class="cal-grade-options" role="group" aria-labelledby="fw-pillar-label"><div class="multiselect-options-list">${pillarOptionsHtml}</div>${buildMultiselectDoneButtonHtml()}</div>

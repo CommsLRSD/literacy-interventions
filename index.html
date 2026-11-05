@@ -93,6 +93,10 @@
                 <span class="nav-link-label" data-i18n="nav_flowchart">Flowchart</span>
             </button>
             <div class="nav-group-label" role="presentation" data-i18n="nav_reference_resources">Reference resources</div>
+            <button class="nav-link" data-page="pillars" role="menuitem" aria-selected="false">
+                <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">menu_book</span>
+                <span class="nav-link-label" data-i18n="nav_pillars">Literacy Pillars</span>
+            </button>
             <button class="nav-link" data-page="interventions" role="menuitem" aria-selected="false">
                 <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">checklist</span>
                 <span class="nav-link-label" data-i18n="nav_interventions">Literacy Toolkit</span>
@@ -138,6 +142,10 @@
                 <span data-i18n="nav_flowchart">Flowchart</span>
             </button>
             <div class="nav-group-label" data-i18n="nav_reference_resources">Reference resources</div>
+            <button class="mobile-nav-item" data-page="pillars">
+                <span class="material-symbols-rounded" aria-hidden="true" translate="no">menu_book</span>
+                <span data-i18n="nav_pillars">Literacy Pillars</span>
+            </button>
             <button class="mobile-nav-item" data-page="interventions">
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">checklist</span>
                 <span data-i18n="nav_interventions_mobile">Literacy Toolkit</span>
@@ -502,7 +510,10 @@
                                 <select id="menu-type-filter" class="fw-select" onchange="onMenuFilterChange('resourceType', this.value)"></select>
                             </div>
                             <div id="filter-pillar-group" class="filter-group filter-group-visual" hidden>
-                                <span id="menu-pillar-label" class="filter-group-label" data-i18n="filter_step_pillars">2. Choose one or more literacy pillars</span>
+                                <div class="pillar-help-heading">
+                                    <span id="menu-pillar-label" class="filter-group-label" data-i18n="filter_step_pillars">2. Choose one or more literacy pillars</span>
+                                    <button type="button" class="pillar-help-button" aria-haspopup="dialog" aria-controls="literacy-pillars-dialog" onclick="openLiteracyPillars(this, 'toolkit')" data-i18n="pillars_help">What do these pillars mean?</button>
+                                </div>
                                 <details id="menu-pillar-filter" class="cal-grade-dropdown menu-pillar-dropdown" onkeydown="if(event.key==='Escape'){event.preventDefault();this.open=false;this.querySelector('summary').focus();}">
                                     <summary aria-labelledby="menu-pillar-label menu-pillar-value"><span id="menu-pillar-value"></span></summary>
                                     <div id="filter-pillar-chips" class="cal-grade-options" role="group" aria-labelledby="menu-pillar-label"></div>
@@ -575,6 +586,18 @@
                     <div id="calendar-legend" class="calendar-legend"></div>
                 </div><!-- /.schedule-page-body -->
             </div><!-- /.schedule-page-wrapper -->
+        </section>
+
+        <section id="pillars-section" class="content-section" data-page="pillars">
+            <div class="pillars-page-wrapper">
+                <div class="hero-area">
+                    <h2 class="section-title" data-i18n="nav_pillars">Literacy Pillars</h2>
+                </div>
+                <div class="pillars-page-body">
+                    <p data-i18n="pillars_intro">Explore each literacy pillar. Select a heading to read its definition; you can open several to compare.</p>
+                    <div id="literacy-pillars-reference" class="pillar-definitions"></div>
+                </div>
+            </div>
         </section>
 
         <!-- ── SCORES & PERCENTILES ──────────────────────────── -->
@@ -1553,6 +1576,17 @@
             </div>
         </div>
     </div>
+
+    <dialog id="literacy-pillars-dialog" class="literacy-pillars-dialog" aria-labelledby="literacy-pillars-title" aria-describedby="literacy-pillars-hint" onkeydown="event.stopPropagation()" onclick="event.stopPropagation()">
+        <div class="pillar-dialog-header">
+            <h2 id="literacy-pillars-title" data-i18n="nav_pillars">Literacy Pillars</h2>
+            <button type="button" class="pillar-help-button" autofocus onclick="this.closest('dialog').close()" data-i18n="pillars_close">Close definitions</button>
+        </div>
+        <div class="pillar-dialog-body">
+            <p id="literacy-pillars-hint" data-i18n="pillars_context_hint">Selected pillars are expanded below. Close this guide to continue where you left off.</p>
+            <div id="literacy-pillars-context" class="pillar-definitions"></div>
+        </div>
+    </dialog>
 
     <script src="translations.js"></script>
     <script src="app.js"></script>

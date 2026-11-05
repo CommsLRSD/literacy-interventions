@@ -530,37 +530,44 @@
     {
       "name": "Alphabetic Principle",
       "name_fr": "Le principe alphabétique",
-      "definition": "Understanding that letters represent sounds and that letter combinations follow patterns and rules."
+      "definition": "The alphabetic principle is the understanding that letters and letter combinations represent the sounds (phonemes) of spoken language. It’s the foundation of reading and writing in alphabetic languages, where each symbol (letter) corresponds to a specific sound or group of sounds. This principle is crucial for children learning to read and write because it helps them understand how written words map to spoken language.",
+      "definition_fr": "Le principe alphabétique est la compréhension du fait que les lettres et les combinaisons de lettres représentent les sons (phonèmes) de la langue parlée. C’est le fondement de la lecture et de l’écriture dans les langues alphabétiques, où chaque symbole (lettre) correspond à un son précis ou à un groupe de sons. Ce principe est crucial pour les enfants qui apprennent à lire et à écrire, car il les aide à comprendre comment les mots écrits correspondent à la langue parlée."
     },
     {
       "name": "Phonemic Awareness",
       "name_fr": "La conscience phonémique",
-      "definition": "The ability to hear, identify, and manipulate individual phonemes (sounds) in spoken words, without visual support."
+      "definition": "Phonemic awareness is the ability to hear, identify, and manipulate sounds (phonemes) in spoken words. It’s crucial for learning to read, as it helps children understand how sounds form words and correspond to letters. Key skills include rhyming, blending, segmenting, isolating, and manipulating sounds. Developing phonemic awareness is essential for decoding (reading) and encoding (spelling) words.",
+      "definition_fr": "La conscience phonémique est la capacité d’entendre, d’identifier et de manipuler les sons (phonèmes) dans les mots parlés. Elle est cruciale pour l’apprentissage de la lecture, car elle aide les enfants à comprendre comment les sons forment des mots et correspondent aux lettres. Les compétences clés comprennent la reconnaissance des rimes, la fusion, la segmentation, l’isolation et la manipulation des sons. Le développement de la conscience phonémique est essentiel au décodage (lecture) et à l’encodage (orthographe) des mots."
     },
     {
       "name": "Phonics",
       "name_fr": "La phonétique",
-      "definition": "The relationship between letters and sounds; the ability to use letter-sound correspondences to decode written words (decoding) and to spell words (encoding)."
+      "definition": "Phonics is a method that teaches reading and writing by connecting letters or letter combinations to their sounds. It helps learners decode (read) and encode (spell) words by recognizing these sound-symbol relationships. Phonics is essential for early reading education, improving both reading fluency and comprehension.",
+      "definition_fr": "La phonétique est une méthode qui enseigne la lecture et l’écriture en reliant les lettres ou les combinaisons de lettres à leurs sons. Elle aide les apprenants à décoder (lire) et à encoder (orthographier) les mots en reconnaissant ces relations entre les sons et les symboles. La phonétique est essentielle à l’enseignement initial de la lecture et améliore à la fois la fluidité de lecture et la compréhension."
     },
     {
       "name": "Reading Fluency",
       "name_fr": "La fluidité de lecture",
-      "definition": "Speed, accuracy, and prosody (expression) in oral and silent reading of connected text, reflecting automaticity in word recognition."
+      "definition": "Reading fluency is the ability to read text with accuracy, automaticity (appropriate speed), and prosody (expression) sufficient to support comprehension. Acting as a bridge between word recognition and understanding, fluency frees up limited cognitive resources so readers can focus on meaning rather than decoding.",
+      "definition_fr": "La fluidité de lecture est la capacité de lire un texte avec une exactitude, une automaticité (vitesse appropriée) et une prosodie (expression) suffisantes pour soutenir la compréhension. Servant de pont entre la reconnaissance des mots et la compréhension, la fluidité libère des ressources cognitives limitées afin que les lecteurs puissent se concentrer sur le sens plutôt que sur le décodage."
     },
     {
       "name": "Vocabulary",
       "name_fr": "Le vocabulaire",
-      "definition": "Understanding and using word meanings, both receptive (understanding words heard or read) and expressive (using words in speaking and writing)."
+      "definition": "Vocabulary refers to the set of words that a person knows and uses. It includes both receptive vocabulary (words we understand when reading or listening) and productive vocabulary (words we use when speaking or writing). A strong vocabulary helps with reading comprehension, effective communication, and writing skills. Vocabulary can be developed through exposure to new words, context, and practice.",
+      "definition_fr": "Le vocabulaire désigne l’ensemble des mots qu’une personne connaît et utilise. Il comprend à la fois le vocabulaire réceptif (les mots que nous comprenons en lisant ou en écoutant) et le vocabulaire productif (les mots que nous utilisons en parlant ou en écrivant). Un vocabulaire riche favorise la compréhension de lecture, la communication efficace et les compétences en écriture. Le vocabulaire peut se développer par l’exposition à de nouveaux mots, le contexte et la pratique."
     },
     {
       "name": "Reading Comprehension",
       "name_fr": "La compréhension de lecture",
-      "definition": "Understanding and deriving meaning from written text, integrating visual symbols, phonological codes, orthographic patterns, word meanings, grammar, and discourse structure."
+      "definition": "Reading comprehension is the ability to understand and interpret written text, including recognizing main ideas, details, and making inferences. It’s essential for fully grasping the meaning of what’s being read, context, and practice.",
+      "definition_fr": "La compréhension de lecture est la capacité de comprendre et d’interpréter un texte écrit, notamment de reconnaître les idées principales et les détails, et de faire des inférences. Elle est essentielle pour saisir pleinement le sens de ce qui est lu, le contexte et la pratique."
     },
     {
       "name": "Orthography",
       "name_fr": "L’orthographe",
-      "definition": "Spelling and the structure/patterns of written words, including conventions of written language and the ability to recognize and produce correctly spelled words."
+      "definition": "Orthography is the system of writing and spelling in a language, including the rules for spelling, punctuation, capitalization, and word formation. It involves the standardized representation of words and their correct written form.",
+      "definition_fr": "L’orthographe est le système d’écriture et d’orthographe d’une langue, y compris les règles d’orthographe, de ponctuation, d’emploi des majuscules et de formation des mots. Elle comprend la représentation normalisée des mots et leur forme écrite correcte."
     }
   ],
   "resourceTypes": [
