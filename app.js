@@ -1087,9 +1087,8 @@ function getPillarHelpTriggerHtml() {
     return `<button type="button" class="pillar-help-button" aria-haspopup="dialog" aria-controls="literacy-pillars-dialog" onclick="event.stopPropagation(); openLiteracyPillars(this)">${escapeHtml(t('pillars_help'))}</button>`;
 }
 
-function openLiteracyPillars(trigger, source = 'flowchart') {
-    const selectedPillars = source === 'toolkit' ? getMenuPillars() : (appState.fwState?.pillars || []);
-    document.getElementById('literacy-pillars-context').innerHTML = getPillarDefinitionsHtml(selectedPillars);
+function openLiteracyPillars(trigger) {
+    document.getElementById('literacy-pillars-context').innerHTML = getPillarDefinitionsHtml();
     const dialog = document.getElementById('literacy-pillars-dialog');
     trigger.focus({ preventScroll: true });
     dialog.showModal();

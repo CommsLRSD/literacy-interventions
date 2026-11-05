@@ -20,7 +20,7 @@ const TRANSLATIONS = {
         pillars_intro: 'Explore each literacy pillar. Select a heading to read its definition; you can open several to compare.',
         pillars_help: 'What do these pillars mean?',
         pillars_close: 'Close definitions',
-        pillars_context_hint: 'Selected pillars are expanded below. Close this guide to continue where you left off.',
+        pillars_context_hint: 'Select a heading to read its definition. Close this guide to continue where you left off.',
         pillars_load_error: 'Literacy pillar definitions could not be loaded. Check your connection and reload the app.',
         nav_scores: 'Understanding Scores & Percentiles',
         nav_resources: 'Resources',
@@ -210,7 +210,7 @@ const TRANSLATIONS = {
         cta_scores_desc: 'Learn how standard scores, percentile ranks, and DIBELS risk categories are used to understand student performance.',
         cta_scores_btn: 'Learn More',
         cta_resources_title: 'Resources',
-        cta_resources_desc: 'Scope and sequence documents, learning progressions, and the division literacy screening summary.',
+        cta_resources_desc: 'Literacy pillar definitions, scope and sequence documents, learning progressions, and the division literacy screening summary.',
         cta_resources_btn: 'Browse Resources',
         cta_about_title: 'About This Guide',
         cta_about_desc: 'Learn about the purpose of this guide, the screening schedule, and the RTI/MTSS framework behind it.',
@@ -336,7 +336,7 @@ const TRANSLATIONS = {
 
         // ── Resources section ──
         resources_section_title: 'Resources',
-        resources_section_subtitle: 'Division documents supporting structured literacy instruction, screening, and progress monitoring',
+        resources_section_subtitle: 'Literacy pillar definitions and division documents supporting instruction, screening, and progress monitoring',
         resources_note: 'Documents open in a new tab. Some links are hosted on the LRSD staff SharePoint and require a division sign-in.',
         resources_group_division: 'Division overview',
         resources_group_english: 'English program',
@@ -530,7 +530,7 @@ const TRANSLATIONS = {
         pillars_intro: 'Explorez chaque pilier de littératie. Sélectionnez un titre pour lire sa définition; vous pouvez en ouvrir plusieurs pour les comparer.',
         pillars_help: 'Que signifient ces piliers?',
         pillars_close: 'Fermer les définitions',
-        pillars_context_hint: 'Les piliers sélectionnés sont développés ci-dessous. Fermez ce guide pour reprendre là où vous en étiez.',
+        pillars_context_hint: 'Sélectionnez un titre pour lire sa définition. Fermez ce guide pour reprendre là où vous en étiez.',
         pillars_load_error: 'Les définitions des piliers de littératie n’ont pas pu être chargées. Vérifiez votre connexion et rechargez l’application.',
         nav_scores: 'Comprendre les scores et les percentiles',
         nav_resources: 'Ressources',
@@ -720,7 +720,7 @@ const TRANSLATIONS = {
         cta_scores_desc: 'Découvrir comment les scores standards, les rangs percentiles et les catégories de risque DIBELS sont utilisés pour comprendre les résultats des élèves.',
         cta_scores_btn: 'En savoir plus',
         cta_resources_title: 'Ressources',
-        cta_resources_desc: 'Documents de portée et de séquence, progressions des apprentissages et sommaire du dépistage en littératie de la division.',
+        cta_resources_desc: 'Définitions des piliers de littératie, documents de portée et de séquence, progressions des apprentissages et sommaire du dépistage en littératie de la division.',
         cta_resources_btn: 'Parcourir les ressources',
         cta_about_title: 'À propos de ce guide',
         cta_about_desc: 'Découvrez l\'objectif de ce guide, l\'horaire de dépistage et le cadre RTI/MTSS qui le sous-tend.',
@@ -846,7 +846,7 @@ const TRANSLATIONS = {
 
         // ── Resources section ──
         resources_section_title: 'Ressources',
-        resources_section_subtitle: 'Documents de la division soutenant l\'enseignement en littératie structurée, le dépistage et le suivi des progrès',
+        resources_section_subtitle: 'Définitions des piliers de littératie et documents de la division soutenant l\'enseignement, le dépistage et le suivi des progrès',
         resources_note: 'Les documents s\'ouvrent dans un nouvel onglet. Certains liens sont hébergés sur le SharePoint du personnel de la DSLR et nécessitent une connexion.',
         resources_group_division: 'Aperçu de la division',
         resources_group_english: 'Programme anglais',
