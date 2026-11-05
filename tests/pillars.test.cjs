@@ -100,14 +100,14 @@ test('both guide surfaces preserve their own expanded pillars when language chan
     assert.ok(hosts.get('literacy-pillars-context').innerHTML.includes(data.pillars[2].definition_fr));
 });
 
-test('contextual help uses the appropriate selections without changing filters or pathway progress', () => {
+test('contextual help opens all definitions closed without changing filters or pathway progress', () => {
     const { run, hosts } = setup();
     const body = { scrollTop: 100 };
     const dialog = { showModal() { this.open = true; }, querySelector: () => body };
     hosts.set('literacy-pillars-dialog', dialog);
     hosts.set('literacy-pillars-context', { innerHTML: '' });
     run(`
-        appState.fwState = { pillars: ['Phonics', 'Vocabulary'], selectedIds: ['chosen-resource'] };
+        appState.fwState = { pillars: ['Reading Fluency', 'Vocabulary'], selectedIds: ['chosen-resource'] };
         appState.visualFlowchart = { tierId: 'tier2', choices: { assessment: { id: 'chosen-resource' } } };
         menuState.pillar = ['Orthography'];
         const before = JSON.stringify({ appState, menuState });
@@ -117,10 +117,11 @@ test('contextual help uses the appropriate selections without changing filters o
     assert.equal(dialog.open, true);
     assert.equal(body.scrollTop, 0);
     assert.equal(run('trigger.focused'), true);
-    assert.match(hosts.get('literacy-pillars-context').innerHTML, /data-pillar="Phonics" open/);
-    run("openLiteracyPillars(trigger, 'toolkit')");
-    assert.match(hosts.get('literacy-pillars-context').innerHTML, /data-pillar="Orthography" open/);
-    assert.doesNotMatch(hosts.get('literacy-pillars-context').innerHTML, /data-pillar="Phonics" open/);
+    assert.equal((hosts.get('literacy-pillars-context').innerHTML.match(/<details /g) || []).length, 7);
+    assert.doesNotMatch(hosts.get('literacy-pillars-context').innerHTML, /<details[^>]* open/);
+    hosts.get('literacy-pillars-context').innerHTML = run("getPillarDefinitionsHtml(['Reading Fluency'])");
+    run('openLiteracyPillars(trigger)');
+    assert.doesNotMatch(hosts.get('literacy-pillars-context').innerHTML, /<details[^>]* open/);
     assert.equal(run('JSON.stringify({ appState, menuState }) === before'), true);
 });
 
@@ -141,15 +142,20 @@ test('help remains available beside unlocked and inherited locked flowchart pill
     }
 });
 
-test('checklist help is outside checkbox labels and both navigations expose the independent guide', () => {
+test('checklist help is outside checkbox labels and the reference guide is part of Resources', () => {
     const { run } = setup();
     run('appState.visualFlowchart = { checklistChecked: {} }');
     const html = run("renderChecklistBody({ items: ['Review the five pillars of reading.'] })");
     assert.ok(html.indexOf('openLiteracyPillars(this)') > html.lastIndexOf('</label>'));
     const page = read('index.html');
-    assert.match(page, /class="nav-link" data-page="pillars"/);
-    assert.match(page, /class="mobile-nav-item" data-page="pillars"/);
-    assert.match(page, /id="pillars-section"/);
-    assert.match(page, /onclick="openLiteracyPillars\(this, 'toolkit'\)"/);
+    assert.doesNotMatch(page, /data-page="pillars"|id="pillars-section"/);
+    assert.match(page, /class="nav-link" data-page="resources"/);
+    assert.match(page, /class="mobile-nav-item" data-page="resources"/);
+    const resources = page.slice(page.indexOf('<section id="resources-section"'), page.indexOf('<!-- /.resources-page-wrapper -->'));
+    assert.match(resources, /id="resources-pillars-title"/);
+    assert.match(resources, /id="literacy-pillars-reference"/);
+    assert.equal((page.match(/id="literacy-pillars-reference"/g) || []).length, 1);
+    assert.doesNotMatch(page, /Selected pillars are expanded below/);
+    assert.match(page, /onclick="openLiteracyPillars\(this\)"/);
     assert.match(page, /<dialog id="literacy-pillars-dialog".*onkeydown="event.stopPropagation\(\)"/);
 });

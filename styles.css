@@ -1265,12 +1265,36 @@ body.side-nav-collapsed .site-footer { margin-left: var(--side-nav-collapsed-wid
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg) 3rem;
 }
 
 .resources-note {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--text);
   margin: 0;
+}
+
+.resource-group-intro {
+  max-width: 70ch;
+  margin: 0 0 var(--space-md);
+  line-height: 1.6;
+}
+
+.resources-page-body .pillar-definitions {
+  max-width: 75ch;
+}
+
+.resources-page-body .pillar-definition {
+  border-top: 1px solid var(--border);
 }
 
 .resource-group {
@@ -1298,12 +1322,16 @@ body.side-nav-collapsed .site-footer { margin-left: var(--side-nav-collapsed-wid
 
 .resource-link-list {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: var(--space-sm);
 }
 
 .resource-link {
   display: flex;
+  flex: 0 1 28rem;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: var(--space-md);
   padding: var(--space-md);
@@ -1348,6 +1376,7 @@ body.side-nav-collapsed .site-footer { margin-left: var(--side-nav-collapsed-wid
   font-size: 0.95rem;
   font-weight: 600;
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .resource-link-arrow {
@@ -10588,19 +10617,7 @@ body.step-review-modal-open { overflow: hidden; }
   margin-top: 0;
 }
 
-/* Literacy pillar reference and contextual help */
-.pillars-page-wrapper {
-  min-height: calc(100vh - var(--nav-height));
-}
-
-.pillars-page-body {
-  width: 100%;
-  max-width: 900px;
-  margin: 0 auto;
-  padding: var(--space-xl) var(--space-lg) 3rem;
-}
-
-.pillars-page-body > p,
+/* Literacy pillar contextual help */
 .pillar-dialog-body > p {
   color: var(--text-secondary);
   line-height: 1.6;
