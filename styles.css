@@ -10588,6 +10588,104 @@ body.step-review-modal-open { overflow: hidden; }
   margin-top: 0;
 }
 
+/* Literacy pillar reference and contextual help */
+.pillars-page-wrapper {
+  min-height: calc(100vh - var(--nav-height));
+}
+
+.pillars-page-body {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg) 3rem;
+}
+
+.pillars-page-body > p,
+.pillar-dialog-body > p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.pillar-help-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.pillar-help-button {
+  min-height: 44px;
+  padding: 0.5rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.pillar-help-button:hover { background: var(--primary-faint); }
+.pillar-help-button:focus-visible,
+.pillar-definition > summary:focus-visible {
+  outline: 3px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.pillar-definition > summary {
+  min-height: 48px;
+  padding: 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.pillar-definition > p {
+  font-size: 1rem;
+  line-height: 1.7;
+  padding-bottom: 1rem;
+}
+
+.literacy-pillars-dialog {
+  position: fixed;
+  inset: 0 0 0 auto;
+  margin: 0;
+  width: min(560px, 100vw);
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.literacy-pillars-dialog[open] { display: flex; flex-direction: column; }
+.literacy-pillars-dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
+body:has(.literacy-pillars-dialog[open]) { overflow: hidden; }
+.pillar-dialog-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  flex-shrink: 0;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.pillar-dialog-header h2 { font-size: 1.3rem; }
+.pillar-dialog-body { padding: 1rem; overflow-y: auto; overscroll-behavior: contain; }
+
+@media (max-width: 600px) {
+  .literacy-pillars-dialog { width: 100vw; border: 0; }
+}
+
 /* ============================================================
    SCORES & PERCENTILES PAGE
    ============================================================ */
