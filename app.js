@@ -4878,7 +4878,8 @@ function createIntegratedSelectionNode(nodeData) {
         const grade = pathwayContext?.grades?.length ? pathwayContext.grades : normalizeGradeList(remembered.grade);
         const baseState = { tier: tierNum, program: program, resourceType: itemType,
             grade, screener: getPathwayScreenerId() || '' };
-        const pillarValues = distinctTagValues(baseState, 'pillar');
+        const availablePillars = new Set(distinctTagValues(baseState, 'pillar'));
+        const pillarValues = (appState.interventionMenuData?.pillars || []).map(pillar => pillar.name);
         // Interventions start from the pillars chosen in the preceding drill-down.
         const drillDownPillars = multiSelect ? null : getPrecedingDrillDownPillars(nodeData.id);
         const basePillarsKey = (drillDownPillars || []).join('|');
@@ -4892,7 +4893,8 @@ function createIntegratedSelectionNode(nodeData) {
             tier: tierNum,
             program: program,
             resourceType: itemType,
-            pillars: pillars.filter(value => typeof value === 'string' && value),
+            pillars: pillars.filter(value => typeof value === 'string' && value &&
+                (drillDownPillars?.length || availablePillars.has(value))),
             screener: baseState.screener,
             grade,
             nodeId: nodeData.id,
@@ -4907,10 +4909,9 @@ function createIntegratedSelectionNode(nodeData) {
         // opens scoped to this same drilldown if visited right afterwards.
         setRememberedMenuFilters({ tier: tierNum, program: program });
 
-        appState.fwState.pillars.forEach(value => { if (!pillarValues.includes(value)) pillarValues.unshift(value); });
         const pillarOptionsHtml = pillarValues.map(value => `
-            <label class="cal-grade-option">
-                <input type="checkbox" value="${escapeAttr(value)}" ${appState.fwState.pillars.includes(value) ? 'checked' : ''} onchange="fwOnPillarToggle(this.value, this.checked)">
+            <label class="cal-grade-option"${availablePillars.has(value) ? '' : buildUnavailablePillarAttributes(value, baseState)}>
+                <input type="checkbox" value="${escapeAttr(value)}" ${appState.fwState.pillars.includes(value) ? 'checked' : ''}${availablePillars.has(value) ? '' : ' disabled'} onchange="fwOnPillarToggle(this.value, this.checked)">
                 <span>${escapeHtml(translatePillar(value))}</span>
             </label>`).join('');
 
@@ -5028,6 +5029,7 @@ function getFwPillarSummary(pillars) {
 function fwOnPillarToggle(value, checked) {
     const state = appState.fwState;
     if (!state || !value || state.pillarsLocked) return;
+    if (checked && !distinctTagValues(state, 'pillar').includes(value)) return;
     const pillars = state.pillars.filter(pillar => pillar !== value);
     if (checked) pillars.push(value);
     state.pillars = pillars;
@@ -5047,12 +5049,12 @@ function fwLoadResults() {
     if (!resultsEl) return;
 
     const { tier, program, resourceType, pillars, screener, grade, multiSelect } = appState.fwState;
-    if (!pillars.length) {
+    const wizardState = { tier, program, resourceType, pillar: pillars, screener, grade };
+    if (!pillars.length && distinctTagValues(wizardState, 'pillar').length) {
         appState.fwState.selectedIds = [];
         resultsEl.innerHTML = `<div class="fw-no-results"><p>${escapeHtml(t('fw_choose_pillar_prompt'))}</p></div>`;
         return;
     }
-    const wizardState = { tier, program, resourceType, pillar: pillars, screener, grade };
     const filtered = getFilteredResources(wizardState, null);
 
     if (filtered.length === 0) {
@@ -9660,6 +9662,7 @@ function getMenuBaselineState() {
 function getAllMenuFieldValues(field) {
     const baselineState = getMenuBaselineState();
     if (field === 'grade') return distinctGradeValues(baselineState);
+    if (field === 'pillar') return (appState.interventionMenuData?.pillars || []).map(pillar => pillar.name);
     const values = distinctTagValues(baselineState, field);
     return field === 'tier' ? values.map(String) : values;
 }
@@ -9691,6 +9694,19 @@ function buildMultiselectDoneButtonHtml() {
     return `<div class="multiselect-footer"><button type="button" class="multiselect-done-btn" onclick="event.stopPropagation();const dropdown=this.closest('details');dropdown.open=false;dropdown.querySelector('summary').focus();">${escapeHtml(t('multiselect_done'))}</button></div>`;
 }
 
+function buildUnavailablePillarAttributes(value, state) {
+    const filters = [
+        state.program ? `${t('filter_program_label')}: ${state.program}` : '',
+        ...MENU_FILTER_CHIP_FIELDS.filter(field => field.field !== 'pillar').map(field => {
+            const selected = state[field.field];
+            if (!selected || (Array.isArray(selected) && !selected.length)) return '';
+            return `${t(field.labelKey)}: ${field.format ? field.format(selected) : selected}`;
+        })
+    ].filter(Boolean).join('; ');
+    const reason = t('pillar_unavailable')(translatePillar(value), filters);
+    return ` tabindex="0" title="${escapeAttr(reason)}" aria-label="${escapeAttr(reason)}"`;
+}
+
 function renderMenuMultiselectOptions(field, id, translate, placeholderKey) {
     const el = document.getElementById(`filter-${id}-chips`);
     if (!el) return;
@@ -9698,7 +9714,7 @@ function renderMenuMultiselectOptions(field, id, translate, placeholderKey) {
     const available = new Set(getAvailableMenuFieldValues(field));
     const values = getAllMenuFieldValues(field);
     el.innerHTML = '<div class="multiselect-options-list">' + (field === 'pillar' ? fwPillarOrder(values) : values).map(value => `
-        <label class="cal-grade-option">
+        <label class="cal-grade-option"${field === 'pillar' && !available.has(value) ? buildUnavailablePillarAttributes(value, getMenuHigherPriorityState(field)) : ''}>
             <input type="checkbox" data-menu-multiselect="${escapeAttr(field)}" value="${escapeAttr(value)}"${isMenuValueSelected(field, value) ? ' checked' : ''}${available.has(value) ? '' : ' disabled'}>
             <span>${escapeHtml(translate(value))}</span>
         </label>

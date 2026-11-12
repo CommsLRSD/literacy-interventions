@@ -2094,12 +2094,11 @@ details > p {
 .cal-grade-options {
   display: flex;
   flex-direction: column;
-  position: absolute;
-  right: 0;
-  top: calc(100% + 4px);
-  z-index: 20;
+  position: relative;
+  margin-top: 4px;
   min-width: 100%;
   max-height: min(420px, 60vh);
+  max-height: clamp(160px, 60dvh, 420px);
   overflow: hidden;
   padding: 8px;
   border: 1px solid var(--border);
@@ -2121,11 +2120,19 @@ details > p {
   align-items: center;
   gap: 8px;
   padding: 8px;
-  white-space: nowrap;
+  white-space: normal;
   cursor: pointer;
 }
 
+.cal-grade-option:has(input:disabled) {
+  color: var(--text-light);
+  cursor: not-allowed;
+}
+
+.cal-grade-option input:disabled { pointer-events: none; }
+
 .cal-grade-dropdown summary:focus-visible,
+.cal-grade-option:focus-visible,
 .cal-grade-option input:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
