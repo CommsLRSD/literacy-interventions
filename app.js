@@ -9694,6 +9694,83 @@ function buildMultiselectDoneButtonHtml() {
     return `<div class="multiselect-footer"><button type="button" class="multiselect-done-btn" onclick="event.stopPropagation();const dropdown=this.closest('details');dropdown.open=false;dropdown.querySelector('summary').focus();">${escapeHtml(t('multiselect_done'))}</button></div>`;
 }
 
+function positionDropdownMenu(dropdown) {
+    const panel = dropdown.querySelector(':scope > .cal-grade-options');
+    const anchor = dropdown.querySelector('summary').getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const top = (viewport?.offsetTop || 0) + 8;
+    const left = (viewport?.offsetLeft || 0) + 8;
+    const right = left + (viewport?.width || window.innerWidth) - 16;
+    const bottom = top + (viewport?.height || window.innerHeight) - 16;
+    const below = Math.max(0, bottom - anchor.bottom - 4);
+    const above = Math.max(0, anchor.top - top - 4);
+    const opensAbove = below < Math.min(240, above);
+    const width = Math.min(anchor.width, Math.max(0, right - left));
+    const height = Math.min(420, opensAbove ? above : below);
+    panel.toggleAttribute('data-compact-menu', height < 160);
+    panel.style.setProperty('--dropdown-left', `${Math.max(left, Math.min(anchor.left, right - width))}px`);
+    panel.style.setProperty('--dropdown-width', `${width}px`);
+    panel.style.setProperty('--dropdown-height', `${height}px`);
+    panel.style.setProperty('--dropdown-top', opensAbove ? 'auto' : `${Math.max(top, anchor.bottom + 4)}px`);
+    panel.style.setProperty('--dropdown-bottom', opensAbove
+        ? `${window.innerHeight - Math.min(bottom, anchor.top - 4)}px` : 'auto');
+}
+
+function setupDropdownMenus() {
+    const close = dropdown => {
+        const panel = dropdown.querySelector(':scope > .cal-grade-options');
+        if (typeof panel?.hidePopover === 'function' && panel.matches(':popover-open')) panel.hidePopover();
+        dropdown.open = false;
+    };
+    const openDropdowns = () => document.querySelectorAll('.cal-grade-dropdown[open]');
+    document.addEventListener('toggle', event => {
+        const dropdown = event.target;
+        if (!dropdown.matches('.cal-grade-dropdown')) return;
+        const panel = dropdown.querySelector(':scope > .cal-grade-options');
+        if (!dropdown.open) {
+            close(dropdown);
+            return;
+        }
+        openDropdowns().forEach(other => { if (other !== dropdown) close(other); });
+        panel.setAttribute('data-floating-menu', '');
+        positionDropdownMenu(dropdown);
+        // The top layer escapes clipping and stacking contexts without moving the menu in the DOM.
+        if (typeof panel.showPopover === 'function') {
+            panel.setAttribute('popover', 'manual');
+            if (!panel.matches(':popover-open')) panel.showPopover();
+        }
+    }, true);
+    const reposition = event => {
+        openDropdowns().forEach(dropdown => {
+            const panel = dropdown.querySelector(':scope > .cal-grade-options');
+            if (panel.contains(event.target)) return;
+            const anchor = dropdown.querySelector('summary').getBoundingClientRect();
+            if (!dropdown.getClientRects().length || anchor.bottom <= 0 || anchor.top >= window.innerHeight) {
+                close(dropdown);
+            } else {
+                positionDropdownMenu(dropdown);
+            }
+        });
+    };
+    document.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    window.visualViewport?.addEventListener('resize', reposition);
+    window.visualViewport?.addEventListener('scroll', reposition);
+    document.addEventListener('click', event => {
+        openDropdowns().forEach(dropdown => { if (!dropdown.contains(event.target)) close(dropdown); });
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key !== 'Escape') return;
+        openDropdowns().forEach(dropdown => {
+            event.preventDefault();
+            close(dropdown);
+            dropdown.querySelector('summary').focus();
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', setupDropdownMenus);
+
 function buildUnavailablePillarAttributes(value, state) {
     const filters = [
         state.program ? `${t('filter_program_label')}: ${state.program}` : '',

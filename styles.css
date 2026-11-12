@@ -2094,11 +2094,12 @@ details > p {
 .cal-grade-options {
   display: flex;
   flex-direction: column;
-  position: relative;
-  margin-top: 4px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
   min-width: 100%;
   max-height: min(420px, 60vh);
-  max-height: clamp(160px, 60dvh, 420px);
   overflow: hidden;
   padding: 8px;
   border: 1px solid var(--border);
@@ -2106,7 +2107,26 @@ details > p {
   background: var(--bg);
   box-shadow: var(--shadow-md);
 }
+
+.cal-grade-dropdown > .cal-grade-options[data-floating-menu] {
+  position: fixed;
+  inset: auto;
+  top: var(--dropdown-top, auto);
+  bottom: var(--dropdown-bottom, auto);
+  left: var(--dropdown-left);
+  width: var(--dropdown-width);
+  min-width: 0;
+  max-width: none;
+  max-height: var(--dropdown-height);
+  margin: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.cal-grade-options[popover]:not(:popover-open) { display: none; }
 .multiselect-options-list { min-height: 0; overflow-y: auto; }
+/* In very short menus, scroll the whole panel rather than squeezing the options out. */
+.cal-grade-options[data-compact-menu] .multiselect-options-list { flex-shrink: 0; }
 .multiselect-footer {
   flex-shrink: 0;
   display: flex;
