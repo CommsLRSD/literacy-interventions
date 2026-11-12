@@ -40,7 +40,7 @@ function setup() {
     return { hosts, run, json };
 }
 
-test('the unfiltered table includes every resource once, independent of guided selections', () => {
+test('with no program selected the unfiltered table includes every resource once', () => {
     const { run, json } = setup();
     run(`
         Object.assign(menuState, { program: 'English', pillar: ['Phonics'], tier: '2', resourceType: 'Intervention' });
@@ -52,6 +52,54 @@ test('the unfiltered table includes every resource once, independent of guided s
     assert.equal(new Set(rows).size, rows.length);
     assert.ok(rows.includes(run("getAllResources().find(item => item.tags.every(tag => tag.program === 'French Immersion')).id")));
     assert.equal(run('before === JSON.stringify({ menuState, fwState: appState.fwState, remembered: appState.rememberedMenuFilters })'), true);
+});
+
+test('the table follows program selection changes while preserving manual filters until the program changes', () => {
+    const { run, json, hosts } = setup();
+    const layout = { hidden: false, querySelectorAll: () => [] };
+    const table = { hidden: true };
+    const toggle = { setAttribute() {} };
+    hosts.set('interventions-menu-layout', layout);
+    hosts.set('toolkit-table-view', table);
+    hosts.set('toolkit-view-toggle', toggle);
+    run(`
+        appState.interventionMenuData.resources = [
+            { id: 'en', name: 'English', tags: [{ program: 'English', pillar: 'Phonics' }] },
+            { id: 'fr', name: 'French', tags: [{ program: 'French Immersion', pillar: 'Phonics' }] },
+            { id: 'both', name: 'Both', tags: [
+                { program: 'English', pillar: 'Phonics', urls: ['https://example.org/en'] },
+                { program: 'French Immersion', pillar: 'Vocabulary', urls: ['https://example.org/fr'] }
+            ] }
+        ];
+        appState.selectedProgram = PROGRAM_ENGLISH;
+        menuState.pillar = ['Vocabulary'];
+        setToolkitView('table');
+    `);
+    assert.deepEqual(json('toolkitTableState.filters.program'), ['English']);
+    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['both', 'en']);
+    assert.match(hosts.get('toolkit-table-head').innerHTML, /type="checkbox" value="English" checked/);
+    assert.match(hosts.get('toolkit-table-body').innerHTML, /href="https:\/\/example.org\/en"/);
+    assert.doesNotMatch(hosts.get('toolkit-table-body').innerHTML, /href="https:\/\/example.org\/fr"/);
+    run("clearToolkitColumnFilter('program'); setToolkitView('guided'); setToolkitView('table')");
+    assert.equal(run('getToolkitTableRows().length'), 3);
+    run(`
+        onToolkitTableFilterChange('pillar', 'Phonics', true);
+        storeProgramPreference = () => {};
+        applyTranslations = () => {};
+        updateTopProgramLangControls = () => {};
+        rerenderForLanguage = () => renderToolkitTable();
+        applyProgramAcrossApp = () => {};
+        finalizeProgramSelection(PROGRAM_FRENCH_IMMERSION, 'fr');
+    `);
+    assert.deepEqual(json('toolkitTableState.filters'), { pillar: ['Phonics'], program: ['French Immersion'] });
+    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['fr']);
+    assert.match(hosts.get('toolkit-table-head').innerHTML, /type="checkbox" value="French Immersion" checked/);
+    assert.deepEqual(json('menuState.pillar'), ['Vocabulary']);
+    run("resetToolkitTableFilters(); setToolkitView('guided'); setToolkitView('table')");
+    assert.equal(run('getToolkitTableRows().length'), 3);
+    run("finalizeProgramSelection(PROGRAM_ENGLISH, 'en'); appState.selectedProgram = null; setToolkitView('table')");
+    assert.equal(run("'program' in toolkitTableState.filters"), false);
+    assert.equal(run('getToolkitTableRows().length'), 3);
 });
 
 test('the view switch toggles the opt-in table and back while preserving guided selections', () => {
@@ -107,7 +155,12 @@ test('column filters allow several values per column, match any of them, and com
     assert.match(head, /toolkit-column-filter is-active" data-field="pillar"/);
     assert.match(head, /aria-label="Filter Literacy Pillar \(2 selected\)"|aria-label="Filter [^"]+ \(2 selected\)"/);
     assert.match(head, /type="checkbox" value="Vocabulary" checked/);
-    assert.match(head, /onclick="sortToolkitTable\('pillar'\)"/);
+    for (const field of ['program', 'pillar', 'tier', 'grade', 'screener']) {
+        assert.doesNotMatch(head, new RegExp(`onclick="sortToolkitTable\\('${field}'\\)"`));
+        assert.match(head, new RegExp(`data-field="${field}"`));
+    }
+    assert.match(head, /onclick="sortToolkitTable\('name'\)"/);
+    assert.match(head, /onclick="sortToolkitTable\('resourceType'\)"/);
 });
 
 test('table filters must match the same tag and metadata and links only use matching tags', () => {
@@ -133,13 +186,13 @@ test('table filters must match the same tag and metadata and links only use matc
     assert.doesNotMatch(hosts.get('toolkit-table-body').innerHTML, /href="https:\/\/example.org\/en"/);
 });
 
-test('table sorting toggles direction, uses numeric grade order, and reports the active sort accessibly', () => {
+test('sortable columns toggle direction and report the active sort accessibly', () => {
     const { run, json, hosts } = setup();
     run(`
         appState.interventionMenuData.resources = [
-            { id: '10', name: 'Resource 10', tags: [{ gradeFilter: ['10'] }] },
-            { id: '2', name: 'Resource 2', tags: [{ gradeFilter: ['2'] }] },
-            { id: 'K', name: 'Resource K', tags: [{ gradeFilter: ['K'] }] }
+            { id: '10', name: 'Resource 10', tags: [{ resourceType: 'Intervention' }] },
+            { id: '2', name: 'Resource 2', tags: [{ resourceType: 'Assessment' }] },
+            { id: 'K', name: 'Resource K', tags: [{ resourceType: 'Assessment' }] }
         ];
     `);
     assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['2', '10', 'K']);
@@ -147,9 +200,10 @@ test('table sorting toggles direction, uses numeric grade order, and reports the
     assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['K', '10', '2']);
     assert.match(hosts.get('toolkit-table-head').innerHTML, /aria-sort="descending"/);
     run("sortToolkitTable('grade')");
-    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['K', '2', '10']);
-    run("sortToolkitTable('grade')");
-    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['10', '2', 'K']);
+    assert.equal(run('toolkitTableState.sort'), 'name');
+    run("sortToolkitTable('resourceType')");
+    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['2', 'K', '10']);
+    assert.match(hosts.get('toolkit-table-head').innerHTML, /aria-sort="ascending"/);
 });
 
 test('resource menu filters or sorts recommendations using matching tags and resets', () => {

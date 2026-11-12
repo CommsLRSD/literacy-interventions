@@ -1281,6 +1281,7 @@ function openProgramLanguagePrompt(program, onComplete, options = {}) {
 
 function finalizeProgramSelection(program, language) {
     appState.selectedProgram = program;
+    syncToolkitTableProgram();
     appState.selectedScreener = null;
     appState.language = normalizeProgramLanguage(program, language || (program === PROGRAM_FRENCH_IMMERSION ? 'fr' : 'en'));
     storeProgramPreference();
@@ -9961,17 +9962,25 @@ function buildResourceCardHtml(item, state = menuState) {
 }
 
 const toolkitTableState = { filters: {}, search: '', recommendation: 'all', sort: 'name', direction: 'ascending' };
+let toolkitTableProgram;
 const TOOLKIT_TABLE_COLUMNS = [
-    { field: 'name', labelKey: 'notes_resource' },
+    { field: 'name', labelKey: 'notes_resource', sortable: true },
     { field: 'program', labelKey: 'filter_program_label', format: value =>
         value === PROGRAM_ENGLISH ? t('fc_program_english')
             : value === PROGRAM_FRENCH_IMMERSION ? t('fc_program_french_immersion') : value },
-    { field: 'resourceType', labelKey: 'filter_type_label', format: translateResourceType },
+    { field: 'resourceType', labelKey: 'filter_type_label', format: translateResourceType, sortable: true },
     { field: 'pillar', labelKey: 'filter_pillar_label', format: translatePillar },
     { field: 'tier', labelKey: 'filter_tier_label', format: value => t('filter_tier_option')(value) },
     { field: 'grade', labelKey: 'filter_grades_label', format: translateGrade },
     { field: 'screener', labelKey: 'filter_screener_label', format: translateScreener }
 ];
+
+function syncToolkitTableProgram() {
+    if (toolkitTableProgram === appState.selectedProgram) return;
+    toolkitTableProgram = appState.selectedProgram;
+    if (toolkitTableProgram) toolkitTableState.filters.program = [toolkitTableProgram];
+    else delete toolkitTableState.filters.program;
+}
 
 function setToolkitView(view) {
     const table = view === 'table';
@@ -9980,6 +9989,7 @@ function setToolkitView(view) {
     document.getElementById('toolkit-table-view').hidden = !table;
     document.getElementById('toolkit-view-toggle').setAttribute('aria-checked', String(table));
     if (table) {
+        syncToolkitTableProgram();
         layout.querySelectorAll('.cal-grade-dropdown[open]').forEach(dropdown => { dropdown.open = false; });
         renderToolkitTable();
     }
@@ -10036,14 +10046,13 @@ function getToolkitTableRows() {
         });
         const notes = uniqueSorted(tags.map(tag => tag.notes)).join('; ');
         const subtests = uniqueSorted(tags.flatMap(tag => tag.subtests || [])).join(', ');
-        const gradeOrder = grades.length ? GRADE_SORT_ORDER.indexOf(grades[0]) : GRADE_SORT_ORDER.length;
-        return { item, values, notes, subtests, gradeOrder, grades, recommended: isRecommendedResource(item, filters) };
+        return { item, values, notes, subtests, grades, recommended: isRecommendedResource(item, filters) };
     }).filter(row => !query || [...Object.values(row.values), ...row.grades.map(translateGrade), row.notes, row.subtests]
         .join(' ').toLocaleLowerCase(appState.language).includes(query));
     const compare = new Intl.Collator(appState.language, { numeric: true, sensitivity: 'base' }).compare;
     const sign = direction === 'ascending' ? 1 : -1;
-    return rows.sort((a, b) => (recommendation === 'first' ? Number(b.recommended) - Number(a.recommended) : 0) || sign * (sort === 'grade'
-        ? a.gradeOrder - b.gradeOrder : compare(a.values[sort], b.values[sort])) ||
+    return rows.sort((a, b) => (recommendation === 'first' ? Number(b.recommended) - Number(a.recommended) : 0) ||
+        sign * compare(a.values[sort], b.values[sort]) ||
         compare(a.item.name, b.item.name) || compare(a.item.id, b.item.id));
 }
 
@@ -10085,9 +10094,9 @@ function renderToolkitTableHead() {
     if (!head) return;
     head.innerHTML = `<tr>${TOOLKIT_TABLE_COLUMNS.map(column => {
         const selected = toolkitTableState.sort === column.field;
-        return `<th scope="col" aria-sort="${selected ? (toolkitTableState.recommendation === 'first' ? 'other' : toolkitTableState.direction) : 'none'}">
+        return `<th scope="col"${column.sortable ? ` aria-sort="${selected ? (toolkitTableState.recommendation === 'first' ? 'other' : toolkitTableState.direction) : 'none'}"` : ''}>
             <div class="toolkit-th">
-                <button type="button" class="toolkit-sort-btn" data-field="${column.field}" onclick="sortToolkitTable('${column.field}')">${escapeHtml(t(column.labelKey))}<span aria-hidden="true">${selected ? (toolkitTableState.direction === 'ascending' ? '&#8593;' : '&#8595;') : '&#8597;'}</span></button>
+                ${column.sortable ? `<button type="button" class="toolkit-sort-btn" data-field="${column.field}" onclick="sortToolkitTable('${column.field}')">${escapeHtml(t(column.labelKey))}<span aria-hidden="true">${selected ? (toolkitTableState.direction === 'ascending' ? '&#8593;' : '&#8595;') : '&#8597;'}</span></button>` : `<span class="toolkit-column-label">${escapeHtml(t(column.labelKey))}</span>`}
                 ${buildToolkitColumnFilterHtml(column)}
             </div>
         </th>`;
@@ -10159,6 +10168,7 @@ function onToolkitTableSearch(value) {
 }
 
 function sortToolkitTable(field) {
+    if (!TOOLKIT_TABLE_COLUMNS.some(column => column.field === field && column.sortable)) return;
     toolkitTableState.direction = toolkitTableState.sort === field && toolkitTableState.direction === 'ascending'
         ? 'descending' : 'ascending';
     toolkitTableState.sort = field;
