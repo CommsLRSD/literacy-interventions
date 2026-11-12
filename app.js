@@ -939,6 +939,8 @@ function rerenderForLanguage() {
 function refreshWizardSelectPlaceholders() {
     if (document.getElementById('menu-search-panel')) {
         refreshMenuUI();
+        renderToolkitTableFilters();
+        renderToolkitTable();
     }
 }
 
@@ -9960,6 +9962,128 @@ function buildResourceCardHtml(item, state = menuState) {
     `;
 }
 
+const toolkitTableState = { filters: {}, search: '', sort: 'name', direction: 'ascending' };
+const TOOLKIT_TABLE_COLUMNS = [
+    { field: 'name', labelKey: 'notes_resource' },
+    { field: 'program', labelKey: 'filter_program_label', format: value =>
+        value === PROGRAM_ENGLISH ? t('fc_program_english')
+            : value === PROGRAM_FRENCH_IMMERSION ? t('fc_program_french_immersion') : value },
+    { field: 'resourceType', labelKey: 'filter_type_label', format: translateResourceType },
+    { field: 'pillar', labelKey: 'filter_pillar_label', format: translatePillar },
+    { field: 'tier', labelKey: 'filter_tier_label', format: value => t('filter_tier_option')(value) },
+    { field: 'grade', labelKey: 'filter_grades_label', format: translateGrade },
+    { field: 'screener', labelKey: 'filter_screener_label', format: translateScreener },
+    { field: 'evidence', labelKey: 'filter_evidence_label', format: translateEvidence }
+];
+
+function setToolkitView(view) {
+    const table = view === 'table';
+    const layout = document.getElementById('interventions-menu-layout');
+    layout.hidden = table;
+    document.getElementById('toolkit-table-view').hidden = !table;
+    document.getElementById('toolkit-guided-view-button').setAttribute('aria-pressed', String(!table));
+    document.getElementById('toolkit-table-view-button').setAttribute('aria-pressed', String(table));
+    if (table) {
+        layout.querySelectorAll('.cal-grade-dropdown[open]').forEach(dropdown => { dropdown.open = false; });
+        renderToolkitTableFilters();
+        renderToolkitTable();
+    }
+}
+
+function getToolkitTableRows() {
+    const { filters, search, sort, direction } = toolkitTableState;
+    const query = search.trim().toLocaleLowerCase(appState.language);
+    const rows = getFilteredResources(filters).map(item => {
+        const tags = getMatchingTags(item, filters);
+        const grades = normalizeGradeList(tags.flatMap(tag => tag.gradeFilter || []));
+        const values = { name: item.name };
+        TOOLKIT_TABLE_COLUMNS.slice(1).forEach(column => {
+            if (column.field === 'grade') {
+                values.grade = grades.map(translateGrade).join(', ');
+                return;
+            }
+            const raw = column.field === 'screener'
+                ? tags.flatMap(tag => tag.screeners?.length ? tag.screeners : [NO_SPECIFIC_SCREENER_VALUE])
+                : tags.map(tag => tag[column.field]);
+            values[column.field] = uniqueSorted(raw.map(value => String(value || '')).filter(Boolean))
+                .map(column.format || (value => value)).join(', ');
+        });
+        const notes = uniqueSorted(tags.map(tag => tag.notes)).join('; ');
+        const subtests = uniqueSorted(tags.flatMap(tag => tag.subtests || [])).join(', ');
+        const gradeOrder = grades.length ? GRADE_SORT_ORDER.indexOf(grades[0]) : GRADE_SORT_ORDER.length;
+        return { item, values, notes, subtests, gradeOrder };
+    }).filter(row => !query || [...Object.values(row.values), row.notes, row.subtests]
+        .join(' ').toLocaleLowerCase(appState.language).includes(query));
+    const compare = new Intl.Collator(appState.language, { numeric: true, sensitivity: 'base' }).compare;
+    const sign = direction === 'ascending' ? 1 : -1;
+    return rows.sort((a, b) => sign * (sort === 'grade'
+        ? a.gradeOrder - b.gradeOrder : compare(a.values[sort], b.values[sort])) ||
+        compare(a.item.name, b.item.name) || compare(a.item.id, b.item.id));
+}
+
+function renderToolkitTableFilters() {
+    const host = document.getElementById('toolkit-table-filters');
+    if (!host) return;
+    const fields = [...TOOLKIT_TABLE_COLUMNS.slice(1), { field: 'subtest', labelKey: 'filter_subtest_label' }];
+    host.innerHTML = fields.map(column => {
+        const values = column.field === 'grade' ? distinctGradeValues({}) : distinctTagValues({}, column.field);
+        return `<label>${escapeHtml(t(column.labelKey))}
+            <select class="fw-select" data-field="${escapeAttr(column.field)}" onchange="onToolkitTableFilterChange(this.dataset.field, this.value)">
+                <option value="">${escapeHtml(t('toolkit_table_all'))}</option>
+                ${values.map(value => `<option value="${escapeAttr(value)}"${String(toolkitTableState.filters[column.field] || '') === String(value) ? ' selected' : ''}>${escapeHtml(column.format ? column.format(value) : value)}</option>`).join('')}
+            </select>
+        </label>`;
+    }).join('');
+}
+
+function renderToolkitTable() {
+    const body = document.getElementById('toolkit-table-body');
+    if (!body) return;
+    document.getElementById('toolkit-table-head').innerHTML = `<tr>${TOOLKIT_TABLE_COLUMNS.map(column => {
+        const selected = toolkitTableState.sort === column.field;
+        return `<th scope="col" aria-sort="${selected ? toolkitTableState.direction : 'none'}">
+            <button type="button" onclick="sortToolkitTable('${column.field}')">${escapeHtml(t(column.labelKey))}<span aria-hidden="true">${selected ? (toolkitTableState.direction === 'ascending' ? '&#8593;' : '&#8595;') : '&#8597;'}</span></button>
+        </th>`;
+    }).join('')}<th scope="col">${escapeHtml(t('toolkit_table_links'))}</th></tr>`;
+    const rows = getToolkitTableRows();
+    document.getElementById('toolkit-table-count').textContent = t('filter_results_label')(rows.length);
+    body.innerHTML = !appState.interventionMenuDataLoaded
+        ? `<tr><td colspan="9" role="alert">${escapeHtml(t('toolkit_table_load_error'))}</td></tr>`
+        : rows.length ? rows.map(row => `<tr data-resource-id="${escapeAttr(row.item.id)}">
+            ${TOOLKIT_TABLE_COLUMNS.map(column => `<td>${escapeHtml(row.values[column.field])}${column.field === 'name'
+                ? `${buildResourceRecommendationBadgeHtml(row.item, toolkitTableState.filters)}${row.notes ? `<small class="toolkit-table-notes">${escapeHtml(row.notes)}</small>` : ''}` : ''}</td>`).join('')}
+            <td><div class="toolkit-table-links">${buildFavouriteButtonHtml(row.item)}${buildResourceLinksHtml(row.item, toolkitTableState.filters)}</div></td>
+        </tr>`).join('')
+            : `<tr><td colspan="9">${escapeHtml(t('filter_results_none'))}</td></tr>`;
+}
+
+function onToolkitTableFilterChange(field, value) {
+    toolkitTableState.filters[field] = value;
+    renderToolkitTable();
+}
+
+function onToolkitTableSearch(value) {
+    toolkitTableState.search = value;
+    renderToolkitTable();
+}
+
+function sortToolkitTable(field) {
+    toolkitTableState.direction = toolkitTableState.sort === field && toolkitTableState.direction === 'ascending'
+        ? 'descending' : 'ascending';
+    toolkitTableState.sort = field;
+    renderToolkitTable();
+    const index = TOOLKIT_TABLE_COLUMNS.findIndex(column => column.field === field);
+    document.querySelectorAll('#toolkit-table-head button')[index]?.focus();
+}
+
+function resetToolkitTableFilters() {
+    toolkitTableState.filters = {};
+    toolkitTableState.search = '';
+    document.getElementById('toolkit-table-search').value = '';
+    renderToolkitTableFilters();
+    renderToolkitTable();
+}
+
 // Fields shown in the criteria summary row above the results, in display
 // order. Their values are buttons so each filter can be changed on its own.
 const MENU_FILTER_CHIP_FIELDS = [
@@ -10262,6 +10386,7 @@ function initializeInterventionsFilterMenu() {
         menuUiState.initialized = true;
     }
     applyRememberedFiltersToMenu();
+    setToolkitView('guided');
 }
 
 // ============================================

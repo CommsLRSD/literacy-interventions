@@ -7907,6 +7907,56 @@ body.step-review-modal-open { overflow: hidden; }
   gap: var(--space-lg);
 }
 
+.interventions-page-layout[hidden],
+#toolkit-table-view[hidden] { display: none; }
+
+.interventions-page-body:has(#toolkit-table-view:not([hidden])) { max-width: 1500px; }
+
+.toolkit-view-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-lg);
+}
+
+.toolkit-view-switch button {
+  padding: 0.6rem 1rem;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.toolkit-view-switch button[aria-pressed="true"] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.toolkit-table-hint { margin: var(--space-sm) 0 var(--space-lg); color: var(--text-secondary); }
+.toolkit-table-search { display: grid; gap: var(--space-xs); margin-bottom: var(--space-md); }
+.toolkit-table-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-md); }
+.toolkit-table-filters label { display: grid; gap: var(--space-xs); font-size: 0.85rem; }
+.toolkit-table-filters select { min-width: 0; }
+.toolkit-table-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); margin: var(--space-md) 0; }
+.toolkit-table-scroll { max-width: 100%; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.toolkit-resource-table { width: 100%; min-width: 1100px; border-collapse: collapse; font-size: 0.85rem; }
+.toolkit-resource-table th,
+.toolkit-resource-table td { padding: 0.75rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+.toolkit-resource-table th { background: var(--bg-alt); }
+.toolkit-resource-table th button { display: flex; gap: 0.4rem; width: 100%; min-height: 44px; align-items: center; background: none; border: 0; padding: 0; color: var(--primary); font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.toolkit-resource-table tbody tr:nth-child(even) { background: var(--bg-alt); }
+.toolkit-resource-table td:first-child { min-width: 220px; }
+.toolkit-resource-table td:last-child { min-width: 110px; }
+.toolkit-table-notes { display: block; margin-top: var(--space-xs); color: var(--text-secondary); overflow-wrap: anywhere; }
+.toolkit-table-links { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+.toolkit-view-switch button:focus-visible,
+.toolkit-table-scroll:focus-visible,
+.toolkit-resource-table th button:focus-visible { outline: 3px solid var(--border-focus); outline-offset: 2px; }
+
 /* ── Search panel (the main area used to build a search) ─────────────── */
 .menu-view-search .menu-search-panel {
   display: block;
