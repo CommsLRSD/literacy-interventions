@@ -577,7 +577,12 @@
                         </div>
                         <div class="toolkit-table-toolbar">
                             <p id="toolkit-table-count" role="status" aria-live="polite"></p>
-                            <button type="button" class="filter-clear-btn" onclick="resetToolkitTableFilters()" data-i18n="wizard_start_over">Clear Filters</button>
+                            <label class="toolkit-table-recommended">
+                                <input type="checkbox" id="toolkit-table-recommended" onchange="onToolkitTableRecommendedChange(this.checked)">
+                                <span class="resource-recommended-badge" aria-hidden="true">★</span>
+                                <span data-i18n="toolkit_table_recommended_only">Recommended only</span>
+                            </label>
+                            <button type="button" class="filter-clear-btn toolkit-table-clear" onclick="resetToolkitTableFilters()" data-i18n="wizard_start_over">Clear Filters</button>
                         </div>
                         <div class="toolkit-table-scroll" role="region" aria-label="All resources" data-i18n-aria="toolkit_table_title" tabindex="0">
                             <table class="toolkit-resource-table">

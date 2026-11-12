@@ -7964,7 +7964,11 @@ body.step-review-modal-open { overflow: hidden; }
 
 .toolkit-table-hint { margin: var(--space-sm) 0 var(--space-lg); color: var(--text-secondary); }
 .toolkit-table-search { display: grid; gap: var(--space-xs); margin-bottom: var(--space-md); }
-.toolkit-table-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-md); margin: var(--space-md) 0; }
+.toolkit-table-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-md); margin: var(--space-md) 0; }
+.toolkit-table-toolbar p { margin: 0; }
+.toolkit-table-recommended { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 44px; font-size: 0.85rem; cursor: pointer; }
+.toolkit-table-recommended input { width: 18px; height: 18px; margin: 0; accent-color: var(--primary); }
+.toolkit-table-clear { margin-left: auto; }
 .toolkit-table-scroll { max-width: 100%; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); }
 .toolkit-resource-table { width: 100%; min-width: 1100px; border-collapse: collapse; font-size: 0.85rem; }
 .toolkit-resource-table th,

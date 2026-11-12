@@ -9957,7 +9957,7 @@ function buildResourceCardHtml(item, state = menuState) {
     `;
 }
 
-const toolkitTableState = { filters: {}, search: '', sort: 'name', direction: 'ascending' };
+const toolkitTableState = { filters: {}, search: '', recommendedOnly: false, sort: 'name', direction: 'ascending' };
 const TOOLKIT_TABLE_COLUMNS = [
     { field: 'name', labelKey: 'notes_resource' },
     { field: 'program', labelKey: 'filter_program_label', format: value =>
@@ -9967,8 +9967,7 @@ const TOOLKIT_TABLE_COLUMNS = [
     { field: 'pillar', labelKey: 'filter_pillar_label', format: translatePillar },
     { field: 'tier', labelKey: 'filter_tier_label', format: value => t('filter_tier_option')(value) },
     { field: 'grade', labelKey: 'filter_grades_label', format: translateGrade },
-    { field: 'screener', labelKey: 'filter_screener_label', format: translateScreener },
-    { field: 'evidence', labelKey: 'filter_evidence_label', format: translateEvidence }
+    { field: 'screener', labelKey: 'filter_screener_label', format: translateScreener }
 ];
 
 function setToolkitView(view) {
@@ -10000,7 +9999,8 @@ function getToolkitTableRows() {
     const { search, sort, direction } = toolkitTableState;
     const { name: names = [], ...filters } = toolkitTableState.filters;
     const query = search.trim().toLocaleLowerCase(appState.language);
-    const rows = getFilteredResources(filters).filter(item => !names.length || names.includes(item.name)).map(item => {
+    const rows = getFilteredResources(filters).filter(item => (!names.length || names.includes(item.name)) &&
+        (!toolkitTableState.recommendedOnly || isRecommendedResource(item, filters))).map(item => {
         const tags = getMatchingTags(item, filters);
         const grades = normalizeGradeList(tags.flatMap(tag => tag.gradeFilter || []));
         const values = { name: item.name };
@@ -10075,13 +10075,13 @@ function renderToolkitTableBody() {
     const rows = getToolkitTableRows();
     document.getElementById('toolkit-table-count').textContent = t('filter_results_label')(rows.length);
     body.innerHTML = !appState.interventionMenuDataLoaded
-        ? `<tr><td colspan="9" role="alert">${escapeHtml(t('toolkit_table_load_error'))}</td></tr>`
+        ? `<tr><td colspan="${TOOLKIT_TABLE_COLUMNS.length + 1}" role="alert">${escapeHtml(t('toolkit_table_load_error'))}</td></tr>`
         : rows.length ? rows.map(row => `<tr data-resource-id="${escapeAttr(row.item.id)}">
             ${TOOLKIT_TABLE_COLUMNS.map(column => `<td>${escapeHtml(row.values[column.field])}${column.field === 'name'
                 ? `${buildResourceRecommendationBadgeHtml(row.item, filters)}${row.notes ? `<small class="toolkit-table-notes">${escapeHtml(row.notes)}</small>` : ''}` : ''}</td>`).join('')}
             <td><div class="toolkit-table-links">${buildFavouriteButtonHtml(row.item)}${buildResourceLinksHtml(row.item, filters)}</div></td>
         </tr>`).join('')
-            : `<tr><td colspan="9">${escapeHtml(t('filter_results_none'))}</td></tr>`;
+            : `<tr><td colspan="${TOOLKIT_TABLE_COLUMNS.length + 1}">${escapeHtml(t('filter_results_none'))}</td></tr>`;
 }
 
 function renderToolkitTable() {
@@ -10118,6 +10118,11 @@ function clearToolkitColumnFilter(field) {
     renderToolkitTableBody();
 }
 
+function onToolkitTableRecommendedChange(checked) {
+    toolkitTableState.recommendedOnly = checked;
+    renderToolkitTableBody();
+}
+
 function onToolkitTableSearch(value) {
     toolkitTableState.search = value;
     renderToolkitTableBody();
@@ -10134,7 +10139,10 @@ function sortToolkitTable(field) {
 function resetToolkitTableFilters() {
     toolkitTableState.filters = {};
     toolkitTableState.search = '';
+    toolkitTableState.recommendedOnly = false;
     document.getElementById('toolkit-table-search').value = '';
+    const recommended = document.getElementById('toolkit-table-recommended');
+    if (recommended) recommended.checked = false;
     renderToolkitTable();
 }
 

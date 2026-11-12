@@ -104,12 +104,12 @@ test('column filters allow several values per column, match any of them, and com
     assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['b', 'c']);
     run("renderToolkitTable()");
     const head = hosts.get('toolkit-table-head').innerHTML;
-    assert.equal((head.match(/class="cal-grade-dropdown toolkit-column-filter/g) || []).length, 8);
+    assert.equal((head.match(/class="cal-grade-dropdown toolkit-column-filter/g) || []).length, 7);
+    assert.doesNotMatch(head, /data-field="evidence"/);
     assert.match(head, /toolkit-column-filter is-active" data-field="pillar"/);
     assert.match(head, /aria-label="Filter Literacy Pillar \(2 selected\)"|aria-label="Filter [^"]+ \(2 selected\)"/);
     assert.match(head, /type="checkbox" value="Vocabulary" checked/);
     assert.match(head, /onclick="sortToolkitTable\('pillar'\)"/);
-    assert.match(head, /data-field="evidence"[\s\S]*?No values to filter in this column/);
 });
 
 test('table filters must match the same tag and metadata and links only use matching tags', () => {
@@ -152,6 +152,24 @@ test('table sorting toggles direction, uses numeric grade order, and reports the
     assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['K', '2', '10']);
     run("sortToolkitTable('grade')");
     assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['10', '2', 'K']);
+});
+
+test('recommended-only uses tags matching the column filters and is cleared by Clear Filters', () => {
+    const { run, json, hosts } = setup();
+    run(`
+        appState.interventionMenuData.resources = [
+            { id: 'rec', name: 'Rec', tags: [{ pillar: 'Phonics', recommended: true }, { pillar: 'Vocabulary' }] },
+            { id: 'plain', name: 'Plain', tags: [{ pillar: 'Phonics' }] }
+        ];
+        onToolkitTableRecommendedChange(true);
+    `);
+    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['rec']);
+    run("onToolkitTableFilterChange('pillar', 'Vocabulary', true)");
+    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), []);
+    assert.match(hosts.get('toolkit-table-body').innerHTML, /colspan="8"/);
+    run('resetToolkitTableFilters()');
+    assert.equal(run('toolkitTableState.recommendedOnly'), false);
+    assert.equal(run('getToolkitTableRows().length'), 2);
 });
 
 test('search includes notes and subtests and no-match filters remain clearable without changing guided state', () => {
