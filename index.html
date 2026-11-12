@@ -479,6 +479,13 @@
                 </div>
 
                 <div class="interventions-page-body">
+                    <div class="toolkit-view-switch">
+                        <button type="button" id="toolkit-view-toggle" class="toolkit-view-toggle" role="switch" aria-checked="false" aria-label="All resources table" data-i18n-aria="toolkit_view_table" aria-controls="interventions-menu-layout toolkit-table-view" onclick="toggleToolkitView()">
+                            <span class="toolkit-view-toggle-label" data-i18n="toolkit_view_guided">Step by step</span>
+                            <span class="toolkit-view-toggle-track" aria-hidden="true"><span class="toolkit-view-toggle-thumb"></span></span>
+                            <span class="toolkit-view-toggle-label" data-i18n="toolkit_view_table">All resources table</span>
+                        </button>
+                    </div>
                     <div class="interventions-page-layout menu-view-search" id="interventions-menu-layout">
 
                     <div id="menu-criteria-bar" class="menu-criteria-bar">
@@ -560,6 +567,31 @@
                     </div><!-- /.interventions-results-panel -->
 
                     </div><!-- /.interventions-page-layout -->
+
+                    <section id="toolkit-table-view" aria-labelledby="toolkit-table-title" hidden>
+                        <h3 id="toolkit-table-title" data-i18n="toolkit_table_title">All resources</h3>
+                        <p class="toolkit-table-hint" data-i18n="toolkit_table_hint">Browse all programs. Select a column heading to sort, or its arrow to filter. These filters do not change your step-by-step selections.</p>
+                        <div class="toolkit-table-search">
+                            <label for="toolkit-table-search" data-i18n="filter_search_label">Search</label>
+                            <input id="toolkit-table-search" class="filter-search-input" type="search" data-i18n-placeholder="toolkit_table_search" placeholder="Search resources, notes, or subtests…" oninput="onToolkitTableSearch(this.value)">
+                        </div>
+                        <div class="toolkit-table-toolbar">
+                            <p id="toolkit-table-count" role="status" aria-live="polite"></p>
+                            <label class="toolkit-table-recommended">
+                                <input type="checkbox" id="toolkit-table-recommended" onchange="onToolkitTableRecommendedChange(this.checked)">
+                                <span class="resource-recommended-badge" aria-hidden="true">★</span>
+                                <span data-i18n="toolkit_table_recommended_only">Recommended only</span>
+                            </label>
+                            <button type="button" class="filter-clear-btn toolkit-table-clear" onclick="resetToolkitTableFilters()" data-i18n="wizard_start_over">Clear Filters</button>
+                        </div>
+                        <div class="toolkit-table-scroll" role="region" aria-label="All resources" data-i18n-aria="toolkit_table_title" tabindex="0">
+                            <table class="toolkit-resource-table">
+                                <caption class="sr-only" data-i18n="toolkit_table_title">All resources</caption>
+                                <thead id="toolkit-table-head"></thead>
+                                <tbody id="toolkit-table-body"></tbody>
+                            </table>
+                        </div>
+                    </section>
 
                 </div><!-- /.interventions-page-body -->
             </div><!-- /.interventions-page-wrapper -->
