@@ -8014,6 +8014,7 @@ body.step-review-modal-open { overflow: hidden; }
 .toolkit-column-filter-empty { margin: 0; padding: 8px; color: var(--text-secondary); }
 .toolkit-column-filter-footer { justify-content: space-between; gap: var(--space-sm); }
 .toolkit-column-filter-clear { background: none; border: 0; padding: 6px 8px; color: var(--primary); font: inherit; text-decoration: underline; cursor: pointer; }
+.toolkit-resource-table tbody tr { background: #fff; }
 .toolkit-resource-table tbody tr:nth-child(even) { background: var(--bg-alt); }
 .toolkit-resource-table td:first-child { min-width: 220px; }
 .toolkit-resource-table td:last-child { min-width: 110px; }
