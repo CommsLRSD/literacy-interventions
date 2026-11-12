@@ -7973,6 +7973,7 @@ body.step-review-modal-open { overflow: hidden; }
 .toolkit-resource-table td { padding: 0.75rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
 .toolkit-resource-table th { background: var(--bg-alt); }
 .toolkit-th { display: flex; align-items: center; gap: 2px; }
+.toolkit-column-label { flex: 1; }
 .toolkit-resource-table .toolkit-sort-btn { display: flex; flex: 1; gap: 0.4rem; min-height: 44px; align-items: center; background: none; border: 0; padding: 0; color: var(--primary); font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
 .toolkit-column-filter.cal-grade-dropdown { position: static; min-width: 0; max-width: none; flex-shrink: 0; }
 .toolkit-column-filter > summary {
