@@ -4,7 +4,7 @@ const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const vm = require('node:vm');
 
-function setup(anchor, { width = 800, height = 600, viewport } = {}) {
+function setup(anchor, { width = 800, height = 600, viewport, dataset = {} } = {}) {
     const listeners = {};
     const properties = {};
     const panel = {
@@ -19,6 +19,7 @@ function setup(anchor, { width = 800, height = 600, viewport } = {}) {
     const summary = { getBoundingClientRect: () => anchor, focus() { summary.focused = true; } };
     const dropdown = {
         open: true,
+        dataset,
         matches: selector => selector === '.cal-grade-dropdown',
         querySelector: selector => selector === 'summary' ? summary : panel,
         getClientRects: () => [anchor],
@@ -68,6 +69,12 @@ test('very short dropdowns scroll the entire panel so the footer cannot squeeze 
     const { panel, properties } = setup({ left: 8, top: 50, bottom: 80, width: 280 }, { height: 100 });
     assert.equal(panel['data-compact-menu'], true);
     assert.equal(properties['--dropdown-height'], '38px');
+});
+
+test('small triggers can request a wider menu that is still clamped inside the viewport', () => {
+    const { properties } = setup({ left: 700, top: 100, bottom: 128, width: 28 }, { dataset: { menuWidth: '240' } });
+    assert.equal(properties['--dropdown-width'], '240px');
+    assert.equal(properties['--dropdown-left'], '552px');
 });
 
 test('dropdown bounds follow a reduced visual viewport and stay within its horizontal edges', () => {

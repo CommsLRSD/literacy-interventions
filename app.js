@@ -939,7 +939,6 @@ function rerenderForLanguage() {
 function refreshWizardSelectPlaceholders() {
     if (document.getElementById('menu-search-panel')) {
         refreshMenuUI();
-        renderToolkitTableFilters();
         renderToolkitTable();
     }
 }
@@ -9419,27 +9418,22 @@ function setRememberedMenuFilters(partial) {
 // subtest/evidence filter it defines (other than `excludeField`) is
 // satisfied by that tag.
 function tagMatches(tag, state, excludeField) {
-    if (excludeField !== 'program' && state.program && tag.program !== state.program) return false;
-    if (excludeField !== 'tier' && state.tier && String(tag.tier) !== String(state.tier)) return false;
-    if (excludeField !== 'pillar' && state.pillar) {
-        // The flowchart wizard may filter by several pillars at once.
-        const pillars = Array.isArray(state.pillar) ? state.pillar : [state.pillar];
-        if (pillars.length && !pillars.includes(tag.pillar)) return false;
-    }
-    if (excludeField !== 'resourceType' && state.resourceType) {
-        const types = Array.isArray(state.resourceType) ? state.resourceType : [state.resourceType];
-        if (types.length && !types.includes(tag.resourceType)) return false;
-    }
-    if (excludeField !== 'screener' && state.screener) {
-        const tagScreeners = tag.screeners || [];
-        if (state.screener === NO_SPECIFIC_SCREENER_VALUE) {
-            if (tagScreeners.length) return false;
-        } else if (!tagScreeners.includes(state.screener)) {
-            return false;
-        }
-    }
-    if (excludeField !== 'subtest' && state.subtest && !(tag.subtests || []).includes(state.subtest)) return false;
-    if (excludeField !== 'evidence' && state.evidence && (tag.evidence || '') !== state.evidence) return false;
+    // Each filter may be a single value or a list; a tag matches a list if it matches any value in it.
+    const selected = field => excludeField === field ? []
+        : (Array.isArray(state[field]) ? state[field] : [state[field]])
+            .filter(value => value !== undefined && value !== null && value !== '').map(String);
+    const matchesAny = (field, test) => {
+        const values = selected(field);
+        return !values.length || values.some(test);
+    };
+    if (!matchesAny('program', value => tag.program === value)) return false;
+    if (!matchesAny('tier', value => String(tag.tier) === value)) return false;
+    if (!matchesAny('pillar', value => tag.pillar === value)) return false;
+    if (!matchesAny('resourceType', value => tag.resourceType === value)) return false;
+    if (!matchesAny('screener', value => value === NO_SPECIFIC_SCREENER_VALUE
+        ? !(tag.screeners || []).length : (tag.screeners || []).includes(value))) return false;
+    if (!matchesAny('subtest', value => (tag.subtests || []).includes(value))) return false;
+    if (!matchesAny('evidence', value => (tag.evidence || '') === value)) return false;
     if (excludeField !== 'grade') {
         // Several grades may be chosen at once; a tag matches if it covers any of them.
         const grades = normalizeGradeList(state.grade);
@@ -9707,7 +9701,8 @@ function positionDropdownMenu(dropdown) {
     const below = Math.max(0, bottom - anchor.bottom - 4);
     const above = Math.max(0, anchor.top - top - 4);
     const opensAbove = below < Math.min(240, above);
-    const width = Math.min(anchor.width, Math.max(0, right - left));
+    // Small triggers (such as table column filters) may request a wider menu than the trigger itself.
+    const width = Math.min(Math.max(anchor.width, Number(dropdown.dataset.menuWidth) || 0), Math.max(0, right - left));
     const height = Math.min(420, opensAbove ? above : below);
     panel.toggleAttribute('data-compact-menu', height < 160);
     panel.style.setProperty('--dropdown-left', `${Math.max(left, Math.min(anchor.left, right - width))}px`);
@@ -9981,19 +9976,31 @@ function setToolkitView(view) {
     const layout = document.getElementById('interventions-menu-layout');
     layout.hidden = table;
     document.getElementById('toolkit-table-view').hidden = !table;
-    document.getElementById('toolkit-guided-view-button').setAttribute('aria-pressed', String(!table));
-    document.getElementById('toolkit-table-view-button').setAttribute('aria-pressed', String(table));
+    document.getElementById('toolkit-view-toggle').setAttribute('aria-checked', String(table));
     if (table) {
         layout.querySelectorAll('.cal-grade-dropdown[open]').forEach(dropdown => { dropdown.open = false; });
-        renderToolkitTableFilters();
         renderToolkitTable();
     }
 }
 
+function toggleToolkitView() {
+    const toggle = document.getElementById('toolkit-view-toggle');
+    setToolkitView(toggle.getAttribute('aria-checked') === 'true' ? 'guided' : 'table');
+}
+
+function getToolkitTableFilterValues(field) {
+    if (field === 'name') {
+        const compare = new Intl.Collator(appState.language, { numeric: true, sensitivity: 'base' }).compare;
+        return [...new Set(getAllResources().map(item => item.name))].sort(compare);
+    }
+    return field === 'grade' ? distinctGradeValues({}) : distinctTagValues({}, field);
+}
+
 function getToolkitTableRows() {
-    const { filters, search, sort, direction } = toolkitTableState;
+    const { search, sort, direction } = toolkitTableState;
+    const { name: names = [], ...filters } = toolkitTableState.filters;
     const query = search.trim().toLocaleLowerCase(appState.language);
-    const rows = getFilteredResources(filters).map(item => {
+    const rows = getFilteredResources(filters).filter(item => !names.length || names.includes(item.name)).map(item => {
         const tags = getMatchingTags(item, filters);
         const grades = normalizeGradeList(tags.flatMap(tag => tag.gradeFilter || []));
         const values = { name: item.name };
@@ -10021,50 +10028,99 @@ function getToolkitTableRows() {
         compare(a.item.name, b.item.name) || compare(a.item.id, b.item.id));
 }
 
-function renderToolkitTableFilters() {
-    const host = document.getElementById('toolkit-table-filters');
-    if (!host) return;
-    const fields = [...TOOLKIT_TABLE_COLUMNS.slice(1), { field: 'subtest', labelKey: 'filter_subtest_label' }];
-    host.innerHTML = fields.map(column => {
-        const values = column.field === 'grade' ? distinctGradeValues({}) : distinctTagValues({}, column.field);
-        return `<label>${escapeHtml(t(column.labelKey))}
-            <select class="fw-select" data-field="${escapeAttr(column.field)}" onchange="onToolkitTableFilterChange(this.dataset.field, this.value)">
-                <option value="">${escapeHtml(t('toolkit_table_all'))}</option>
-                ${values.map(value => `<option value="${escapeAttr(value)}"${String(toolkitTableState.filters[column.field] || '') === String(value) ? ' selected' : ''}>${escapeHtml(column.format ? column.format(value) : value)}</option>`).join('')}
-            </select>
-        </label>`;
-    }).join('');
+function getToolkitColumnFilterLabel(column) {
+    const count = (toolkitTableState.filters[column.field] || []).length;
+    return t('toolkit_table_filter_label')(t(column.labelKey), count);
 }
 
-function renderToolkitTable() {
-    const body = document.getElementById('toolkit-table-body');
-    if (!body) return;
-    document.getElementById('toolkit-table-head').innerHTML = `<tr>${TOOLKIT_TABLE_COLUMNS.map(column => {
+function buildToolkitColumnFilterHtml(column) {
+    const selected = toolkitTableState.filters[column.field] || [];
+    const label = getToolkitColumnFilterLabel(column);
+    const options = getToolkitTableFilterValues(column.field).map(value => `
+        <label class="cal-grade-option">
+            <input type="checkbox" value="${escapeAttr(value)}"${selected.includes(String(value)) ? ' checked' : ''}
+                onchange="onToolkitTableFilterChange('${column.field}', this.value, this.checked)">
+            <span>${escapeHtml(column.format ? column.format(value) : value)}</span>
+        </label>`).join('');
+    return `<details class="cal-grade-dropdown toolkit-column-filter${selected.length ? ' is-active' : ''}" data-field="${escapeAttr(column.field)}" data-menu-width="${column.field === 'name' ? 320 : 240}">
+        <summary aria-label="${escapeAttr(label)}" title="${escapeAttr(label)}"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="18" height="18"><path d="M7 10l5 5 5-5z" fill="currentColor"/></svg></summary>
+        <div class="cal-grade-options" role="group" aria-label="${escapeAttr(label)}">
+            <div class="multiselect-options-list">${options || `<p class="toolkit-column-filter-empty">${escapeHtml(t('toolkit_table_filter_empty'))}</p>`}</div>
+            <div class="multiselect-footer toolkit-column-filter-footer">
+                <button type="button" class="toolkit-column-filter-clear" onclick="clearToolkitColumnFilter('${column.field}')">${escapeHtml(t('toolkit_table_filter_clear'))}</button>
+                ${buildMultiselectDoneButtonHtml().replace(/^<div class="multiselect-footer">|<\/div>$/g, '')}
+            </div>
+        </div>
+    </details>`;
+}
+
+function renderToolkitTableHead() {
+    const head = document.getElementById('toolkit-table-head');
+    if (!head) return;
+    head.innerHTML = `<tr>${TOOLKIT_TABLE_COLUMNS.map(column => {
         const selected = toolkitTableState.sort === column.field;
         return `<th scope="col" aria-sort="${selected ? toolkitTableState.direction : 'none'}">
-            <button type="button" onclick="sortToolkitTable('${column.field}')">${escapeHtml(t(column.labelKey))}<span aria-hidden="true">${selected ? (toolkitTableState.direction === 'ascending' ? '&#8593;' : '&#8595;') : '&#8597;'}</span></button>
+            <div class="toolkit-th">
+                <button type="button" class="toolkit-sort-btn" data-field="${column.field}" onclick="sortToolkitTable('${column.field}')">${escapeHtml(t(column.labelKey))}<span aria-hidden="true">${selected ? (toolkitTableState.direction === 'ascending' ? '&#8593;' : '&#8595;') : '&#8597;'}</span></button>
+                ${buildToolkitColumnFilterHtml(column)}
+            </div>
         </th>`;
     }).join('')}<th scope="col">${escapeHtml(t('toolkit_table_links'))}</th></tr>`;
+}
+
+function renderToolkitTableBody() {
+    const body = document.getElementById('toolkit-table-body');
+    if (!body) return;
+    const { name, ...filters } = toolkitTableState.filters;
     const rows = getToolkitTableRows();
     document.getElementById('toolkit-table-count').textContent = t('filter_results_label')(rows.length);
     body.innerHTML = !appState.interventionMenuDataLoaded
         ? `<tr><td colspan="9" role="alert">${escapeHtml(t('toolkit_table_load_error'))}</td></tr>`
         : rows.length ? rows.map(row => `<tr data-resource-id="${escapeAttr(row.item.id)}">
             ${TOOLKIT_TABLE_COLUMNS.map(column => `<td>${escapeHtml(row.values[column.field])}${column.field === 'name'
-                ? `${buildResourceRecommendationBadgeHtml(row.item, toolkitTableState.filters)}${row.notes ? `<small class="toolkit-table-notes">${escapeHtml(row.notes)}</small>` : ''}` : ''}</td>`).join('')}
-            <td><div class="toolkit-table-links">${buildFavouriteButtonHtml(row.item)}${buildResourceLinksHtml(row.item, toolkitTableState.filters)}</div></td>
+                ? `${buildResourceRecommendationBadgeHtml(row.item, filters)}${row.notes ? `<small class="toolkit-table-notes">${escapeHtml(row.notes)}</small>` : ''}` : ''}</td>`).join('')}
+            <td><div class="toolkit-table-links">${buildFavouriteButtonHtml(row.item)}${buildResourceLinksHtml(row.item, filters)}</div></td>
         </tr>`).join('')
             : `<tr><td colspan="9">${escapeHtml(t('filter_results_none'))}</td></tr>`;
 }
 
-function onToolkitTableFilterChange(field, value) {
-    toolkitTableState.filters[field] = value;
-    renderToolkitTable();
+function renderToolkitTable() {
+    renderToolkitTableHead();
+    renderToolkitTableBody();
+}
+
+// Update a column's filter indicator in place so its open menu stays open.
+function updateToolkitColumnFilterState(field) {
+    const column = TOOLKIT_TABLE_COLUMNS.find(item => item.field === field);
+    const dropdown = document.querySelector(`#toolkit-table-head .toolkit-column-filter[data-field="${field}"]`);
+    if (!column || !dropdown) return;
+    const label = getToolkitColumnFilterLabel(column);
+    dropdown.classList.toggle('is-active', Boolean((toolkitTableState.filters[field] || []).length));
+    const summary = dropdown.querySelector('summary');
+    summary.setAttribute('aria-label', label);
+    summary.setAttribute('title', label);
+    dropdown.querySelector('.cal-grade-options').setAttribute('aria-label', label);
+}
+
+function onToolkitTableFilterChange(field, value, checked) {
+    const values = new Set(toolkitTableState.filters[field] || []);
+    if (checked) values.add(String(value)); else values.delete(String(value));
+    if (values.size) toolkitTableState.filters[field] = [...values]; else delete toolkitTableState.filters[field];
+    updateToolkitColumnFilterState(field);
+    renderToolkitTableBody();
+}
+
+function clearToolkitColumnFilter(field) {
+    delete toolkitTableState.filters[field];
+    document.querySelectorAll(`#toolkit-table-head .toolkit-column-filter[data-field="${field}"] input[type="checkbox"]`)
+        .forEach(input => { input.checked = false; });
+    updateToolkitColumnFilterState(field);
+    renderToolkitTableBody();
 }
 
 function onToolkitTableSearch(value) {
     toolkitTableState.search = value;
-    renderToolkitTable();
+    renderToolkitTableBody();
 }
 
 function sortToolkitTable(field) {
@@ -10072,15 +10128,13 @@ function sortToolkitTable(field) {
         ? 'descending' : 'ascending';
     toolkitTableState.sort = field;
     renderToolkitTable();
-    const index = TOOLKIT_TABLE_COLUMNS.findIndex(column => column.field === field);
-    document.querySelectorAll('#toolkit-table-head button')[index]?.focus();
+    document.querySelector(`#toolkit-table-head .toolkit-sort-btn[data-field="${field}"]`)?.focus();
 }
 
 function resetToolkitTableFilters() {
     toolkitTableState.filters = {};
     toolkitTableState.search = '';
     document.getElementById('toolkit-table-search').value = '';
-    renderToolkitTableFilters();
     renderToolkitTable();
 }
 

@@ -8,13 +8,14 @@ const read = file => readFileSync(join(__dirname, '..', file), 'utf8');
 
 function setup() {
     const hosts = new Map(['toolkit-table-head', 'toolkit-table-body', 'toolkit-table-count',
-        'toolkit-table-filters', 'toolkit-table-search'].map(id => [id, { innerHTML: '', textContent: '', value: '' }]));
+        'toolkit-table-search'].map(id => [id, { innerHTML: '', textContent: '', value: '' }]));
     const context = vm.createContext({
         URL,
         document: {
             addEventListener() {},
             getElementById: id => hosts.get(id) || null,
             querySelectorAll: () => [],
+            querySelector: () => null,
             createElement: () => ({
                 textContent: '',
                 get innerHTML() {
@@ -53,33 +54,62 @@ test('the unfiltered table includes every resource once, independent of guided s
     assert.equal(run('before === JSON.stringify({ menuState, fwState: appState.fwState, remembered: appState.rememberedMenuFilters })'), true);
 });
 
-test('switching to the opt-in table and back preserves guided selections and updates the view controls', () => {
+test('the view switch toggles the opt-in table and back while preserving guided selections', () => {
     const { run, hosts } = setup();
     const dropdown = { open: true };
     const layout = { hidden: false, querySelectorAll: () => [dropdown] };
     const table = { hidden: true };
-    const guidedButton = { setAttribute(key, value) { this[key] = value; } };
-    const tableButton = { setAttribute(key, value) { this[key] = value; } };
+    const toggle = { 'aria-checked': 'false', setAttribute(key, value) { this[key] = value; }, getAttribute(key) { return this[key]; } };
     hosts.set('interventions-menu-layout', layout);
     hosts.set('toolkit-table-view', table);
-    hosts.set('toolkit-guided-view-button', guidedButton);
-    hosts.set('toolkit-table-view-button', tableButton);
+    hosts.set('toolkit-view-toggle', toggle);
     run(`
         menuState.pillar = ['Phonics'];
         menuUiState.view = 'results';
         const before = JSON.stringify({ menuState, menuUiState });
-        setToolkitView('table');
+        toggleToolkitView();
     `);
     assert.equal(layout.hidden, true);
     assert.equal(table.hidden, false);
-    assert.equal(tableButton['aria-pressed'], 'true');
-    assert.equal(guidedButton['aria-pressed'], 'false');
+    assert.equal(toggle['aria-checked'], 'true');
     assert.equal(dropdown.open, false);
-    run("setToolkitView('guided')");
+    run('toggleToolkitView()');
     assert.equal(layout.hidden, false);
     assert.equal(table.hidden, true);
-    assert.equal(tableButton['aria-pressed'], 'false');
+    assert.equal(toggle['aria-checked'], 'false');
     assert.equal(run('before === JSON.stringify({ menuState, menuUiState })'), true);
+});
+
+test('column filters allow several values per column, match any of them, and combine columns on the same tag', () => {
+    const { run, json, hosts } = setup();
+    run(`
+        appState.interventionMenuData.resources = [
+            { id: 'a', name: 'A', tags: [{ program: 'English', tier: 1, pillar: 'Phonics', screeners: ['DIBELS'] }] },
+            { id: 'b', name: 'B', tags: [{ program: 'English', tier: 2, pillar: 'Vocabulary' }] },
+            { id: 'c', name: 'C', tags: [{ program: 'French Immersion', tier: 3, pillar: 'Fluency', screeners: ['THaFoL'] }] }
+        ];
+        renderToolkitTable();
+        onToolkitTableFilterChange('pillar', 'Phonics', true);
+        onToolkitTableFilterChange('pillar', 'Fluency', true);
+    `);
+    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['a', 'c']);
+    run("onToolkitTableFilterChange('screener', NO_SPECIFIC_SCREENER_VALUE, true); onToolkitTableFilterChange('screener', 'DIBELS', true)");
+    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['a']);
+    run("onToolkitTableFilterChange('pillar', 'Vocabulary', true)");
+    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['a', 'b']);
+    run("onToolkitTableFilterChange('name', 'B', true)");
+    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['b']);
+    run("onToolkitTableFilterChange('name', 'B', false); clearToolkitColumnFilter('screener'); onToolkitTableFilterChange('pillar', 'Phonics', false)");
+    assert.deepEqual(json('toolkitTableState.filters'), { pillar: ['Fluency', 'Vocabulary'] });
+    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['b', 'c']);
+    run("renderToolkitTable()");
+    const head = hosts.get('toolkit-table-head').innerHTML;
+    assert.equal((head.match(/class="cal-grade-dropdown toolkit-column-filter/g) || []).length, 8);
+    assert.match(head, /toolkit-column-filter is-active" data-field="pillar"/);
+    assert.match(head, /aria-label="Filter Literacy Pillar \(2 selected\)"|aria-label="Filter [^"]+ \(2 selected\)"/);
+    assert.match(head, /type="checkbox" value="Vocabulary" checked/);
+    assert.match(head, /onclick="sortToolkitTable\('pillar'\)"/);
+    assert.match(head, /data-field="evidence"[\s\S]*?No values to filter in this column/);
 });
 
 test('table filters must match the same tag and metadata and links only use matching tags', () => {
@@ -93,10 +123,10 @@ test('table filters must match the same tag and metadata and links only use matc
                   gradeFilter: ['2'], screeners: ['THaFoL'], urls: ['https://example.org/fr'] }
             ]
         }];
-        toolkitTableState.filters = { program: 'English', tier: '2' };
+        toolkitTableState.filters = { program: ['English'], tier: ['2'] };
     `);
     assert.deepEqual(json('getToolkitTableRows()'), []);
-    run("toolkitTableState.filters = { program: 'French Immersion', grade: '2', screener: 'THaFoL' }; renderToolkitTable()");
+    run("toolkitTableState.filters = { program: ['French Immersion'], grade: ['2'], screener: ['THaFoL'] }; renderToolkitTable()");
     const [row] = json('getToolkitTableRows()');
     assert.equal(row.values.pillar, 'Vocabulary');
     assert.equal(row.values.screener, 'THaFoL');
@@ -155,7 +185,6 @@ test('table labels and values translate without translating resource names, and 
             }]
         }];
         appState.language = 'fr';
-        renderToolkitTableFilters();
         renderToolkitTable();
     `);
     const body = hosts.get('toolkit-table-body').innerHTML;
@@ -166,7 +195,8 @@ test('table labels and values translate without translating resource names, and 
     assert.match(body, /Année 2/);
     assert.match(body, /Immersion française/);
     assert.match(hosts.get('toolkit-table-head').innerHTML, /Liens vers les ressources/);
-    assert.match(hosts.get('toolkit-table-filters').innerHTML, />Tous<\/option>/);
+    assert.match(hosts.get('toolkit-table-head').innerHTML, /aria-label="Filtrer : /);
+    assert.match(hosts.get('toolkit-table-head').innerHTML, />Effacer</);
 });
 
 test('failed resource loading is explicit rather than appearing as an empty catalogue', () => {

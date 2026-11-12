@@ -479,9 +479,12 @@
                 </div>
 
                 <div class="interventions-page-body">
-                    <div class="toolkit-view-switch" role="group" aria-label="Toolkit view" data-i18n-aria="toolkit_view_label">
-                        <button type="button" id="toolkit-guided-view-button" aria-pressed="true" aria-controls="interventions-menu-layout" onclick="setToolkitView('guided')" data-i18n="toolkit_view_guided">Step by step</button>
-                        <button type="button" id="toolkit-table-view-button" aria-pressed="false" aria-controls="toolkit-table-view" onclick="setToolkitView('table')" data-i18n="toolkit_view_table">All resources table</button>
+                    <div class="toolkit-view-switch">
+                        <button type="button" id="toolkit-view-toggle" class="toolkit-view-toggle" role="switch" aria-checked="false" aria-label="All resources table" data-i18n-aria="toolkit_view_table" aria-controls="interventions-menu-layout toolkit-table-view" onclick="toggleToolkitView()">
+                            <span class="toolkit-view-toggle-label" data-i18n="toolkit_view_guided">Step by step</span>
+                            <span class="toolkit-view-toggle-track" aria-hidden="true"><span class="toolkit-view-toggle-thumb"></span></span>
+                            <span class="toolkit-view-toggle-label" data-i18n="toolkit_view_table">All resources table</span>
+                        </button>
                     </div>
                     <div class="interventions-page-layout menu-view-search" id="interventions-menu-layout">
 
@@ -567,12 +570,11 @@
 
                     <section id="toolkit-table-view" aria-labelledby="toolkit-table-title" hidden>
                         <h3 id="toolkit-table-title" data-i18n="toolkit_table_title">All resources</h3>
-                        <p class="toolkit-table-hint" data-i18n="toolkit_table_hint">Browse all programs, filter in any order, and select a column heading to sort. These filters do not change your step-by-step selections.</p>
+                        <p class="toolkit-table-hint" data-i18n="toolkit_table_hint">Browse all programs. Select a column heading to sort, or its arrow to filter. These filters do not change your step-by-step selections.</p>
                         <div class="toolkit-table-search">
                             <label for="toolkit-table-search" data-i18n="filter_search_label">Search</label>
                             <input id="toolkit-table-search" class="filter-search-input" type="search" data-i18n-placeholder="toolkit_table_search" placeholder="Search resources, notes, or subtests…" oninput="onToolkitTableSearch(this.value)">
                         </div>
-                        <div id="toolkit-table-filters" class="toolkit-table-filters"></div>
                         <div class="toolkit-table-toolbar">
                             <p id="toolkit-table-count" role="status" aria-live="polite"></p>
                             <button type="button" class="filter-clear-btn" onclick="resetToolkitTableFilters()" data-i18n="wizard_start_over">Clear Filters</button>
