@@ -4878,7 +4878,8 @@ function createIntegratedSelectionNode(nodeData) {
         const grade = pathwayContext?.grades?.length ? pathwayContext.grades : normalizeGradeList(remembered.grade);
         const baseState = { tier: tierNum, program: program, resourceType: itemType,
             grade, screener: getPathwayScreenerId() || '' };
-        const pillarValues = distinctTagValues(baseState, 'pillar');
+        const availablePillars = new Set(distinctTagValues(baseState, 'pillar'));
+        const pillarValues = (appState.interventionMenuData?.pillars || []).map(pillar => pillar.name);
         // Interventions start from the pillars chosen in the preceding drill-down.
         const drillDownPillars = multiSelect ? null : getPrecedingDrillDownPillars(nodeData.id);
         const basePillarsKey = (drillDownPillars || []).join('|');
@@ -4892,7 +4893,8 @@ function createIntegratedSelectionNode(nodeData) {
             tier: tierNum,
             program: program,
             resourceType: itemType,
-            pillars: pillars.filter(value => typeof value === 'string' && value),
+            pillars: pillars.filter(value => typeof value === 'string' && value &&
+                (drillDownPillars?.length || availablePillars.has(value))),
             screener: baseState.screener,
             grade,
             nodeId: nodeData.id,
@@ -4907,10 +4909,9 @@ function createIntegratedSelectionNode(nodeData) {
         // opens scoped to this same drilldown if visited right afterwards.
         setRememberedMenuFilters({ tier: tierNum, program: program });
 
-        appState.fwState.pillars.forEach(value => { if (!pillarValues.includes(value)) pillarValues.unshift(value); });
         const pillarOptionsHtml = pillarValues.map(value => `
-            <label class="cal-grade-option">
-                <input type="checkbox" value="${escapeAttr(value)}" ${appState.fwState.pillars.includes(value) ? 'checked' : ''} onchange="fwOnPillarToggle(this.value, this.checked)">
+            <label class="cal-grade-option"${availablePillars.has(value) ? '' : buildUnavailablePillarAttributes(value, baseState)}>
+                <input type="checkbox" value="${escapeAttr(value)}" ${appState.fwState.pillars.includes(value) ? 'checked' : ''}${availablePillars.has(value) ? '' : ' disabled'} onchange="fwOnPillarToggle(this.value, this.checked)">
                 <span>${escapeHtml(translatePillar(value))}</span>
             </label>`).join('');
 
@@ -5028,6 +5029,7 @@ function getFwPillarSummary(pillars) {
 function fwOnPillarToggle(value, checked) {
     const state = appState.fwState;
     if (!state || !value || state.pillarsLocked) return;
+    if (checked && !distinctTagValues(state, 'pillar').includes(value)) return;
     const pillars = state.pillars.filter(pillar => pillar !== value);
     if (checked) pillars.push(value);
     state.pillars = pillars;
@@ -5047,12 +5049,12 @@ function fwLoadResults() {
     if (!resultsEl) return;
 
     const { tier, program, resourceType, pillars, screener, grade, multiSelect } = appState.fwState;
-    if (!pillars.length) {
+    const wizardState = { tier, program, resourceType, pillar: pillars, screener, grade };
+    if (!pillars.length && distinctTagValues(wizardState, 'pillar').length) {
         appState.fwState.selectedIds = [];
         resultsEl.innerHTML = `<div class="fw-no-results"><p>${escapeHtml(t('fw_choose_pillar_prompt'))}</p></div>`;
         return;
     }
-    const wizardState = { tier, program, resourceType, pillar: pillars, screener, grade };
     const filtered = getFilteredResources(wizardState, null);
 
     if (filtered.length === 0) {
@@ -9660,6 +9662,7 @@ function getMenuBaselineState() {
 function getAllMenuFieldValues(field) {
     const baselineState = getMenuBaselineState();
     if (field === 'grade') return distinctGradeValues(baselineState);
+    if (field === 'pillar') return (appState.interventionMenuData?.pillars || []).map(pillar => pillar.name);
     const values = distinctTagValues(baselineState, field);
     return field === 'tier' ? values.map(String) : values;
 }
@@ -9691,6 +9694,96 @@ function buildMultiselectDoneButtonHtml() {
     return `<div class="multiselect-footer"><button type="button" class="multiselect-done-btn" onclick="event.stopPropagation();const dropdown=this.closest('details');dropdown.open=false;dropdown.querySelector('summary').focus();">${escapeHtml(t('multiselect_done'))}</button></div>`;
 }
 
+function positionDropdownMenu(dropdown) {
+    const panel = dropdown.querySelector(':scope > .cal-grade-options');
+    const anchor = dropdown.querySelector('summary').getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const top = (viewport?.offsetTop || 0) + 8;
+    const left = (viewport?.offsetLeft || 0) + 8;
+    const right = left + (viewport?.width || window.innerWidth) - 16;
+    const bottom = top + (viewport?.height || window.innerHeight) - 16;
+    const below = Math.max(0, bottom - anchor.bottom - 4);
+    const above = Math.max(0, anchor.top - top - 4);
+    const opensAbove = below < Math.min(240, above);
+    const width = Math.min(anchor.width, Math.max(0, right - left));
+    const height = Math.min(420, opensAbove ? above : below);
+    panel.toggleAttribute('data-compact-menu', height < 160);
+    panel.style.setProperty('--dropdown-left', `${Math.max(left, Math.min(anchor.left, right - width))}px`);
+    panel.style.setProperty('--dropdown-width', `${width}px`);
+    panel.style.setProperty('--dropdown-height', `${height}px`);
+    panel.style.setProperty('--dropdown-top', opensAbove ? 'auto' : `${Math.max(top, anchor.bottom + 4)}px`);
+    panel.style.setProperty('--dropdown-bottom', opensAbove
+        ? `${window.innerHeight - Math.min(bottom, anchor.top - 4)}px` : 'auto');
+}
+
+function setupDropdownMenus() {
+    const close = dropdown => {
+        const panel = dropdown.querySelector(':scope > .cal-grade-options');
+        if (typeof panel?.hidePopover === 'function' && panel.matches(':popover-open')) panel.hidePopover();
+        dropdown.open = false;
+    };
+    const openDropdowns = () => document.querySelectorAll('.cal-grade-dropdown[open]');
+    document.addEventListener('toggle', event => {
+        const dropdown = event.target;
+        if (!dropdown.matches('.cal-grade-dropdown')) return;
+        const panel = dropdown.querySelector(':scope > .cal-grade-options');
+        if (!dropdown.open) {
+            close(dropdown);
+            return;
+        }
+        openDropdowns().forEach(other => { if (other !== dropdown) close(other); });
+        panel.setAttribute('data-floating-menu', '');
+        positionDropdownMenu(dropdown);
+        // The top layer escapes clipping and stacking contexts without moving the menu in the DOM.
+        if (typeof panel.showPopover === 'function') {
+            panel.setAttribute('popover', 'manual');
+            if (!panel.matches(':popover-open')) panel.showPopover();
+        }
+    }, true);
+    const reposition = event => {
+        openDropdowns().forEach(dropdown => {
+            const panel = dropdown.querySelector(':scope > .cal-grade-options');
+            if (panel.contains(event.target)) return;
+            const anchor = dropdown.querySelector('summary').getBoundingClientRect();
+            if (!dropdown.getClientRects().length || anchor.bottom <= 0 || anchor.top >= window.innerHeight) {
+                close(dropdown);
+            } else {
+                positionDropdownMenu(dropdown);
+            }
+        });
+    };
+    document.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+    window.visualViewport?.addEventListener('resize', reposition);
+    window.visualViewport?.addEventListener('scroll', reposition);
+    document.addEventListener('click', event => {
+        openDropdowns().forEach(dropdown => { if (!dropdown.contains(event.target)) close(dropdown); });
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key !== 'Escape') return;
+        openDropdowns().forEach(dropdown => {
+            event.preventDefault();
+            close(dropdown);
+            dropdown.querySelector('summary').focus();
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', setupDropdownMenus);
+
+function buildUnavailablePillarAttributes(value, state) {
+    const filters = [
+        state.program ? `${t('filter_program_label')}: ${state.program}` : '',
+        ...MENU_FILTER_CHIP_FIELDS.filter(field => field.field !== 'pillar').map(field => {
+            const selected = state[field.field];
+            if (!selected || (Array.isArray(selected) && !selected.length)) return '';
+            return `${t(field.labelKey)}: ${field.format ? field.format(selected) : selected}`;
+        })
+    ].filter(Boolean).join('; ');
+    const reason = t('pillar_unavailable')(translatePillar(value), filters);
+    return ` tabindex="0" title="${escapeAttr(reason)}" aria-label="${escapeAttr(reason)}"`;
+}
+
 function renderMenuMultiselectOptions(field, id, translate, placeholderKey) {
     const el = document.getElementById(`filter-${id}-chips`);
     if (!el) return;
@@ -9698,7 +9791,7 @@ function renderMenuMultiselectOptions(field, id, translate, placeholderKey) {
     const available = new Set(getAvailableMenuFieldValues(field));
     const values = getAllMenuFieldValues(field);
     el.innerHTML = '<div class="multiselect-options-list">' + (field === 'pillar' ? fwPillarOrder(values) : values).map(value => `
-        <label class="cal-grade-option">
+        <label class="cal-grade-option"${field === 'pillar' && !available.has(value) ? buildUnavailablePillarAttributes(value, getMenuHigherPriorityState(field)) : ''}>
             <input type="checkbox" data-menu-multiselect="${escapeAttr(field)}" value="${escapeAttr(value)}"${isMenuValueSelected(field, value) ? ' checked' : ''}${available.has(value) ? '' : ' disabled'}>
             <span>${escapeHtml(translate(value))}</span>
         </label>

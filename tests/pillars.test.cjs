@@ -142,6 +142,24 @@ test('help remains available beside unlocked and inherited locked flowchart pill
     }
 });
 
+test('Toolkit pillar menus retain every pillar even when the program has no matching resources', () => {
+    const { hosts, run } = setup();
+    const chips = { innerHTML: '', contains: () => false };
+    hosts.set('filter-pillar-chips', chips);
+    hosts.set('menu-pillar-value', { textContent: '' });
+    run(`
+        menuState.program = 'French Immersion';
+        menuState.resourceType = 'Intervention';
+        appState.interventionMenuData.resources = [];
+        renderMenuMultiselectOptions('pillar', 'pillar', translatePillar, 'filter_choose_pillars');
+    `);
+    assert.equal((chips.innerHTML.match(/type="checkbox"/g) || []).length, 7);
+    assert.equal((chips.innerHTML.match(/ disabled/g) || []).length, 7);
+    assert.equal((chips.innerHTML.match(/No resources are available/g) || []).length, 14);
+    assert.match(chips.innerHTML, /Program: French Immersion; Resource Type: Intervention/);
+    assert.match(chips.innerHTML, /multiselect-done-btn/);
+});
+
 test('checklist help is outside checkbox labels and the reference guide is part of Resources', () => {
     const { run } = setup();
     run('appState.visualFlowchart = { checklistChecked: {} }');
