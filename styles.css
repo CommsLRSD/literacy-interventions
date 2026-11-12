@@ -7966,8 +7966,6 @@ body.step-review-modal-open { overflow: hidden; }
 .toolkit-table-search { display: grid; gap: var(--space-xs); margin-bottom: var(--space-md); }
 .toolkit-table-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-md); margin: var(--space-md) 0; }
 .toolkit-table-toolbar p { margin: 0; }
-.toolkit-table-recommended { display: inline-flex; align-items: center; gap: 0.4rem; min-height: 44px; font-size: 0.85rem; cursor: pointer; }
-.toolkit-table-recommended input { width: 18px; height: 18px; margin: 0; accent-color: var(--primary); }
 .toolkit-table-clear { margin-left: auto; }
 .toolkit-table-scroll { max-width: 100%; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); }
 .toolkit-resource-table { width: 100%; min-width: 1100px; border-collapse: collapse; font-size: 0.85rem; }
@@ -7996,7 +7994,8 @@ body.step-review-modal-open { overflow: hidden; }
 .toolkit-column-filter.is-active > summary { background: var(--primary); color: #fff; }
 .toolkit-column-filter .cal-grade-options { font-weight: 400; font-size: 0.85rem; text-align: left; color: var(--text); }
 /* Round "radio dial" markers that still allow several selections. */
-.toolkit-column-filter .cal-grade-option input[type="checkbox"] {
+.toolkit-column-filter .cal-grade-option input[type="checkbox"],
+.toolkit-column-filter .cal-grade-option input[type="radio"] {
   appearance: none;
   flex-shrink: 0;
   width: 18px;
@@ -8007,7 +8006,8 @@ body.step-review-modal-open { overflow: hidden; }
   background: var(--bg);
   cursor: pointer;
 }
-.toolkit-column-filter .cal-grade-option input[type="checkbox"]:checked {
+.toolkit-column-filter .cal-grade-option input[type="checkbox"]:checked,
+.toolkit-column-filter .cal-grade-option input[type="radio"]:checked {
   border-color: var(--primary);
   background: radial-gradient(circle, var(--primary) 0 4px, var(--bg) 5px);
 }
@@ -8019,6 +8019,15 @@ body.step-review-modal-open { overflow: hidden; }
 .toolkit-resource-table td:last-child { min-width: 110px; }
 .toolkit-table-notes { display: block; margin-top: var(--space-xs); color: var(--text-secondary); overflow-wrap: anywhere; }
 .toolkit-table-links { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+.toolkit-link-unavailable::before {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 2px;
+  background: currentColor;
+  transform: rotate(-45deg);
+}
+.toolkit-link-unavailable:hover { color: var(--text-light); background: var(--bg-muted); }
 .toolkit-view-toggle:focus-visible,
 .toolkit-table-scroll:focus-visible,
 .toolkit-resource-table th button:focus-visible,

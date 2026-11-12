@@ -97,9 +97,7 @@ test('column filters allow several values per column, match any of them, and com
     assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['a']);
     run("onToolkitTableFilterChange('pillar', 'Vocabulary', true)");
     assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['a', 'b']);
-    run("onToolkitTableFilterChange('name', 'B', true)");
-    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['b']);
-    run("onToolkitTableFilterChange('name', 'B', false); clearToolkitColumnFilter('screener'); onToolkitTableFilterChange('pillar', 'Phonics', false)");
+    run("clearToolkitColumnFilter('screener'); onToolkitTableFilterChange('pillar', 'Phonics', false)");
     assert.deepEqual(json('toolkitTableState.filters'), { pillar: ['Fluency', 'Vocabulary'] });
     assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['b', 'c']);
     run("renderToolkitTable()");
@@ -154,22 +152,56 @@ test('table sorting toggles direction, uses numeric grade order, and reports the
     assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['10', '2', 'K']);
 });
 
-test('recommended-only uses tags matching the column filters and is cleared by Clear Filters', () => {
+test('resource menu filters or sorts recommendations using matching tags and resets', () => {
     const { run, json, hosts } = setup();
     run(`
         appState.interventionMenuData.resources = [
             { id: 'rec', name: 'Rec', tags: [{ pillar: 'Phonics', recommended: true }, { pillar: 'Vocabulary' }] },
-            { id: 'plain', name: 'Plain', tags: [{ pillar: 'Phonics' }] }
+            { id: 'plain', name: 'A plain', tags: [{ pillar: 'Phonics' }] },
+            { id: 'rec2', name: 'Z rec', tags: [{ pillar: 'Vocabulary', recommended: true }] }
         ];
-        onToolkitTableRecommendedChange(true);
+        renderToolkitTable();
     `);
+    const head = hosts.get('toolkit-table-head').innerHTML;
+    assert.match(head, /name="toolkit-recommendation" value="all" checked/);
+    assert.match(head, /Recommended only/);
+    assert.match(head, /Recommended first/);
+    assert.doesNotMatch(head, /onToolkitTableFilterChange\('name'/);
+    run("onToolkitTableRecommendationChange('first')");
+    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['rec', 'rec2', 'plain']);
+    run("sortToolkitTable('name')");
+    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['rec2', 'rec', 'plain']);
+    assert.match(hosts.get('toolkit-table-head').innerHTML, /aria-sort="other"/);
+    run("onToolkitTableFilterChange('pillar', 'Phonics', true); onToolkitTableRecommendationChange('only')");
     assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['rec']);
-    run("onToolkitTableFilterChange('pillar', 'Vocabulary', true)");
-    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), []);
+    run("clearToolkitColumnFilter('pillar'); onToolkitTableFilterChange('pillar', 'Vocabulary', true); onToolkitTableSearch('Rec')");
+    assert.deepEqual(json('getToolkitTableRows().map(row => row.item.id)'), ['rec2']);
+    run("onToolkitTableSearch('not present')");
     assert.match(hosts.get('toolkit-table-body').innerHTML, /colspan="8"/);
     run('resetToolkitTableFilters()');
-    assert.equal(run('toolkitTableState.recommendedOnly'), false);
-    assert.equal(run('getToolkitTableRows().length'), 2);
+    assert.equal(run('toolkitTableState.recommendation'), 'all');
+    assert.equal(run('getToolkitTableRows().length'), 3);
+});
+
+test('table groups consecutive grades without merging M and K and preserves grade search', () => {
+    const { run } = setup();
+    assert.equal(run("formatToolkitGrades(['12','K','1','2','3','4','5','6','7','8','9','10','11'])"), 'K–Gr. 12');
+    assert.equal(run("formatToolkitGrades(['M','K','1','2','4','5','7','8','9','11'])"), 'M, K–Gr. 2, Gr. 4, Gr. 5, Gr. 7–Gr. 9, Gr. 11');
+    assert.equal(run("formatToolkitGrades(['M','1','2'])"), 'M–Gr. 2');
+    assert.equal(run("formatToolkitGrades(['2','1','1'])"), 'Gr. 1, Gr. 2');
+    run("appState.language = 'fr'");
+    assert.equal(run("formatToolkitGrades(['K','1','2'])"), 'K–Année 2');
+    run("appState.interventionMenuData.resources = [{ id: 'a', name: 'A', tags: [{ gradeFilter: ['1','2','3'] }] }]; onToolkitTableSearch('Année 2')");
+    assert.equal(run('getToolkitTableRows().length'), 1);
+});
+
+test('table shows an accessible unavailable icon instead of missing link text', () => {
+    const { run, hosts } = setup();
+    run("appState.interventionMenuData.resources = [{ id: 'a', name: 'A', tags: [{}] }]; renderToolkitTable()");
+    const body = hosts.get('toolkit-table-body').innerHTML;
+    assert.match(body, /toolkit-link-unavailable" role="img" aria-label="No link available"/);
+    assert.match(body, />open_in_new<\/span>/);
+    assert.doesNotMatch(body, />No link available</);
 });
 
 test('search includes notes and subtests and no-match filters remain clearable without changing guided state', () => {
