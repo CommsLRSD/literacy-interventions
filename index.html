@@ -101,26 +101,9 @@
                 <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">calendar_month</span>
                 <span class="nav-link-label" data-i18n="nav_schedule">Assessment Schedule</span>
             </button>
-            <button class="nav-link" data-page="scores" role="menuitem" aria-selected="false">
-                <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">bar_chart</span>
-                <span class="nav-link-label" data-i18n="nav_scores">Understanding Scores &amp; Percentiles</span>
-            </button>
-            <button class="nav-link" data-page="resources" role="menuitem" aria-selected="false">
+            <button class="nav-link" data-page="resource-centre" role="menuitem" aria-selected="false">
                 <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">folder_open</span>
-                <span class="nav-link-label" data-i18n="nav_resources">Resources</span>
-            </button>
-            <button class="nav-link" data-page="faq" role="menuitem" aria-selected="false">
-                <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">quiz</span>
-                <span class="nav-link-label" data-i18n="nav_faq">FAQs</span>
-            </button>
-            <button class="nav-link" data-page="favourites" role="menuitem" aria-selected="false">
-                <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">bookmark</span>
-                <span class="nav-link-label" data-i18n="nav_favourites">Saved</span>
-                <span class="nav-badge is-empty" id="side-nav-favourites-badge">0</span>
-            </button>
-            <button class="nav-link" data-page="about" role="menuitem" aria-selected="false">
-                <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">info</span>
-                <span class="nav-link-label" data-i18n="nav_about">About</span>
+                <span class="nav-link-label" data-i18n="nav_resource_centre">Resource Centre</span>
             </button>
             <button class="nav-link nav-settings" type="button" role="menuitem" onclick="openProgressTransfer()" aria-haspopup="dialog" aria-controls="progress-transfer-dialog">
                 <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">settings</span>
@@ -146,26 +129,9 @@
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">calendar_month</span>
                 <span data-i18n="nav_schedule">Assessment Schedule</span>
             </button>
-            <button class="mobile-nav-item" data-page="scores">
-                <span class="material-symbols-rounded" aria-hidden="true" translate="no">bar_chart</span>
-                <span data-i18n="nav_scores">Understanding Scores &amp; Percentiles</span>
-            </button>
-            <button class="mobile-nav-item" data-page="resources">
+            <button class="mobile-nav-item" data-page="resource-centre">
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">folder_open</span>
-                <span data-i18n="nav_resources">Resources</span>
-            </button>
-            <button class="mobile-nav-item" data-page="faq">
-                <span class="material-symbols-rounded" aria-hidden="true" translate="no">quiz</span>
-                <span data-i18n="nav_faq">FAQs</span>
-            </button>
-            <button class="mobile-nav-item" data-page="favourites">
-                <span class="material-symbols-rounded" aria-hidden="true" translate="no">bookmark</span>
-                <span data-i18n="nav_favourites">Saved</span>
-                <span class="nav-badge is-empty" id="mobile-nav-favourites-badge">0</span>
-            </button>
-            <button class="mobile-nav-item" data-page="about">
-                <span class="material-symbols-rounded" aria-hidden="true" translate="no">info</span>
-                <span data-i18n="nav_about">About</span>
+                <span data-i18n="nav_resource_centre">Resource Centre</span>
             </button>
             <div class="mobile-menu-program-lang" id="mobile-program-lang">
                 <label class="top-program-lang-field" for="mobile-program-select">
@@ -444,10 +410,67 @@
                     <div class="home-reference-links">
                         <button type="button" onclick="navigateToPage('interventions')" data-i18n="nav_interventions">Literacy Toolkit</button>
                         <button type="button" onclick="navigateToPage('schedule')" data-i18n="nav_schedule">Assessment Schedule</button>
-                        <button type="button" onclick="navigateToPage('scores')" data-i18n="nav_scores">Understanding Scores &amp; Percentiles</button>
-                        <button type="button" onclick="navigateToPage('resources')" data-i18n="nav_resources">Resources</button>
-                        <button type="button" onclick="navigateToPage('faq')" data-i18n="nav_faq">FAQs</button>
-                        <button type="button" onclick="navigateToPage('about')" data-i18n="nav_about">About</button>
+                        <button type="button" onclick="navigateToPage('resource-centre')" data-i18n="nav_resource_centre">Resource Centre</button>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section id="resource-centre-section" class="content-section" data-page="resource-centre">
+            <div class="hero-area">
+                <h2 class="section-title" tabindex="-1" data-i18n="nav_resource_centre">Resource Centre</h2>
+                <p class="section-subtitle" data-i18n="resource_centre_intro">Your saved work, reference guides, and help in one place.</p>
+            </div>
+            <div class="resource-centre-content">
+                <section class="resource-centre-group" aria-labelledby="centre-saved-title">
+                    <h3 id="centre-saved-title" data-i18n="resource_centre_saved">My Saved Items</h3>
+                    <div class="resource-centre-grid">
+                        <button type="button" class="resource-centre-card" data-page="favourites" onclick="navigateToPage('favourites')">
+                            <span class="material-symbols-rounded" aria-hidden="true" translate="no">bookmark</span>
+                            <span class="resource-centre-card-copy">
+                                <span class="resource-centre-card-title" data-i18n="resource_centre_saved">My Saved Items</span>
+                                <span data-i18n="resource_centre_saved_desc">Resume saved sessions or revisit bookmarked resources.</span>
+                            </span>
+                            <span class="nav-badge is-empty">0</span>
+                        </button>
+                    </div>
+                </section>
+                <section class="resource-centre-group" aria-labelledby="centre-guides-title">
+                    <h3 id="centre-guides-title" data-i18n="resource_centre_guides">Guides &amp; Documents</h3>
+                    <div class="resource-centre-grid">
+                        <button type="button" class="resource-centre-card" onclick="navigateToPage('scores')">
+                            <span class="material-symbols-rounded" aria-hidden="true" translate="no">bar_chart</span>
+                            <span class="resource-centre-card-copy">
+                                <span class="resource-centre-card-title" data-i18n="nav_scores">Understanding Scores &amp; Percentiles</span>
+                                <span data-i18n="resource_centre_scores_desc">Interpret screening results, standard scores, and percentiles.</span>
+                            </span>
+                        </button>
+                        <button type="button" class="resource-centre-card" onclick="navigateToPage('resources')">
+                            <span class="material-symbols-rounded" aria-hidden="true" translate="no">menu_book</span>
+                            <span class="resource-centre-card-copy">
+                                <span class="resource-centre-card-title" data-i18n="resource_centre_documents">Literacy Pillars &amp; Division Documents</span>
+                                <span data-i18n="resource_centre_documents_desc">Explore pillar definitions, screening guidance, and English and French learning progressions.</span>
+                            </span>
+                        </button>
+                    </div>
+                </section>
+                <section class="resource-centre-group" aria-labelledby="centre-help-title">
+                    <h3 id="centre-help-title" data-i18n="resource_centre_help">Help &amp; Background</h3>
+                    <div class="resource-centre-grid">
+                        <button type="button" class="resource-centre-card" onclick="navigateToPage('faq')">
+                            <span class="material-symbols-rounded" aria-hidden="true" translate="no">quiz</span>
+                            <span class="resource-centre-card-copy">
+                                <span class="resource-centre-card-title" data-i18n="nav_faq">FAQs</span>
+                                <span data-i18n="resource_centre_faq_desc">Find answers about screeners, literacy data, and the LRSD portal.</span>
+                            </span>
+                        </button>
+                        <button type="button" class="resource-centre-card" onclick="navigateToPage('about')">
+                            <span class="material-symbols-rounded" aria-hidden="true" translate="no">info</span>
+                            <span class="resource-centre-card-copy">
+                                <span class="resource-centre-card-title" data-i18n="nav_about">About</span>
+                                <span data-i18n="resource_centre_about_desc">Learn about RTI and MTSS, the project's purpose, acknowledgements, and feedback.</span>
+                            </span>
+                        </button>
                     </div>
                 </section>
             </div>

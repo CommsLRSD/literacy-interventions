@@ -1099,7 +1099,27 @@ function openLiteracyPillars(trigger) {
 // ============================================
 // Navigation
 // ============================================
+const RESOURCE_CENTRE_PAGES = ['scores', 'resources', 'faq', 'favourites', 'about'];
+
+function getNavigationPage(pageName) {
+    if (pageName === 'home') return 'flowchart';
+    return RESOURCE_CENTRE_PAGES.includes(pageName) ? 'resource-centre' : pageName;
+}
+
 function setupNavigation() {
+    RESOURCE_CENTRE_PAGES.forEach(page => {
+        const wrapper = document.querySelector(`#${page}-section > div`);
+        const nav = document.createElement('nav');
+        nav.className = 'resource-centre-back';
+        nav.setAttribute('data-i18n-aria', 'resource_centre_navigation');
+        nav.setAttribute('aria-label', t('resource_centre_navigation'));
+        nav.innerHTML = `<button type="button" onclick="navigateToPage('resource-centre')">
+            <span class="material-symbols-rounded" aria-hidden="true" translate="no">arrow_back</span>
+            <span data-i18n="resource_centre_back">${escapeHtml(t('resource_centre_back'))}</span>
+        </button>`;
+        wrapper.prepend(nav);
+    });
+
     // Desktop navigation
     document.querySelectorAll('.nav-link[data-page]').forEach(link => {
         link.addEventListener('click', (e) => {
@@ -1152,7 +1172,7 @@ function navigateToPage(pageName, { sessionNotesOnly = false } = {}) {
     updateMobilePageTitle();
     
     // Update active states in desktop nav
-    const navPage = pageName === 'home' ? 'flowchart' : pageName;
+    const navPage = getNavigationPage(pageName);
     document.querySelectorAll('.nav-link').forEach(link => {
         const isActive = link.dataset.page === navPage;
         link.classList.toggle('active', isActive);
@@ -1186,6 +1206,16 @@ function navigateToPage(pageName, { sessionNotesOnly = false } = {}) {
         renderFavourites();
     }
     updateGuidedHome();
+
+    if (getNavigationPage(pageName) === 'resource-centre') {
+        const section = document.getElementById(`${pageName}-section`);
+        // Hero headings are hidden on mobile, so focus the visible content there.
+        const target = window.matchMedia('(max-width: 480px)').matches
+            ? section.querySelector('.resource-centre-back button, .resource-centre-group h3')
+            : section.querySelector('.section-title');
+        if (target.tagName !== 'BUTTON') target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+    }
     
     // Smooth scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
