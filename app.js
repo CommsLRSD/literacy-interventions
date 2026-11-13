@@ -317,7 +317,7 @@ async function hardResetApp() {
     const resetConfirmation = window.prompt(t('guided_hard_reset_type'));
     if (resetConfirmation?.trim().toLowerCase() !== 'reset') return;
     closeMobileMenu();
-    document.getElementById('progress-transfer-dialog')?.close();
+    clearProgressTransfer();
     appReady = false;
     pathwayDefaults = {};
     pathwaySessions = [];
@@ -1276,6 +1276,7 @@ function navigateToPage(pageName, { sessionNotesOnly = false } = {}) {
     }
     setHomeDrawerOpen(false);
     document.getElementById('pathway-sessions-drawer')?.close();
+    if (appState.currentPage === 'settings') clearProgressTransfer();
 
     // Update state
     appState.currentPage = pageName;
@@ -1317,11 +1318,15 @@ function navigateToPage(pageName, { sessionNotesOnly = false } = {}) {
         initializeInterventionsFilterMenu();
     } else if (pageName === 'resource-centre') {
         selectResourceCentrePage(centrePage);
+    } else if (pageName === 'settings') {
+        initializeSettings();
     }
     updateGuidedHome();
 
     if (pageName === 'resource-centre') {
         document.getElementById('resource-centre-reader-title').focus({ preventScroll: true });
+    } else if (pageName === 'settings') {
+        document.getElementById('settings-title').focus({ preventScroll: true });
     }
     
     // Smooth scroll to top

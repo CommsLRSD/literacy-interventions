@@ -25,7 +25,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
     <script src="theme.js?v=dark-mode-1"></script>
-    <link rel="stylesheet" href="styles.css?v=dark-mode-1">
+    <link rel="stylesheet" href="styles.css?v=settings-screen-1">
 </head>
 <body data-page="home">
     <svg xmlns="http://www.w3.org/2000/svg" class="resource-centre-symbols" aria-hidden="true">
@@ -41,6 +41,9 @@
         <symbol id="rc-feedback" viewBox="0 0 24 24"><path d="M21 4H3v14h5l4 4v-4h9V4ZM7 8h10M7 12h6"/></symbol>
         <symbol id="rc-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
         <symbol id="rc-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+        <symbol id="rc-settings" viewBox="0 0 24 24"><path d="m9 3-1 3-3 1-2 5 2 5 3 1 1 3h6l1-3 3-1 2-5-2-5-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/></symbol>
+        <symbol id="rc-send" viewBox="0 0 24 24"><path d="m3 3 18 9-18 9 4-9-4-9Zm4 9h14"/></symbol>
+        <symbol id="rc-receive" viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4M4 14v7h16v-7"/></symbol>
     </svg>
     <!-- Skip to content for keyboard navigation -->
     <a href="#main-content" class="skip-to-content" data-i18n="skip_to_content">Skip to content</a>
@@ -120,7 +123,7 @@
                 <svg class="resource-centre-icon nav-icon" aria-hidden="true"><use href="#rc-book"/></svg>
                 <span class="nav-link-label" data-i18n="nav_resource_centre">Resource Centre</span>
             </button>
-            <button class="nav-link nav-settings" type="button" role="menuitem" onclick="openProgressTransfer()" aria-haspopup="dialog" aria-controls="progress-transfer-dialog">
+            <button class="nav-link nav-settings" type="button" data-page="settings" role="menuitem" aria-selected="false">
                 <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">settings</span>
                 <span class="nav-link-label" data-i18n="settings_title">Settings</span>
             </button>
@@ -169,7 +172,7 @@
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">install_mobile</span>
                 <span data-i18n="install_btn">Install App</span>
             </button>
-            <button class="mobile-nav-item" type="button" onclick="openProgressTransfer()" aria-haspopup="dialog" aria-controls="progress-transfer-dialog">
+            <button class="mobile-nav-item" type="button" data-page="settings">
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">settings</span>
                 <span data-i18n="settings_title">Settings</span>
             </button>
@@ -192,62 +195,92 @@
         <div id="pathway-sessions-list"></div>
     </dialog>
 
-    <dialog id="progress-transfer-dialog" class="progress-transfer-dialog" aria-labelledby="transfer-title" onkeydown="event.stopPropagation()">
-        <header class="transfer-header">
-            <h2 id="transfer-title" data-i18n="settings_title">Settings</h2>
-            <button type="button" onclick="document.getElementById('progress-transfer-dialog').close()" data-i18n="transfer_close" autofocus>Close</button>
-        </header>
-        <section class="settings-card settings-appearance" aria-labelledby="settings-appearance-title">
-            <h3 id="settings-appearance-title" data-i18n="settings_appearance">Appearance</h3>
-            <label class="settings-theme-toggle" for="settings-dark-mode">
-                <input id="settings-dark-mode" type="checkbox" role="switch" aria-describedby="settings-theme-hint">
-                <span data-i18n="settings_dark_mode">Dark mode</span>
-            </label>
-            <p id="settings-theme-hint" data-i18n="settings_theme_hint">Use darker backgrounds. This preference is saved on this device.</p>
-            <p id="settings-theme-status" role="status" aria-atomic="true"></p>
-        </section>
-        <details id="settings-transfer" class="settings-card">
-            <summary data-i18n="settings_transfer_title">Transfer saved data</summary>
-            <p id="transfer-description" data-i18n="transfer_description">Move all saved progress, sessions, favourites, and preferences to another device by email.</p>
-            <p id="transfer-privacy" class="transfer-notice" data-i18n="transfer_privacy">Not encrypted: anyone with the link, including your email provider, can access your data. Later changes need a new email.</p>
-            <section id="transfer-send" class="transfer-section" aria-labelledby="transfer-send-title">
-                <h3 id="transfer-send-title" data-i18n="transfer_title">Email my progress</h3>
-                <div class="transfer-actions">
-                    <button type="button" id="transfer-email" disabled onclick="emailProgressTransfer()" data-i18n="transfer_email">Email all progress</button>
-                </div>
-                <p data-i18n="transfer_email_hint">Opens a draft in your email app. Send it to yourself.</p>
-            </section>
-            <section id="transfer-receive" class="transfer-section" aria-labelledby="transfer-receive-title">
-                <h3 id="transfer-receive-title" data-i18n="transfer_receive_title">Restore from email link</h3>
-                <p id="transfer-app-hint" data-i18n="transfer_app_hint">Paste your emailed link here. Using the installed app? Paste it inside that app, not another browser.</p>
-                <label for="transfer-link-input" data-i18n="transfer_link_label">Emailed restore link</label>
-                <textarea id="transfer-link-input" rows="3" maxlength="1400000" aria-describedby="transfer-app-hint" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
-                <div class="transfer-actions">
-                    <button type="button" onclick="previewEmailedProgressLink()" data-i18n="transfer_preview_link">Preview emailed link</button>
-                </div>
-                <p data-i18n="transfer_restore_hint">Replaces all saved data on this device. Email a backup first if needed.</p>
-                <div class="transfer-actions">
-                    <button type="button" id="transfer-restore" hidden onclick="restoreProgressTransfer()" data-i18n="transfer_restore">Restore progress</button>
-                </div>
-                <div id="transfer-preview" class="transfer-preview" aria-live="polite"></div>
-            </section>
-            <p id="transfer-status" role="status" aria-atomic="true"></p>
-        </details>
-        <section class="settings-card settings-reset" aria-labelledby="settings-reset-title">
-            <h3 id="settings-reset-title" data-i18n="guided_hard_reset">Reset saved data</h3>
-            <p data-i18n="settings_reset_description">Permanently delete all saved data on this device.</p>
-            <div class="transfer-actions">
-                <button class="menu-hard-reset" type="button" onclick="hardResetApp()" data-i18n="guided_hard_reset">Reset saved data</button>
-            </div>
-        </section>
-    </dialog>
-
     <!-- Main Content -->
     <main class="main-content" id="main-content">
         <div class="pathway-return-banner" id="pathway-return-banner" hidden>
             <span data-i18n="guided_return_hint">Your guided process is still available.</span>
             <button type="button" onclick="returnToPathway()" data-i18n="guided_return">Return to my next step</button>
         </div>
+
+        <!-- Settings uses the same page navigation as the reference resources. -->
+        <section id="settings-section" class="content-section" data-page="settings" aria-labelledby="settings-title">
+            <div class="settings-layout">
+                <header class="settings-header">
+                    <svg class="resource-centre-icon settings-page-icon" aria-hidden="true"><use href="#rc-settings"/></svg>
+                    <div>
+                        <h2 id="settings-title" class="section-title" tabindex="-1" data-i18n="settings_title">Settings</h2>
+                        <p data-i18n="settings_intro">Make yourself at home. Manage your appearance and saved data in one place.</p>
+                    </div>
+                </header>
+                <section class="settings-card settings-appearance" aria-labelledby="settings-appearance-title">
+                    <h3 id="settings-appearance-title" data-i18n="settings_appearance">Appearance</h3>
+                    <label class="settings-theme-toggle" for="settings-dark-mode">
+                        <span class="settings-theme-copy">
+                            <span id="settings-dark-mode-label" class="settings-option-title" data-i18n="settings_dark_mode">Dark mode</span>
+                            <span id="settings-theme-hint" data-i18n="settings_theme_hint">Use darker backgrounds. This preference is saved on this device.</span>
+                        </span>
+                        <input id="settings-dark-mode" type="checkbox" role="switch" aria-labelledby="settings-dark-mode-label" aria-describedby="settings-theme-hint">
+                        <span class="settings-switch-track" aria-hidden="true"></span>
+                    </label>
+                    <p id="settings-theme-status" role="status" aria-atomic="true"></p>
+                </section>
+                <section id="settings-transfer" class="settings-card" aria-labelledby="settings-transfer-title">
+                    <h3 id="settings-transfer-title" data-i18n="settings_transfer_title">Transfer saved data</h3>
+                    <p id="transfer-description" data-i18n="transfer_description">Take your saved sessions, current progress, favourites, and program and language preferences to another device. Your appearance stays on this device.</p>
+                    <p class="settings-hint" data-i18n="transfer_snapshot_hint">This sends a copy, not a live sync. Nothing is removed from the sending device. Create a new email whenever you want to transfer newer changes.</p>
+                    <div class="transfer-grid">
+                        <section id="transfer-send" class="transfer-section" aria-labelledby="transfer-send-title">
+                            <div class="transfer-card-heading">
+                                <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-send"/></svg>
+                                <h4 id="transfer-send-title" data-i18n="transfer_send_title">On your current device</h4>
+                            </div>
+                            <ol class="transfer-steps">
+                                <li data-i18n="transfer_send_step1">Select “Email my saved data” to open a draft in your email app.</li>
+                                <li data-i18n="transfer_send_step2">Send the email to yourself, then open it on your other device.</li>
+                                <li data-i18n="transfer_send_step3">Open the link in the email, review the preview, then choose “Replace saved data”.</li>
+                            </ol>
+                            <div class="transfer-actions">
+                                <button class="settings-primary-button" type="button" id="transfer-email" onclick="emailProgressTransfer()" data-i18n="transfer_email">Email my saved data</button>
+                            </div>
+                            <p class="settings-hint" data-i18n="transfer_email_hint">You need an email app set up on this device. Opening the draft does not send it automatically.</p>
+                        </section>
+                        <section id="transfer-receive" class="transfer-section" aria-labelledby="transfer-receive-title">
+                            <div class="transfer-card-heading">
+                                <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-receive"/></svg>
+                                <h4 id="transfer-receive-title" data-i18n="transfer_receive_title">On your other device</h4>
+                            </div>
+                            <ol class="transfer-steps">
+                                <li data-i18n="transfer_receive_step1">Copy the complete link from the email and paste it below.</li>
+                                <li data-i18n="transfer_receive_step2">Select “Preview saved data” to check what is in the link. Nothing changes yet.</li>
+                                <li data-i18n="transfer_receive_step3">Review the preview, then confirm “Replace saved data” to finish. The app will reload.</li>
+                            </ol>
+                            <p id="transfer-app-hint" class="settings-hint" data-i18n="transfer_app_hint">Using the installed app? Paste the link in Settings inside that app. Restoring in another browser will not update the app’s saved data.</p>
+                            <label for="transfer-link-input" data-i18n="transfer_link_label">Link from your email</label>
+                            <textarea id="transfer-link-input" rows="3" maxlength="1400000" aria-describedby="transfer-app-hint" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+                            <div class="transfer-actions">
+                                <button type="button" onclick="previewEmailedProgressLink()" data-i18n="transfer_preview_link">Preview saved data</button>
+                            </div>
+                            <div id="transfer-preview" class="transfer-preview" aria-live="polite"></div>
+                            <p class="transfer-replace-notice" data-i18n="transfer_restore_hint">Restoring replaces, rather than combines, all saved data on this device. Email yourself a backup of this device’s data first if you want to keep it.</p>
+                            <div class="transfer-actions">
+                                <button class="settings-primary-button" type="button" id="transfer-restore" hidden onclick="restoreProgressTransfer()" data-i18n="transfer_restore">Replace saved data</button>
+                            </div>
+                        </section>
+                    </div>
+                    <p id="transfer-status" role="status" aria-atomic="true"></p>
+                    <p id="transfer-privacy" class="transfer-notice" data-i18n="transfer_privacy">Keep the link private. It is not encrypted: anyone with it, including your email provider, can access your saved data.</p>
+                </section>
+                <section class="settings-card settings-reset" aria-labelledby="settings-reset-title">
+                    <div>
+                        <h3 id="settings-reset-title" data-i18n="guided_hard_reset">Reset saved data</h3>
+                        <p data-i18n="settings_reset_description">Permanently delete all saved data on this device.</p>
+                    </div>
+                    <div class="transfer-actions">
+                        <button class="menu-hard-reset" type="button" onclick="hardResetApp()" data-i18n="guided_hard_reset">Reset saved data</button>
+                    </div>
+                </section>
+            </div>
+        </section>
 
         <!-- ── HOME ─────────────────────────────────────────── -->
         <section id="home-section" class="content-section active" data-page="home">
@@ -1688,9 +1721,9 @@
         </div>
     </dialog>
 
-    <script src="translations.js?v=dark-mode-1"></script>
-    <script src="app.js?v=resource-centre-3"></script>
-    <script src="transfer.js?v=resource-centre-3"></script>
+    <script src="translations.js?v=settings-screen-1"></script>
+    <script src="app.js?v=settings-screen-1"></script>
+    <script src="transfer.js?v=settings-screen-1"></script>
 
     <script>
     (function() {

@@ -14,6 +14,11 @@ function setup() {
     const storage = new Map();
     const element = () => ({
         hidden: false, disabled: false, textContent: '', value: '', children: [], handlers: new Map(),
+        dataset: {}, attributes: new Map(), classes: new Set(),
+        classList: {
+            toggle(name, active) { if (active) this.owner.classes.add(name); else this.owner.classes.delete(name); },
+            contains(name) { return this.owner.classes.has(name); }
+        },
         get innerHTML() {
             return String(this.textContent).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         },
@@ -21,23 +26,42 @@ function setup() {
         replaceChildren(...children) { this.children = children; },
         append(...children) { this.children.push(...children); },
         appendChild(child) { this.children.push(child); },
-        showModal() { this.open = true; }
+        close() { this.open = false; },
+        setAttribute(name, value) { this.attributes.set(name, value); },
+        focus() { this.focused = true; }
     });
     const getElement = id => {
-        if (!elements.has(id)) elements.set(id, element());
+        if (!elements.has(id)) {
+            const item = element();
+            item.id = id;
+            item.classList.owner = item;
+            elements.set(id, item);
+        }
         return elements.get(id);
     };
+    const pages = ['home', 'settings'];
+    const navigation = prefix => pages.map(page => {
+        const item = getElement(`${prefix}-${page}`);
+        item.dataset.page = page;
+        return item;
+    });
     const context = vm.createContext({
         console, URL, Blob, TextEncoder, TextDecoder, CompressionStream, DecompressionStream,
         btoa, atob, structuredClone, crypto: webcrypto,
         document: {
+            body: { dataset: {} },
             baseURI: 'https://example.org/literacy-interventions/',
-            addEventListener() {}, getElementById: getElement, createElement: element
+            addEventListener() {}, getElementById: getElement, createElement: element,
+            querySelector: selector => selector === '#settings-section .section-title' ? getElement('settings-title') : null,
+            querySelectorAll: selector => selector === '.nav-link' ? navigation('desktop')
+                : selector === '.mobile-nav-item' ? navigation('mobile')
+                : selector === '.content-section' ? pages.map(page => getElement(`${page}-section`)) : []
         },
         window: {
             location: { href: 'https://example.org/literacy-interventions/', hash: '', pathname: '/literacy-interventions/', search: '', reloads: 0,
                 reload() { this.reloads++; } },
             confirm: () => true,
+            scrollTo() {},
             addEventListener(name, callback) { listeners.set(name, callback); },
             matchMedia: () => ({ matches: false, addEventListener() {} })
         },
@@ -83,40 +107,56 @@ function setup() {
             Object.fromEntries(schedulesData.programs.map(program => [program.id, [program.grades[0].id]]))));
         savePathwayProgress = () => {};
         closeMobileMenu = () => {};
+        closeResourceCentreDrawer = () => {};
+        setHomeDrawerOpen = () => {};
+        clearFavouriteFeedback = () => {};
+        closeVisualFlowchartModal = () => {};
+        updateGuidedHome = () => {};
         getSessionNotes = item => ({ date: new Date(item.startedAt), program: item.context.program,
             grade: item.context.grades[0], screener: item.context.screener });
     `);
     return { context, run, getElement, storage, listeners };
 }
 
-test('Settings combines email, restore and reset behind one gear in each navigation', () => {
+test('Settings is a full screen in both navigation menus with visible transfer steps', () => {
     const html = read('index.html');
     const desktop = html.slice(html.indexOf('<nav class="side-nav"'), html.indexOf('<!-- Mobile nav overlay'));
     const mobile = html.slice(html.indexOf('<!-- Mobile nav overlay'), html.indexOf('<!-- Backdrop'));
     for (const navigation of [desktop, mobile]) {
-        assert.equal((navigation.match(/onclick="openProgressTransfer\(\)"/g) || []).length, 1);
+        assert.equal((navigation.match(/data-page="settings"/g) || []).length, 1);
         assert.match(navigation, /translate="no">settings<\/span>/);
         assert.match(navigation, /data-i18n="settings_title">Settings/);
         assert.doesNotMatch(navigation, /onclick="hardResetApp\(\)"/);
     }
-    const dialog = html.slice(html.indexOf('<dialog id="progress-transfer-dialog"'), html.indexOf('<!-- Main Content'));
-    assert.match(dialog, /data-i18n="settings_title">Settings/);
+    assert.doesNotMatch(html, /progress-transfer-dialog|openProgressTransfer/);
+    const settings = html.slice(html.indexOf('<section id="settings-section"'), html.indexOf('<!-- ── HOME'));
+    assert.match(settings, /data-i18n="settings_title">Settings/);
     for (const handler of ['emailProgressTransfer', 'previewEmailedProgressLink', 'restoreProgressTransfer', 'hardResetApp']) {
-        assert.ok(dialog.includes(`onclick="${handler}()"`));
+        assert.ok(settings.includes(`onclick="${handler}()"`));
     }
-    assert.match(dialog, /<details id="settings-transfer" class="settings-card">/);
-    assert.match(dialog, /<summary data-i18n="settings_transfer_title">Transfer saved data<\/summary>/);
-    assert.ok(dialog.indexOf('</details>') < dialog.indexOf('id="settings-reset-title"'));
+    assert.doesNotMatch(settings, /<details|<dialog/);
+    assert.equal((settings.match(/class="transfer-steps"/g) || []).length, 2);
+    assert.match(settings, /role="switch"/);
 });
 
-test('Settings opens with transfer controls collapsed, including after a previous expansion', () => {
+test('Settings navigation updates page selection, title and focus, and leaving cancels previews', async () => {
     const { context, getElement } = setup();
-    getElement('settings-transfer').open = true;
-    context.openProgressTransfer();
-    assert.equal(getElement('progress-transfer-dialog').open, true);
-    assert.equal(getElement('settings-transfer').open, false);
-    assert.equal(getElement('transfer-send').hidden, false);
-    assert.equal(getElement('transfer-receive').hidden, false);
+    getElement('settings-title').textContent = 'Settings';
+    context.navigateToPage('settings');
+    assert.equal(context.document.body.dataset.page, 'settings');
+    assert.equal(getElement('settings-section').classes.has('active'), true);
+    assert.equal(getElement('home-section').classes.has('active'), false);
+    assert.equal(getElement('desktop-settings').attributes.get('aria-selected'), 'true');
+    assert.equal(getElement('mobile-settings').classes.has('active'), true);
+    assert.equal(getElement('mobile-page-title').textContent, 'Settings');
+    assert.equal(getElement('settings-title').focused, true);
+    await context.previewProgressTransfer(await context.encodeProgressTransfer(context.captureProgressTransfer()));
+    context.navigateToPage('home');
+    await context.restoreProgressTransfer();
+    assert.equal(getElement('transfer-restore').hidden, true);
+    assert.equal(context.window.location.reloads, 0);
+    context.navigateToPage('settings');
+    assert.equal(getElement('transfer-email').disabled, false);
 });
 
 test('only the Tier 1 benchmark phrase toggles the existing guidance in either pathway view', () => {
@@ -253,7 +293,7 @@ test('one email link includes all saved data, not a selected session', async () 
     const { context, getElement } = setup();
     await context.prepareTransferLink();
     assert.equal(getElement('transfer-email').disabled, false);
-    context.emailProgressTransfer();
+    await context.emailProgressTransfer();
     const email = new URL(context.window.location.href);
     assert.equal(email.protocol, 'mailto:');
     const body = email.searchParams.get('body');
@@ -273,12 +313,11 @@ test('opening link only previews; canceled confirmation preserves data; restore 
     const code = await context.encodeProgressTransfer(source);
     run(`pathwaySessions = [{ ...session, id: 'destination-only' }]; favouriteIds = new Set();`);
     context.window.location.hash = `#progress=${code}`;
-    context.receiveProgressTransferLink();
-    // Wait for the asynchronous streamed preview started by the link handler.
-    await context.previewProgressTransfer(code);
-    assert.equal(getElement('transfer-send').hidden, true);
+    await context.receiveProgressTransferLink();
+    assert.equal(context.document.body.dataset.page, 'settings');
+    assert.equal(getElement('transfer-send').hidden, false);
     assert.equal(getElement('transfer-receive').hidden, false);
-    assert.equal(getElement('settings-transfer').open, true);
+    assert.equal(getElement('transfer-email').disabled, false);
     assert.equal(getElement('transfer-restore').hidden, false);
     assert.equal(run('pathwaySessions[0].id'), 'destination-only');
     context.window.confirm = () => false;
@@ -344,7 +383,7 @@ test('oversized full email is disabled without partial sends or data removal', a
     await context.prepareTransferLink();
     assert.equal(getElement('transfer-email').disabled, true);
     assert.match(getElement('transfer-status').textContent, /No data was sent or removed/);
-    context.emailProgressTransfer();
+    await context.emailProgressTransfer();
     assert.equal(context.window.location.href, 'https://example.org/literacy-interventions/');
     assert.equal(run('pathwaySessions.length'), 2);
 });
@@ -365,7 +404,7 @@ test('failed persistence does not reload or replace existing progress and prefer
     assert.match(getElement('transfer-status').textContent, /could not be prepared or restored/);
 });
 
-test('closing invalidates a preview and the interface offers only email', async () => {
+test('clearing Settings invalidates a preview and the interface offers only email', async () => {
     const { context, run, getElement } = setup();
     await context.previewProgressTransfer(await context.encodeProgressTransfer(context.captureProgressTransfer()));
     context.clearProgressTransfer();
@@ -382,7 +421,7 @@ test('closing invalidates a preview and the interface offers only email', async 
 test('an installed app can restore the emailed snapshot independently of the default browser', async () => {
     const sender = setup();
     await sender.context.prepareTransferLink();
-    sender.context.emailProgressTransfer();
+    await sender.context.emailProgressTransfer();
     const body = new URL(sender.context.window.location.href).searchParams.get('body');
     const link = body.match(/https:\/\/\S+/)[0];
     assert.match(body, /inside that app/);
@@ -391,7 +430,7 @@ test('an installed app can restore the emailed snapshot independently of the def
     browser.run(`pathwaySessions = [{ ...session, id: 'browser-only' }];`);
     const app = setup();
     app.run(`pathwaySessions = [{ ...session, id: 'app-only' }];`);
-    app.context.openProgressTransfer();
+    app.context.navigateToPage('settings');
     assert.equal(app.getElement('transfer-receive').hidden, false);
     app.getElement('transfer-link-input').value = `  ${link}\n`;
     await app.context.previewEmailedProgressLink();
@@ -431,13 +470,15 @@ test('pasted links are validated locally without navigating or changing saved da
     assert.equal(getElement('transfer-restore').hidden, false);
 });
 
-test('editing or closing the pasted link cancels stale and in-flight previews', async () => {
+test('editing or leaving Settings cancels stale and in-flight previews', async () => {
     const { context, getElement } = setup();
+    context.navigateToPage('settings');
     const code = await context.encodeProgressTransfer(context.captureProgressTransfer());
     const input = getElement('transfer-link-input');
     const link = `https://example.org/literacy-interventions/#progress=${code}`;
     input.value = link;
     await context.previewEmailedProgressLink();
+    assert.equal(input.value, link);
     input.value = 'changed';
     input.handlers.get('input')();
     await context.restoreProgressTransfer();
@@ -450,8 +491,39 @@ test('editing or closing the pasted link cancels stale and in-flight previews', 
     assert.equal(getElement('transfer-restore').hidden, true);
     input.value = link;
     await context.previewEmailedProgressLink();
-    getElement('progress-transfer-dialog').handlers.get('close')();
+    context.navigateToPage('home');
     assert.equal(input.value, '');
     await context.restoreProgressTransfer();
     assert.equal(context.window.location.reloads, 0);
+});
+
+test('emailing a backup after a preview captures current device data without losing the preview', async () => {
+    const { context, run, getElement } = setup();
+    const incoming = await context.encodeProgressTransfer(context.captureProgressTransfer());
+    run(`pathwaySessions = [{ ...session, id: 'destination-only' }]; activePathwaySessionId = 'destination-only';`);
+    await context.previewProgressTransfer(incoming);
+    await context.emailProgressTransfer();
+    const body = new URL(context.window.location.href).searchParams.get('body');
+    const link = new URL(body.match(/https:\/\/\S+/)[0]);
+    const backup = await context.decodeProgressTransfer(link.hash.slice('#progress='.length));
+    assert.equal(backup.sessions.length, 1);
+    assert.equal(backup.sessions[0].id, 'destination-only');
+    assert.equal(getElement('transfer-restore').hidden, false);
+    await context.restoreProgressTransfer();
+    assert.equal(run('pathwaySessions[0].id'), 'active-session');
+});
+
+test('leaving Settings cancels an in-flight email even if a newer email is prepared', async () => {
+    const { context, run } = setup();
+    context.navigateToPage('settings');
+    const code = await context.encodeProgressTransfer(context.captureProgressTransfer());
+    run(`let finishEncoding; encodeProgressTransfer = () => new Promise(resolve => { finishEncoding = resolve; });`);
+    const pending = context.emailProgressTransfer();
+    context.navigateToPage('home');
+    context.navigateToPage('settings');
+    run(`encodeProgressTransfer = async () => '${code}';`);
+    await context.prepareTransferLink();
+    run(`finishEncoding('${code}');`);
+    await pending;
+    assert.equal(context.window.location.href, 'https://example.org/literacy-interventions/');
 });
