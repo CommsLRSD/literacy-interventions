@@ -38,8 +38,7 @@ test('both main menus group supporting pages under Resource Centre', () => {
     const mobile = html.slice(html.indexOf('<div class="mobile-nav-overlay"'), html.indexOf('<!-- Backdrop'));
     for (const menu of [desktop, mobile]) {
         assert.deepEqual([...menu.matchAll(/data-page="([^"]+)"/g)].map(match => match[1]),
-            ['flowchart', 'interventions', 'schedule', 'resource-centre']);
-        assert.match(menu, /onclick="openProgressTransfer\(\)"/);
+            ['flowchart', 'interventions', 'schedule', 'resource-centre', 'settings']);
     }
     const centre = html.slice(html.indexOf('<section id="resource-centre-section"'), html.indexOf('<!-- ── FLOWCHART'));
     assert.deepEqual([...centre.matchAll(/role="tab" data-page="([^"]+)"/g)].map(match => match[1]),

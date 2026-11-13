@@ -10,14 +10,15 @@ function transferStatus(key) {
     document.getElementById('transfer-status').textContent = t(key);
 }
 
-function clearProgressTransfer() {
+function clearProgressTransfer({ keepInput = false } = {}) {
     transferEpoch++;
     transferPreview = null;
     transferLink = '';
     document.getElementById('transfer-preview').replaceChildren();
     document.getElementById('transfer-restore').hidden = true;
-    document.getElementById('transfer-email').disabled = true;
-    document.getElementById('transfer-link-input').value = '';
+    document.getElementById('transfer-email').disabled = false;
+    document.getElementById('transfer-status').textContent = '';
+    if (!keepInput) document.getElementById('transfer-link-input').value = '';
 }
 
 async function readTransferBytes(stream) {
@@ -145,26 +146,22 @@ async function prepareTransferLink() {
         }
         document.getElementById('transfer-email').disabled = false;
         document.getElementById('transfer-status').textContent = '';
+        return true;
     } catch (error) {
         if (epoch === transferEpoch) transferStatus('transfer_error');
     }
 }
 
-function openProgressTransfer() {
+function initializeSettings() {
     if (!appReady) return;
-    closeMobileMenu();
     savePathwayProgress();
     clearProgressTransfer();
-    document.getElementById('transfer-receive').hidden = false;
-    document.getElementById('transfer-send').hidden = false;
-    document.getElementById('settings-transfer').open = false;
-    const dialog = document.getElementById('progress-transfer-dialog');
-    if (!dialog.open) dialog.showModal();
-    prepareTransferLink();
 }
 
-function emailProgressTransfer() {
-    if (!appReady || !transferLink) return;
+async function emailProgressTransfer() {
+    if (!appReady || document.getElementById('transfer-email').disabled) return;
+    savePathwayProgress();
+    if (!await prepareTransferLink()) return;
     const email = buildTransferEmail();
     if (email.length <= TRANSFER_MAX_EMAIL) window.location.href = email;
     else transferStatus('transfer_too_large');
@@ -182,14 +179,14 @@ async function previewEmailedProgressLink() {
             url.username || url.password || !url.hash.startsWith('#progress=')) throw new Error('Invalid restore link');
         code = url.hash.slice('#progress='.length);
     } catch (error) {
-        clearProgressTransfer();
+        clearProgressTransfer({ keepInput: true });
         return transferStatus('transfer_invalid_link');
     }
     await previewProgressTransfer(code);
 }
 
 async function previewProgressTransfer(code) {
-    clearProgressTransfer();
+    clearProgressTransfer({ keepInput: true });
     const epoch = transferEpoch;
     transferStatus('transfer_loading');
     try {
@@ -273,16 +270,10 @@ function receiveProgressTransferLink() {
     const code = window.location.hash.slice('#progress='.length);
     // Remove the snapshot from the address bar without navigating or sending it to the server.
     history.replaceState(history.state, '', window.location.pathname + window.location.search);
-    clearProgressTransfer();
-    document.getElementById('transfer-send').hidden = true;
-    document.getElementById('transfer-receive').hidden = false;
-    document.getElementById('settings-transfer').open = true;
-    const dialog = document.getElementById('progress-transfer-dialog');
-    if (!dialog.open) dialog.showModal();
-    previewProgressTransfer(code);
+    navigateToPage('settings');
+    return previewProgressTransfer(code);
 }
 
-document.getElementById('progress-transfer-dialog').addEventListener('close', clearProgressTransfer);
 document.getElementById('transfer-link-input').addEventListener('input', () => {
     // An edited link must never leave a previously previewed snapshot available to restore.
     transferEpoch++;
