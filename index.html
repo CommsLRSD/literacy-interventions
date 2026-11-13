@@ -24,7 +24,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=resource-centre-3">
+    <script src="theme.js?v=dark-mode-1"></script>
+    <link rel="stylesheet" href="styles.css?v=dark-mode-1">
 </head>
 <body data-page="home">
     <svg xmlns="http://www.w3.org/2000/svg" class="resource-centre-symbols" aria-hidden="true">
@@ -196,6 +197,15 @@
             <h2 id="transfer-title" data-i18n="settings_title">Settings</h2>
             <button type="button" onclick="document.getElementById('progress-transfer-dialog').close()" data-i18n="transfer_close" autofocus>Close</button>
         </header>
+        <section class="settings-card settings-appearance" aria-labelledby="settings-appearance-title">
+            <h3 id="settings-appearance-title" data-i18n="settings_appearance">Appearance</h3>
+            <label class="settings-theme-toggle" for="settings-dark-mode">
+                <input id="settings-dark-mode" type="checkbox" role="switch" aria-describedby="settings-theme-hint">
+                <span data-i18n="settings_dark_mode">Dark mode</span>
+            </label>
+            <p id="settings-theme-hint" data-i18n="settings_theme_hint">Use darker backgrounds. This preference is saved on this device.</p>
+            <p id="settings-theme-status" role="status" aria-atomic="true"></p>
+        </section>
         <details id="settings-transfer" class="settings-card">
             <summary data-i18n="settings_transfer_title">Transfer saved data</summary>
             <p id="transfer-description" data-i18n="transfer_description">Move all saved progress, sessions, favourites, and preferences to another device by email.</p>
@@ -1678,7 +1688,7 @@
         </div>
     </dialog>
 
-    <script src="translations.js?v=resource-centre-3"></script>
+    <script src="translations.js?v=dark-mode-1"></script>
     <script src="app.js?v=resource-centre-3"></script>
     <script src="transfer.js?v=resource-centre-3"></script>
 
