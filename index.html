@@ -24,7 +24,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=resource-centre-2">
+    <link rel="stylesheet" href="styles.css?v=resource-centre-3">
 </head>
 <body data-page="home">
     <svg xmlns="http://www.w3.org/2000/svg" class="resource-centre-symbols" aria-hidden="true">
@@ -38,6 +38,8 @@
         <symbol id="rc-language" viewBox="0 0 24 24"><path d="M3 5h12M9 3v2m4 0c-1 6-4 9-9 11m2-8c1 4 3 6 6 8m1 5 4-11 4 11m-6-4h4"/></symbol>
         <symbol id="rc-external" viewBox="0 0 24 24"><path d="M14 3h7v7m0-7L10 14m0-10H4v16h16v-6"/></symbol>
         <symbol id="rc-feedback" viewBox="0 0 24 24"><path d="M21 4H3v14h5l4 4v-4h9V4ZM7 8h10M7 12h6"/></symbol>
+        <symbol id="rc-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+        <symbol id="rc-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
     </svg>
     <!-- Skip to content for keyboard navigation -->
     <a href="#main-content" class="skip-to-content" data-i18n="skip_to_content">Skip to content</a>
@@ -438,6 +440,7 @@
                     </div>
                 </header>
                 <div class="resource-centre-workspace">
+                    <div class="resource-centre-navigation">
                     <div class="resource-centre-tablist" role="tablist" aria-label="Resource Centre sections" data-i18n-aria="resource_centre_navigation" aria-orientation="vertical">
                         <span class="resource-centre-nav-caption" role="presentation" data-i18n="resource_centre_workspace">Your workspace</span>
                         <button type="button" id="rc-tab-favourites" class="resource-centre-tab active" role="tab" data-page="favourites" aria-selected="true" aria-controls="favourites-section" tabindex="0">
@@ -450,9 +453,13 @@
                             <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-chart"/></svg>
                             <span class="resource-centre-tab-label" data-i18n="resource_centre_scores">Scores &amp; Percentiles</span>
                         </button>
-                        <button type="button" id="rc-tab-resources" class="resource-centre-tab" role="tab" data-page="resources" aria-selected="false" aria-controls="resources-section" tabindex="-1">
+                        <button type="button" id="rc-tab-pillars" class="resource-centre-tab" role="tab" data-page="pillars" aria-selected="false" aria-controls="pillars-section" tabindex="-1">
                             <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-book"/></svg>
-                            <span class="resource-centre-tab-label" data-i18n="resource_centre_documents">Pillars &amp; Documents</span>
+                            <span class="resource-centre-tab-label" data-i18n="nav_pillars">Literacy Pillars</span>
+                        </button>
+                        <button type="button" id="rc-tab-resources" class="resource-centre-tab" role="tab" data-page="resources" aria-selected="false" aria-controls="resources-section" tabindex="-1">
+                            <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-file"/></svg>
+                            <span class="resource-centre-tab-label" data-i18n="nav_resources">Resources</span>
                         </button>
                         <span class="resource-centre-nav-caption" role="presentation" data-i18n="resource_centre_help">Help &amp; Background</span>
                         <button type="button" id="rc-tab-faq" class="resource-centre-tab" role="tab" data-page="faq" aria-selected="false" aria-controls="faq-section" tabindex="-1">
@@ -464,13 +471,21 @@
                             <span class="resource-centre-tab-label" data-i18n="nav_about">About</span>
                         </button>
                     </div>
+                    </div>
                     <div class="resource-centre-reader">
+                        <div class="resource-centre-mobile-browse">
+                            <button type="button" id="resource-centre-browse" onclick="openResourceCentreDrawer()" aria-haspopup="dialog" aria-controls="resource-centre-drawer" aria-expanded="false">
+                                <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-menu"/></svg>
+                                <span data-i18n="resource_centre_browse">Browse sections</span>
+                                <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-arrow"/></svg>
+                            </button>
+                        </div>
                         <header class="resource-centre-reader-header">
                             <div>
                                 <h3 id="resource-centre-reader-title" tabindex="-1">My Saved Items</h3>
                                 <p id="resource-centre-reader-description">Your sessions and resources, in one place.</p>
                             </div>
-                            <span id="resource-centre-position" class="resource-centre-position" aria-live="polite" aria-atomic="true">1 / 5</span>
+                            <span id="resource-centre-position" class="resource-centre-position" aria-live="polite" aria-atomic="true">1 / 6</span>
                         </header>
                         <div class="resource-centre-panels"></div>
                         <footer class="resource-centre-cycle">
@@ -714,12 +729,12 @@
             </div><!-- /.scores-page-wrapper -->
         </section>
 
-        <!-- ── RESOURCES ──────────────────────────────────── -->
-        <section id="resources-section" class="content-section" data-page="resources">
+        <!-- ── LITERACY PILLARS ───────────────────────────── -->
+        <section id="pillars-section" class="content-section" data-page="pillars">
             <div class="resources-page-wrapper">
                 <div class="hero-area">
-                    <h2 class="section-title" data-i18n="resources_section_title">Resources</h2>
-                    <p class="section-subtitle" data-i18n="resources_section_subtitle">Literacy pillar definitions and division documents supporting instruction, screening, and progress monitoring</p>
+                    <h2 class="section-title" data-i18n="nav_pillars">Literacy Pillars</h2>
+                    <p class="section-subtitle" data-i18n="pillars_intro">Explore each literacy pillar. Select a heading to read its definition; you can open several to compare.</p>
                 </div>
 
                 <div class="resources-page-body">
@@ -728,10 +743,20 @@
                             <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-book"/></svg>
                             <span data-i18n="nav_pillars">Literacy Pillars</span>
                         </h3>
-                        <p class="resource-group-intro" data-i18n="pillars_intro">Explore each literacy pillar. Select a heading to read its definition; you can open several to compare.</p>
                         <div id="literacy-pillars-reference" class="pillar-definitions"></div>
                     </section>
+                </div>
+            </div>
+        </section>
 
+        <!-- ── RESOURCES ──────────────────────────────────── -->
+        <section id="resources-section" class="content-section" data-page="resources">
+            <div class="resources-page-wrapper">
+                <div class="hero-area">
+                    <h2 class="section-title" data-i18n="resources_section_title">Resources</h2>
+                    <p class="section-subtitle" data-i18n="resources_section_subtitle">Division documents supporting instruction, screening, and progress monitoring</p>
+                </div>
+                <div class="resources-page-body">
                     <p class="resources-note" data-i18n="resources_note">Documents open in a new tab. Some links are hosted on the LRSD staff SharePoint and require a division sign-in.</p>
 
                     <div class="resource-group">
@@ -1517,6 +1542,19 @@
 
     </main>
 
+    <dialog id="resource-centre-drawer" class="resource-centre-drawer" aria-labelledby="resource-centre-drawer-title">
+        <div class="resource-centre-drawer-header">
+            <div>
+                <h2 id="resource-centre-drawer-title" data-i18n="nav_resource_centre">Resource Centre</h2>
+                <p data-i18n="resource_centre_choose">Choose a section to explore</p>
+            </div>
+            <button type="button" onclick="closeResourceCentreDrawer()" aria-label="Close section menu" data-i18n-aria="resource_centre_close">
+                <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-close"/></svg>
+            </button>
+        </div>
+        <div class="resource-centre-drawer-navigation"></div>
+    </dialog>
+
     <!-- Footer -->
     <footer class="site-footer" role="contentinfo">
         <img class="site-footer-division-logo" src="images/logos/lrsd-logo-fullcolour.svg" alt="Louis Riel School Division">
@@ -1640,9 +1678,9 @@
         </div>
     </dialog>
 
-    <script src="translations.js?v=resource-centre-2"></script>
-    <script src="app.js?v=resource-centre-2"></script>
-    <script src="transfer.js?v=resource-centre-2"></script>
+    <script src="translations.js?v=resource-centre-3"></script>
+    <script src="app.js?v=resource-centre-3"></script>
+    <script src="transfer.js?v=resource-centre-3"></script>
 
     <script>
     (function() {

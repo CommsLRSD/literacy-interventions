@@ -1112,7 +1112,7 @@ function openLiteracyPillars(trigger) {
 // ============================================
 // Navigation
 // ============================================
-const RESOURCE_CENTRE_PAGES = ['favourites', 'scores', 'resources', 'faq', 'about'];
+const RESOURCE_CENTRE_PAGES = ['favourites', 'scores', 'pillars', 'resources', 'faq', 'about'];
 let resourceCentrePage = 'favourites';
 
 function getNavigationPage(pageName) {
@@ -1133,12 +1133,34 @@ function setupResourceCentre() {
     });
     const tablist = document.querySelector('.resource-centre-tablist');
     const compact = window.matchMedia('(max-width: 900px)');
-    const updateOrientation = () => tablist.setAttribute('aria-orientation', compact.matches ? 'horizontal' : 'vertical');
-    compact.addEventListener('change', updateOrientation);
-    updateOrientation();
+    const drawer = document.getElementById('resource-centre-drawer');
+    const updateNavigation = () => {
+        closeResourceCentreDrawer();
+        const navigation = document.querySelector(compact.matches
+            ? '.resource-centre-drawer-navigation' : '.resource-centre-navigation');
+        navigation.append(tablist);
+        tablist.setAttribute('aria-orientation', 'vertical');
+    };
+    compact.addEventListener('change', updateNavigation);
+    updateNavigation();
+    drawer.addEventListener('close', () => {
+        document.getElementById('resource-centre-browse').setAttribute('aria-expanded', 'false');
+    });
+    drawer.addEventListener('click', event => {
+        if (event.target !== drawer) return;
+        const bounds = drawer.getBoundingClientRect();
+        if (event.clientX < bounds.left || event.clientX > bounds.right ||
+            event.clientY < bounds.top || event.clientY > bounds.bottom) closeResourceCentreDrawer();
+    });
     tablist.addEventListener('click', event => {
         const tab = event.target.closest('[role="tab"]');
-        if (tab) selectResourceCentrePage(tab.dataset.page);
+        if (tab) {
+            selectResourceCentrePage(tab.dataset.page);
+            if (drawer.open) {
+                closeResourceCentreDrawer();
+                document.getElementById('resource-centre-reader-title').focus({ preventScroll: true });
+            }
+        }
     });
     tablist.addEventListener('keydown', event => {
         const tab = event.target.closest('[role="tab"]');
@@ -1155,6 +1177,18 @@ function setupResourceCentre() {
         document.getElementById(`rc-tab-${resourceCentrePage}`).focus({ preventScroll: true });
     });
     selectResourceCentrePage(resourceCentrePage);
+}
+
+function openResourceCentreDrawer() {
+    const drawer = document.getElementById('resource-centre-drawer');
+    if (!drawer.open) drawer.showModal();
+    document.getElementById('resource-centre-browse').setAttribute('aria-expanded', 'true');
+    document.getElementById(`rc-tab-${resourceCentrePage}`).focus({ preventScroll: true });
+}
+
+function closeResourceCentreDrawer() {
+    const drawer = document.getElementById('resource-centre-drawer');
+    if (drawer.open) drawer.close();
 }
 
 function updateResourceCentreText() {
@@ -1184,11 +1218,6 @@ function selectResourceCentrePage(page) {
         tab.tabIndex = selected ? 0 : -1;
     });
     updateResourceCentreText();
-    const tab = document.getElementById(`rc-tab-${page}`);
-    const tablist = tab.parentElement;
-    if (tablist.getAttribute('aria-orientation') === 'horizontal') {
-        tablist.scrollLeft = tab.offsetLeft - tablist.offsetLeft - (tablist.clientWidth - tab.offsetWidth) / 2;
-    }
     if (page === 'favourites') renderFavourites();
 }
 
@@ -1236,6 +1265,7 @@ function updateMobilePageTitle() {
 }
 
 function navigateToPage(pageName, { sessionNotesOnly = false } = {}) {
+    closeResourceCentreDrawer();
     const centrePage = RESOURCE_CENTRE_PAGES.includes(pageName) ? pageName : resourceCentrePage;
     if (RESOURCE_CENTRE_PAGES.includes(pageName)) pageName = 'resource-centre';
     if (pageName === 'flowchart' && !appReady) return;

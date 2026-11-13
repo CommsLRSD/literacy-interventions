@@ -43,17 +43,17 @@ test('both main menus group supporting pages under Resource Centre', () => {
     }
     const centre = html.slice(html.indexOf('<section id="resource-centre-section"'), html.indexOf('<!-- ── FLOWCHART'));
     assert.deepEqual([...centre.matchAll(/role="tab" data-page="([^"]+)"/g)].map(match => match[1]),
-        ['favourites', 'scores', 'resources', 'faq', 'about']);
+        ['favourites', 'scores', 'pillars', 'resources', 'faq', 'about']);
     assert.match(centre, /onclick="cycleResourceCentre\(-1\)"/);
     assert.match(centre, /onclick="cycleResourceCentre\(1\)"/);
-    for (const page of ['favourites', 'scores', 'resources', 'faq', 'about']) {
+    for (const page of ['favourites', 'scores', 'pillars', 'resources', 'faq', 'about']) {
         assert.match(html, new RegExp(`id="${page}-section"`));
     }
 });
 
 test('direct supporting-page destinations highlight Resource Centre without changing their destination', () => {
     const { run } = setup();
-    for (const page of ['scores', 'resources', 'faq', 'favourites', 'about', 'resource-centre']) {
+    for (const page of ['scores', 'pillars', 'resources', 'faq', 'favourites', 'about', 'resource-centre']) {
         assert.equal(run(`getNavigationPage('${page}')`), 'resource-centre');
     }
     for (const page of ['flowchart', 'interventions', 'schedule']) {
@@ -94,7 +94,7 @@ test('Saved Items tab badge includes sessions and bookmarked resources', () => {
 function setupCentre() {
     const setupResult = setup();
     const { run, context } = setupResult;
-    const pages = ['favourites', 'scores', 'resources', 'faq', 'about'];
+    const pages = ['favourites', 'scores', 'pillars', 'resources', 'faq', 'about'];
     const elements = new Map();
     const element = (id, text = '') => {
         const classes = new Set(['content-section']);
@@ -108,9 +108,12 @@ function setupCentre() {
             },
             setAttribute(name, value) { this.attributes[name] = value; },
             getAttribute(name) { return this.attributes[name]; },
-            addEventListener(name, handler) { this[name] = handler; },
+            addEventListener(name, handler) { this[name === 'close' ? 'close-event' : name] = handler; },
+            append(node) { node.parentElement = this; },
             focus() { context.document.activeElement = this; },
-            close() {}
+            open: false,
+            showModal() { this.open = true; },
+            close() { this.open = false; this['close-event']?.(); }
         };
         elements.set(id, node);
         return node;
@@ -127,7 +130,8 @@ function setupCentre() {
     }
     for (const id of ['resource-centre-reader-title', 'resource-centre-reader-description',
         'resource-centre-position', 'resource-centre-previous-title', 'resource-centre-next-title',
-        'pathway-sessions-drawer', 'resource-centre-section', 'home-section', 'interventions-section']) element(id);
+        'pathway-sessions-drawer', 'resource-centre-section', 'home-section', 'interventions-section',
+        'resource-centre-drawer', 'resource-centre-browse', 'desktop-navigation', 'drawer-navigation']) element(id);
     const nav = element('nav');
     nav.dataset.page = 'resource-centre';
     context.document.body = { dataset: {} };
@@ -135,6 +139,8 @@ function setupCentre() {
     context.document.querySelector = selector => {
         if (selector === '.resource-centre-panels') return host;
         if (selector === '.resource-centre-tablist') return tablist;
+        if (selector === '.resource-centre-navigation') return elements.get('desktop-navigation');
+        if (selector === '.resource-centre-drawer-navigation') return elements.get('drawer-navigation');
         if (selector.includes('.resource-centre-tab-label') || selector.includes('.section-subtitle')) {
             return { textContent: selector };
         }
@@ -147,6 +153,8 @@ function setupCentre() {
         return [];
     };
     context.window.scrollTo = () => {};
+    const compact = { matches: false, addEventListener(name, handler) { this.change = handler; } };
+    context.window.matchMedia = () => compact;
     run(`
         setHomeDrawerOpen = () => {};
         clearFavouriteFeedback = () => {};
@@ -156,7 +164,7 @@ function setupCentre() {
         renderFavourites = () => {};
         setupResourceCentre();
     `);
-    return { ...setupResult, elements, host, tablist, nav, pages };
+    return { ...setupResult, elements, host, tablist, nav, pages, compact };
 }
 
 test('all existing content is mounted inside one screen, with only the selected panel exposed', () => {
@@ -198,6 +206,7 @@ test('tab keyboard controls cycle and expose just one keyboard tab stop', () => 
         target: { closest: () => elements.get('rc-tab-favourites') },
         preventDefault() { prevented = true; }
     });
+
     assert.equal(prevented, true);
     assert.equal(run('resourceCentrePage'), 'about');
     assert.equal(context.document.activeElement.id, 'rc-tab-about');
@@ -207,6 +216,31 @@ test('tab keyboard controls cycle and expose just one keyboard tab stop', () => 
         preventDefault() {}
     });
     assert.equal(run('resourceCentrePage'), 'favourites');
+});
+
+test('mobile drawer shares desktop navigation, closes after selection, and restores on resize', () => {
+    const { run, compact, tablist, elements, context } = setupCentre();
+    const drawer = elements.get('resource-centre-drawer');
+    const browse = elements.get('resource-centre-browse');
+    assert.equal(tablist.parentElement.id, 'desktop-navigation');
+    compact.matches = true;
+    compact.change();
+    assert.equal(tablist.parentElement.id, 'drawer-navigation');
+    run('openResourceCentreDrawer()');
+    assert.equal(drawer.open, true);
+    assert.equal(browse.attributes['aria-expanded'], 'true');
+    assert.equal(context.document.activeElement.id, 'rc-tab-favourites');
+    tablist.click({ target: { closest: () => elements.get('rc-tab-pillars') } });
+    assert.equal(run('resourceCentrePage'), 'pillars');
+    assert.equal(drawer.open, false);
+    assert.equal(browse.attributes['aria-expanded'], 'false');
+    assert.equal(context.document.activeElement.id, 'resource-centre-reader-title');
+    run('openResourceCentreDrawer()');
+    compact.matches = false;
+    compact.change();
+    assert.equal(drawer.open, false);
+    assert.equal(tablist.parentElement.id, 'desktop-navigation');
+    assert.equal(run('resourceCentrePage'), 'pillars');
 });
 
 test('stale translation dictionaries preserve readable labels rather than showing raw keys', () => {

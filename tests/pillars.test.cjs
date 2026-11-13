@@ -160,19 +160,23 @@ test('Toolkit pillar menus retain every pillar even when the program has no matc
     assert.match(chips.innerHTML, /multiselect-done-btn/);
 });
 
-test('checklist help is outside checkbox labels and the reference guide is part of Resources', () => {
+test('checklist help is outside checkbox labels and the reference guide has its own Resource Centre section', () => {
     const { run } = setup();
     run('appState.visualFlowchart = { checklistChecked: {} }');
     const html = run("renderChecklistBody({ items: ['Review the five pillars of reading.'] })");
     assert.ok(html.indexOf('openLiteracyPillars(this)') > html.lastIndexOf('</label>'));
     const page = read('index.html');
-    assert.doesNotMatch(page, /data-page="pillars"|id="pillars-section"/);
     assert.match(page, /class="nav-link" data-page="resource-centre"/);
     assert.match(page, /class="mobile-nav-item" data-page="resource-centre"/);
     assert.match(page, /id="rc-tab-resources".*role="tab".*aria-controls="resources-section"/);
+    assert.match(page, /id="rc-tab-pillars".*role="tab".*aria-controls="pillars-section"/);
+    const pillars = page.slice(page.indexOf('<section id="pillars-section"'), page.indexOf('<section id="resources-section"'));
+    assert.match(pillars, /id="resources-pillars-title"/);
+    assert.match(pillars, /id="literacy-pillars-reference"/);
     const resources = page.slice(page.indexOf('<section id="resources-section"'), page.indexOf('<!-- /.resources-page-wrapper -->'));
-    assert.match(resources, /id="resources-pillars-title"/);
-    assert.match(resources, /id="literacy-pillars-reference"/);
+    assert.doesNotMatch(resources, /literacy-pillars-reference/);
+    const generalResources = resources.slice(0, resources.indexOf('data-program-scope="French Immersion"'));
+    assert.equal((generalResources.match(/class="resource-link" /g) || []).length, 3);
     assert.equal((page.match(/id="literacy-pillars-reference"/g) || []).length, 1);
     assert.doesNotMatch(page, /Selected pillars are expanded below/);
     assert.match(page, /onclick="openLiteracyPillars\(this\)"/);

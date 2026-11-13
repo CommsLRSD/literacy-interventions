@@ -35,7 +35,9 @@ const TRANSLATIONS = {
         resource_centre_saved: 'My Saved Items',
         resource_centre_workspace: 'Your workspace',
         resource_centre_guides: 'Guides & Documents',
-        resource_centre_documents: 'Pillars & Documents',
+        resource_centre_browse: 'Browse sections',
+        resource_centre_choose: 'Choose a section to explore',
+        resource_centre_close: 'Close section menu',
         resource_centre_scores: 'Scores & Percentiles',
         resource_centre_help: 'Help & Background',
         resource_centre_previous: 'Previous',
@@ -363,7 +365,7 @@ const TRANSLATIONS = {
 
         // ── Resources section ──
         resources_section_title: 'Resources',
-        resources_section_subtitle: 'Literacy pillar definitions and division documents supporting instruction, screening, and progress monitoring',
+        resources_section_subtitle: 'Division documents supporting instruction, screening, and progress monitoring',
         resources_note: 'Documents open in a new tab. Some links are hosted on the LRSD staff SharePoint and require a division sign-in.',
         resources_group_division: 'Division overview',
         resources_group_progressions: 'Learning Progressions',
@@ -572,7 +574,9 @@ const TRANSLATIONS = {
         resource_centre_saved: 'Mes éléments enregistrés',
         resource_centre_workspace: 'Votre espace',
         resource_centre_guides: 'Guides et documents',
-        resource_centre_documents: 'Piliers et documents',
+        resource_centre_browse: 'Parcourir les sections',
+        resource_centre_choose: 'Choisissez une section à explorer',
+        resource_centre_close: 'Fermer le menu des sections',
         resource_centre_scores: 'Scores et percentiles',
         resource_centre_help: 'Aide et contexte',
         resource_centre_previous: 'Précédent',
@@ -900,7 +904,7 @@ const TRANSLATIONS = {
 
         // ── Resources section ──
         resources_section_title: 'Ressources',
-        resources_section_subtitle: 'Définitions des piliers de littératie et documents de la division soutenant l\'enseignement, le dépistage et le suivi des progrès',
+        resources_section_subtitle: 'Documents de la division soutenant l\'enseignement, le dépistage et le suivi des progrès',
         resources_note: 'Les documents s\'ouvrent dans un nouvel onglet. Certains liens sont hébergés sur le SharePoint du personnel de la DSLR et nécessitent une connexion.',
         resources_group_division: 'Aperçu de la division',
         resources_group_progressions: 'Progressions des apprentissages',
