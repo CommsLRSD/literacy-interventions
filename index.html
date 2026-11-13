@@ -24,9 +24,23 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=resource-centre-3">
 </head>
 <body data-page="home">
+    <svg xmlns="http://www.w3.org/2000/svg" class="resource-centre-symbols" aria-hidden="true">
+        <symbol id="rc-book" viewBox="0 0 24 24"><path d="M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1Zm0 0v15"/></symbol>
+        <symbol id="rc-bookmark" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4V3Z"/></symbol>
+        <symbol id="rc-chart" viewBox="0 0 24 24"><path d="M4 3v17h17M8 15v-4m5 4V7m5 8V4"/></symbol>
+        <symbol id="rc-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01"/></symbol>
+        <symbol id="rc-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10h.01"/></symbol>
+        <symbol id="rc-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+        <symbol id="rc-file" viewBox="0 0 24 24"><path d="M14 3H5v18h14V8l-5-5Zm0 0v5h5M8 12h8m-8 4h6"/></symbol>
+        <symbol id="rc-language" viewBox="0 0 24 24"><path d="M3 5h12M9 3v2m4 0c-1 6-4 9-9 11m2-8c1 4 3 6 6 8m1 5 4-11 4 11m-6-4h4"/></symbol>
+        <symbol id="rc-external" viewBox="0 0 24 24"><path d="M14 3h7v7m0-7L10 14m0-10H4v16h16v-6"/></symbol>
+        <symbol id="rc-feedback" viewBox="0 0 24 24"><path d="M21 4H3v14h5l4 4v-4h9V4ZM7 8h10M7 12h6"/></symbol>
+        <symbol id="rc-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+        <symbol id="rc-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    </svg>
     <!-- Skip to content for keyboard navigation -->
     <a href="#main-content" class="skip-to-content" data-i18n="skip_to_content">Skip to content</a>
 
@@ -101,26 +115,9 @@
                 <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">calendar_month</span>
                 <span class="nav-link-label" data-i18n="nav_schedule">Assessment Schedule</span>
             </button>
-            <button class="nav-link" data-page="scores" role="menuitem" aria-selected="false">
-                <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">bar_chart</span>
-                <span class="nav-link-label" data-i18n="nav_scores">Understanding Scores &amp; Percentiles</span>
-            </button>
-            <button class="nav-link" data-page="resources" role="menuitem" aria-selected="false">
-                <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">folder_open</span>
-                <span class="nav-link-label" data-i18n="nav_resources">Resources</span>
-            </button>
-            <button class="nav-link" data-page="faq" role="menuitem" aria-selected="false">
-                <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">quiz</span>
-                <span class="nav-link-label" data-i18n="nav_faq">FAQs</span>
-            </button>
-            <button class="nav-link" data-page="favourites" role="menuitem" aria-selected="false">
-                <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">bookmark</span>
-                <span class="nav-link-label" data-i18n="nav_favourites">Saved</span>
-                <span class="nav-badge is-empty" id="side-nav-favourites-badge">0</span>
-            </button>
-            <button class="nav-link" data-page="about" role="menuitem" aria-selected="false">
-                <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">info</span>
-                <span class="nav-link-label" data-i18n="nav_about">About</span>
+            <button class="nav-link" data-page="resource-centre" role="menuitem" aria-selected="false">
+                <svg class="resource-centre-icon nav-icon" aria-hidden="true"><use href="#rc-book"/></svg>
+                <span class="nav-link-label" data-i18n="nav_resource_centre">Resource Centre</span>
             </button>
             <button class="nav-link nav-settings" type="button" role="menuitem" onclick="openProgressTransfer()" aria-haspopup="dialog" aria-controls="progress-transfer-dialog">
                 <span class="material-symbols-rounded nav-icon" aria-hidden="true" translate="no">settings</span>
@@ -146,26 +143,9 @@
                 <span class="material-symbols-rounded" aria-hidden="true" translate="no">calendar_month</span>
                 <span data-i18n="nav_schedule">Assessment Schedule</span>
             </button>
-            <button class="mobile-nav-item" data-page="scores">
-                <span class="material-symbols-rounded" aria-hidden="true" translate="no">bar_chart</span>
-                <span data-i18n="nav_scores">Understanding Scores &amp; Percentiles</span>
-            </button>
-            <button class="mobile-nav-item" data-page="resources">
-                <span class="material-symbols-rounded" aria-hidden="true" translate="no">folder_open</span>
-                <span data-i18n="nav_resources">Resources</span>
-            </button>
-            <button class="mobile-nav-item" data-page="faq">
-                <span class="material-symbols-rounded" aria-hidden="true" translate="no">quiz</span>
-                <span data-i18n="nav_faq">FAQs</span>
-            </button>
-            <button class="mobile-nav-item" data-page="favourites">
-                <span class="material-symbols-rounded" aria-hidden="true" translate="no">bookmark</span>
-                <span data-i18n="nav_favourites">Saved</span>
-                <span class="nav-badge is-empty" id="mobile-nav-favourites-badge">0</span>
-            </button>
-            <button class="mobile-nav-item" data-page="about">
-                <span class="material-symbols-rounded" aria-hidden="true" translate="no">info</span>
-                <span data-i18n="nav_about">About</span>
+            <button class="mobile-nav-item" data-page="resource-centre">
+                <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-book"/></svg>
+                <span data-i18n="nav_resource_centre">Resource Centre</span>
             </button>
             <div class="mobile-menu-program-lang" id="mobile-program-lang">
                 <label class="top-program-lang-field" for="mobile-program-select">
@@ -444,12 +424,83 @@
                     <div class="home-reference-links">
                         <button type="button" onclick="navigateToPage('interventions')" data-i18n="nav_interventions">Literacy Toolkit</button>
                         <button type="button" onclick="navigateToPage('schedule')" data-i18n="nav_schedule">Assessment Schedule</button>
-                        <button type="button" onclick="navigateToPage('scores')" data-i18n="nav_scores">Understanding Scores &amp; Percentiles</button>
-                        <button type="button" onclick="navigateToPage('resources')" data-i18n="nav_resources">Resources</button>
-                        <button type="button" onclick="navigateToPage('faq')" data-i18n="nav_faq">FAQs</button>
-                        <button type="button" onclick="navigateToPage('about')" data-i18n="nav_about">About</button>
+                        <button type="button" onclick="navigateToPage('resource-centre')" data-i18n="nav_resource_centre">Resource Centre</button>
                     </div>
                 </section>
+            </div>
+        </section>
+
+        <section id="resource-centre-section" class="content-section" data-page="resource-centre">
+            <div class="resource-centre-shell">
+                <header class="resource-centre-header">
+                    <div class="resource-centre-mark"><svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-book"/></svg></div>
+                    <div>
+                        <h2 class="section-title" data-i18n="nav_resource_centre">Resource Centre</h2>
+                        <p data-i18n="resource_centre_intro">Your saved work, reference guides, and help in one place.</p>
+                    </div>
+                </header>
+                <div class="resource-centre-workspace">
+                    <div class="resource-centre-navigation">
+                    <div class="resource-centre-tablist" role="tablist" aria-label="Resource Centre sections" data-i18n-aria="resource_centre_navigation" aria-orientation="vertical">
+                        <span class="resource-centre-nav-caption" role="presentation" data-i18n="resource_centre_workspace">Your workspace</span>
+                        <button type="button" id="rc-tab-favourites" class="resource-centre-tab active" role="tab" data-page="favourites" aria-selected="true" aria-controls="favourites-section" tabindex="0">
+                            <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-bookmark"/></svg>
+                            <span class="resource-centre-tab-label" data-i18n="resource_centre_saved">My Saved Items</span>
+                            <span class="nav-badge is-empty">0</span>
+                        </button>
+                        <span class="resource-centre-nav-caption" role="presentation" data-i18n="resource_centre_guides">Guides &amp; Documents</span>
+                        <button type="button" id="rc-tab-scores" class="resource-centre-tab" role="tab" data-page="scores" aria-selected="false" aria-controls="scores-section" tabindex="-1">
+                            <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-chart"/></svg>
+                            <span class="resource-centre-tab-label" data-i18n="resource_centre_scores">Scores &amp; Percentiles</span>
+                        </button>
+                        <button type="button" id="rc-tab-pillars" class="resource-centre-tab" role="tab" data-page="pillars" aria-selected="false" aria-controls="pillars-section" tabindex="-1">
+                            <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-book"/></svg>
+                            <span class="resource-centre-tab-label" data-i18n="nav_pillars">Literacy Pillars</span>
+                        </button>
+                        <button type="button" id="rc-tab-resources" class="resource-centre-tab" role="tab" data-page="resources" aria-selected="false" aria-controls="resources-section" tabindex="-1">
+                            <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-file"/></svg>
+                            <span class="resource-centre-tab-label" data-i18n="nav_resources">Resources</span>
+                        </button>
+                        <span class="resource-centre-nav-caption" role="presentation" data-i18n="resource_centre_help">Help &amp; Background</span>
+                        <button type="button" id="rc-tab-faq" class="resource-centre-tab" role="tab" data-page="faq" aria-selected="false" aria-controls="faq-section" tabindex="-1">
+                            <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-help"/></svg>
+                            <span class="resource-centre-tab-label" data-i18n="nav_faq">FAQs</span>
+                        </button>
+                        <button type="button" id="rc-tab-about" class="resource-centre-tab" role="tab" data-page="about" aria-selected="false" aria-controls="about-section" tabindex="-1">
+                            <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-info"/></svg>
+                            <span class="resource-centre-tab-label" data-i18n="nav_about">About</span>
+                        </button>
+                    </div>
+                    </div>
+                    <div class="resource-centre-reader">
+                        <div class="resource-centre-mobile-browse">
+                            <button type="button" id="resource-centre-browse" onclick="openResourceCentreDrawer()" aria-haspopup="dialog" aria-controls="resource-centre-drawer" aria-expanded="false">
+                                <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-menu"/></svg>
+                                <span data-i18n="resource_centre_browse">Browse sections</span>
+                                <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-arrow"/></svg>
+                            </button>
+                        </div>
+                        <header class="resource-centre-reader-header">
+                            <div>
+                                <h3 id="resource-centre-reader-title" tabindex="-1">My Saved Items</h3>
+                                <p id="resource-centre-reader-description">Your sessions and resources, in one place.</p>
+                            </div>
+                            <span id="resource-centre-position" class="resource-centre-position" aria-live="polite" aria-atomic="true">1 / 6</span>
+                        </header>
+                        <div class="resource-centre-panels"></div>
+                        <footer class="resource-centre-cycle">
+                            <button type="button" class="resource-centre-cycle-button" onclick="cycleResourceCentre(-1)">
+                                <svg class="resource-centre-icon resource-centre-arrow-back" aria-hidden="true"><use href="#rc-arrow"/></svg>
+                                <span><span class="resource-centre-cycle-label" data-i18n="resource_centre_previous">Previous</span><span id="resource-centre-previous-title">About</span></span>
+                            </button>
+                            <span class="resource-centre-cycle-hint" data-i18n="resource_centre_cycle_hint">Explore at your own pace</span>
+                            <button type="button" class="resource-centre-cycle-button resource-centre-cycle-next" onclick="cycleResourceCentre(1)">
+                                <span><span class="resource-centre-cycle-label" data-i18n="resource_centre_next">Next</span><span id="resource-centre-next-title">Scores &amp; Percentiles</span></span>
+                                <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-arrow"/></svg>
+                            </button>
+                        </footer>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -620,7 +671,7 @@
                         <h3 class="scores-topic-title" id="scores-understanding-heading" data-i18n="scores_understanding_title">Understanding Scores</h3>
                         <div class="scores-reference-card">
                             <h4>
-                                <span class="material-symbols-rounded" aria-hidden="true" translate="no">category</span>
+                                <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-chart"/></svg>
                                 <span data-i18n="scores_acc_dibels_title">What are Risk Categories?</span>
                             </h4>
                             <div class="scores-reference-content">
@@ -652,7 +703,7 @@
                         <div class="scores-reference-grid">
                             <section class="scores-reference-card" aria-labelledby="scores-percentile-heading">
                                 <h4 id="scores-percentile-heading">
-                                    <span class="material-symbols-rounded" aria-hidden="true" translate="no">leaderboard</span>
+                                    <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-chart"/></svg>
                                     <span data-i18n="scores_acc_percentile_title">What Are Percentile Ranks?</span>
                                 </h4>
                                 <div class="scores-reference-content">
@@ -663,7 +714,7 @@
                             </section>
                             <section class="scores-reference-card" aria-labelledby="scores-standard-heading">
                                 <h4 id="scores-standard-heading">
-                                    <span class="material-symbols-rounded" aria-hidden="true" translate="no">insights</span>
+                                    <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-chart"/></svg>
                                     <span data-i18n="scores_acc_standard_title">What Are Standard Scores?</span>
                                 </h4>
                                 <div class="scores-reference-content">
@@ -678,84 +729,94 @@
             </div><!-- /.scores-page-wrapper -->
         </section>
 
-        <!-- ── RESOURCES ──────────────────────────────────── -->
-        <section id="resources-section" class="content-section" data-page="resources">
+        <!-- ── LITERACY PILLARS ───────────────────────────── -->
+        <section id="pillars-section" class="content-section" data-page="pillars">
             <div class="resources-page-wrapper">
                 <div class="hero-area">
-                    <h2 class="section-title" data-i18n="resources_section_title">Resources</h2>
-                    <p class="section-subtitle" data-i18n="resources_section_subtitle">Literacy pillar definitions and division documents supporting instruction, screening, and progress monitoring</p>
+                    <h2 class="section-title" data-i18n="nav_pillars">Literacy Pillars</h2>
+                    <p class="section-subtitle" data-i18n="pillars_intro">Explore each literacy pillar. Select a heading to read its definition; you can open several to compare.</p>
                 </div>
 
                 <div class="resources-page-body">
                     <section class="resource-group" aria-labelledby="resources-pillars-title">
                         <h3 class="resource-group-title" id="resources-pillars-title">
-                            <span class="material-symbols-rounded" aria-hidden="true" translate="no">menu_book</span>
+                            <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-book"/></svg>
                             <span data-i18n="nav_pillars">Literacy Pillars</span>
                         </h3>
-                        <p class="resource-group-intro" data-i18n="pillars_intro">Explore each literacy pillar. Select a heading to read its definition; you can open several to compare.</p>
                         <div id="literacy-pillars-reference" class="pillar-definitions"></div>
                     </section>
+                </div>
+            </div>
+        </section>
 
+        <!-- ── RESOURCES ──────────────────────────────────── -->
+        <section id="resources-section" class="content-section" data-page="resources">
+            <div class="resources-page-wrapper">
+                <div class="hero-area">
+                    <h2 class="section-title" data-i18n="resources_section_title">Resources</h2>
+                    <p class="section-subtitle" data-i18n="resources_section_subtitle">Division documents supporting instruction, screening, and progress monitoring</p>
+                </div>
+                <div class="resources-page-body">
                     <p class="resources-note" data-i18n="resources_note">Documents open in a new tab. Some links are hosted on the LRSD staff SharePoint and require a division sign-in.</p>
 
                     <div class="resource-group">
                         <h3 class="resource-group-title">
-                            <span class="material-symbols-rounded" aria-hidden="true" translate="no">summarize</span>
+                            <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-file"/></svg>
                             <span data-i18n="resources_group_division">Division overview</span>
                         </h3>
                         <div class="resource-link-list">
                             <a class="resource-link" href="https://media.lrsd.net/media/Default/medialib/2024_11_29-literacy_screening_and_progress_monitoring_executive_summary-v07.5b52af52587.pdf" target="_blank" rel="noopener noreferrer">
-                                <span class="resource-link-icon" aria-hidden="true"><span class="material-symbols-rounded" translate="no">picture_as_pdf</span></span>
+                                <span class="resource-link-icon" aria-hidden="true"><svg class="resource-centre-icon"><use href="#rc-file"/></svg></span>
                                 <span class="resource-link-label" data-i18n="resources_link_screening">Literacy Screening and Progress Monitoring in Louis Riel School Division</span>
-                                <span class="material-symbols-rounded resource-link-arrow" aria-hidden="true" translate="no">open_in_new</span>
+                                <svg class="resource-centre-icon resource-link-arrow" aria-hidden="true"><use href="#rc-external"/></svg>
                             </a>
                         </div>
                     </div>
 
                     <div class="resource-group">
                         <h3 class="resource-group-title">
-                            <span class="material-symbols-rounded" aria-hidden="true" translate="no">menu_book</span>
+                            <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-book"/></svg>
                             <span data-i18n="resources_group_progressions">Learning Progressions</span>
                         </h3>
                         <div class="resource-link-list">
                             <a class="resource-link" href="https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLitt%C3%A9ratie%20structur%C3%A9e%2FProgressions%20des%20apprentissages%20en%20litt%C3%A9ratie%2FAnglais&amp;viewid=46f2e15a%2D621a%2D4c2d%2Da473%2D2d8c27980932&amp;newTargetListUrl=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy&amp;viewpath=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FForms%2FAllItems%2Easpx&amp;xsdata=MDV8MDJ8fGM5ZWE5NzVhZWQ0MDQxNTczNjBhMDhkZjNiNzUwNWRjfDQ5NTFiMjk4MTI0MjQ5OWM4YTNjYTIxZjg1OTFmYjg5fDB8MHw2MzkyOTUwNDU5MDU0MzgxNTh8VW5rbm93bnxWR1ZoYlhOVFpXTjFjbWwwZVZObGNuWnBZMlY4ZXlKRFFTSTZJbFJsWVcxelgwRlVVRk5sY25acFkyVmZVMUJQVEU5R0lpd2lWaUk2SWpBdU1DNHdNREF3SWl3aVVDSTZJbGRwYmpNeUlpd2lRVTRpT2lKUGRHaGxjaUlzSWxkVUlqb3hNWDA9fDF8TDJOb1lYUnpMekU1T2pOa01UUmpNMkV6TFdObVpqTXRORGM0WmkxaVltWmlMVFEyT1dObFkyRmhPRGMyT0Y4M1lqRmhNV0l4T0MwME5EQTVMVFJtWXprdE9UTXdNeTFrTXpabU5tTmxPVEpoT1RCQWRXNXhMbWRpYkM1emNHRmpaWE12YldWemMyRm5aWE12TVRjNU16a3dOemM0T0RJMk5nPT18MTBlMjY2YjYyNzEyNDA2ZWQ5YzUwOGRmM2I3NTA1ZGJ8Nzk5ZGU2ZThhYzUxNGQ1NThjYTQzNjE1MTAxNDNmMjA%3D&amp;sdata=ZS9vRE1tQjdKVGYvOFd3UElxTzF5WTNhTHo3MUlVMlZXN2xVakRadzZLVT0%3D&amp;ovuser=4951b298-1242-499c-8a3c-a21f8591fb89%2Ccody.sellar%40lrsd.net" target="_blank" rel="noopener noreferrer">
-                                <span class="resource-link-icon" aria-hidden="true"><span class="material-symbols-rounded" translate="no">picture_as_pdf</span></span>
+                                <span class="resource-link-icon" aria-hidden="true"><svg class="resource-centre-icon"><use href="#rc-file"/></svg></span>
                                 <span class="resource-link-label" data-i18n="resources_link_progressions_english">English Learning Progressions</span>
-                                <span class="material-symbols-rounded resource-link-arrow" aria-hidden="true" translate="no">open_in_new</span>
+                                <svg class="resource-centre-icon resource-link-arrow" aria-hidden="true"><use href="#rc-external"/></svg>
                             </a>
                             <a class="resource-link" href="https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLitt%C3%A9ratie%20structur%C3%A9e%2FProgressions%20des%20apprentissages%20en%20litt%C3%A9ratie%2FFran%C3%A7ais&amp;viewid=46f2e15a%2D621a%2D4c2d%2Da473%2D2d8c27980932&amp;newTargetListUrl=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy&amp;viewpath=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FForms%2FAllItems%2Easpx&amp;ovuser=4951b298%2D1242%2D499c%2D8a3c%2Da21f8591fb89%2Ccody%2Esellar%40lrsd%2Enet&amp;TeamsCID=c49a8d59%2D0334%2D45ca%2Da0a8%2Dfb5a4ef09e3d&amp;OR=Teams%2DHL&amp;CT=1794252624742&amp;clickparams=eyJBcHBOYW1lIjoiVGVhbXMtRGVza3RvcCIsIkFwcFZlcnNpb24iOiI0OS8yNjEwMTUxNTIyMCIsIkhhc0ZlZGVyYXRlZFVzZXIiOmZhbHNlfQ%3D%3D" target="_blank" rel="noopener noreferrer">
-                                <span class="resource-link-icon" aria-hidden="true"><span class="material-symbols-rounded" translate="no">picture_as_pdf</span></span>
+                                <span class="resource-link-icon" aria-hidden="true"><svg class="resource-centre-icon"><use href="#rc-file"/></svg></span>
                                 <span class="resource-link-label" data-i18n="resources_link_progressions_french">French Learning Progressions</span>
-                                <span class="material-symbols-rounded resource-link-arrow" aria-hidden="true" translate="no">open_in_new</span>
+                                <svg class="resource-centre-icon resource-link-arrow" aria-hidden="true"><use href="#rc-external"/></svg>
                             </a>
                         </div>
                     </div>
 
                     <div class="resource-group" data-program-scope="French Immersion">
                         <h3 class="resource-group-title">
-                            <span class="material-symbols-rounded" aria-hidden="true" translate="no">translate</span>
+                            <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-language"/></svg>
                             <span data-i18n="resources_group_french">Français et immersion française</span>
                         </h3>
                         <div class="resource-link-list">
                             <a class="resource-link" href="https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLitt%C3%A9ratie%20structur%C3%A9e%2FProgressions%20des%20apprentissages%20en%20litt%C3%A9ratie%2FFran%C3%A7ais%2FProgression%20des%20apprentissages%20M%2D3%20ann%C3%A9e%2Epdf&amp;parent=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLitt%C3%A9ratie%20structur%C3%A9e%2FProgressions%20des%20apprentissages%20en%20litt%C3%A9ratie%2FFran%C3%A7ais" target="_blank" rel="noopener noreferrer">
-                                <span class="resource-link-icon" aria-hidden="true"><span class="material-symbols-rounded" translate="no">picture_as_pdf</span></span>
+                                <span class="resource-link-icon" aria-hidden="true"><svg class="resource-centre-icon"><use href="#rc-file"/></svg></span>
                                 <span class="resource-link-label" data-i18n="resources_link_fr_m3">Progression des apprentissages M-3 année</span>
-                                <span class="material-symbols-rounded resource-link-arrow" aria-hidden="true" translate="no">open_in_new</span>
+                                <svg class="resource-centre-icon resource-link-arrow" aria-hidden="true"><use href="#rc-external"/></svg>
                             </a>
                             <a class="resource-link" href="https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLitt%C3%A9ratie%20structur%C3%A9e%2FProgressions%20des%20apprentissages%20en%20litt%C3%A9ratie%2FFran%C3%A7ais%2FProgression%20des%20apprentissages%204e%2D6e%20ann%C3%A9e%2Epdf&amp;parent=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLitt%C3%A9ratie%20structur%C3%A9e%2FProgressions%20des%20apprentissages%20en%20litt%C3%A9ratie%2FFran%C3%A7ais" target="_blank" rel="noopener noreferrer">
-                                <span class="resource-link-icon" aria-hidden="true"><span class="material-symbols-rounded" translate="no">picture_as_pdf</span></span>
+                                <span class="resource-link-icon" aria-hidden="true"><svg class="resource-centre-icon"><use href="#rc-file"/></svg></span>
                                 <span class="resource-link-label" data-i18n="resources_link_fr_46">Progression des apprentissages 4-6 année</span>
-                                <span class="material-symbols-rounded resource-link-arrow" aria-hidden="true" translate="no">open_in_new</span>
+                                <svg class="resource-centre-icon resource-link-arrow" aria-hidden="true"><use href="#rc-external"/></svg>
                             </a>
                             <a class="resource-link" href="https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLitt%C3%A9ratie%20structur%C3%A9e%2FProgressions%20des%20apprentissages%20en%20litt%C3%A9ratie%2FFran%C3%A7ais%2FProgression%20des%20apprentissages%204e%2D6e%20ann%C3%A9e%2Epdf&amp;parent=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLitt%C3%A9ratie%20structur%C3%A9e%2FProgressions%20des%20apprentissages%20en%20litt%C3%A9ratie%2FFran%C3%A7ais" target="_blank" rel="noopener noreferrer">
-                                <span class="resource-link-icon" aria-hidden="true"><span class="material-symbols-rounded" translate="no">picture_as_pdf</span></span>
+                                <span class="resource-link-icon" aria-hidden="true"><svg class="resource-centre-icon"><use href="#rc-file"/></svg></span>
                                 <span class="resource-link-label" data-i18n="resources_link_fi_24">French Immersion: Grades 2-4 Scope and Sequence for Structured Literacy</span>
-                                <span class="material-symbols-rounded resource-link-arrow" aria-hidden="true" translate="no">open_in_new</span>
+                                <svg class="resource-centre-icon resource-link-arrow" aria-hidden="true"><use href="#rc-external"/></svg>
                             </a>
                             <a class="resource-link" href="https://lrsdcdn.sharepoint.com/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Forms/AllItems.aspx?id=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLitt%C3%A9ratie%20structur%C3%A9e%2FProgressions%20des%20apprentissages%20en%20litt%C3%A9ratie%2FFran%C3%A7ais%2FProgression%20des%20apprentissages%204e%2D6e%20ann%C3%A9e%2Epdf&amp;parent=%2Fsites%2FTeachingLearning%2Fcurriculum%2FLiteracy%2FEarly%20Literacy%2FLitt%C3%A9ratie%20structur%C3%A9e%2FProgressions%20des%20apprentissages%20en%20litt%C3%A9ratie%2FFran%C3%A7ais" target="_blank" rel="noopener noreferrer">
-                                <span class="resource-link-icon" aria-hidden="true"><span class="material-symbols-rounded" translate="no">picture_as_pdf</span></span>
+                                <span class="resource-link-icon" aria-hidden="true"><svg class="resource-centre-icon"><use href="#rc-file"/></svg></span>
                                 <span class="resource-link-label" data-i18n="resources_link_fi_56">French Immersion: Grades 5-6 Scope and Sequence for Structured Literacy</span>
-                                <span class="material-symbols-rounded resource-link-arrow" aria-hidden="true" translate="no">open_in_new</span>
+                                <svg class="resource-centre-icon resource-link-arrow" aria-hidden="true"><use href="#rc-external"/></svg>
                             </a>
                         </div>
                     </div>
@@ -1450,7 +1511,7 @@
                         <div class="about-feedback">
                             <p class="about-feedback-text" data-i18n="about_feedback_text">We want to hear from you! Let us know what you think of this project.</p>
                             <a href="https://forms.office.com/r/ZQFqkNDpmG?origin=lprLink" target="_blank" rel="noopener noreferrer" class="about-feedback-btn">
-                                <span class="material-symbols-rounded" aria-hidden="true" translate="no">rate_review</span>
+                                <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-feedback"/></svg>
                                 <span data-i18n="about_feedback_btn">Provide your feedback</span>
                             </a>
                         </div>
@@ -1480,6 +1541,19 @@
         </section>
 
     </main>
+
+    <dialog id="resource-centre-drawer" class="resource-centre-drawer" aria-labelledby="resource-centre-drawer-title">
+        <div class="resource-centre-drawer-header">
+            <div>
+                <h2 id="resource-centre-drawer-title" data-i18n="nav_resource_centre">Resource Centre</h2>
+                <p data-i18n="resource_centre_choose">Choose a section to explore</p>
+            </div>
+            <button type="button" onclick="closeResourceCentreDrawer()" aria-label="Close section menu" data-i18n-aria="resource_centre_close">
+                <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-close"/></svg>
+            </button>
+        </div>
+        <div class="resource-centre-drawer-navigation"></div>
+    </dialog>
 
     <!-- Footer -->
     <footer class="site-footer" role="contentinfo">
@@ -1604,9 +1678,9 @@
         </div>
     </dialog>
 
-    <script src="translations.js"></script>
-    <script src="app.js"></script>
-    <script src="transfer.js"></script>
+    <script src="translations.js?v=resource-centre-3"></script>
+    <script src="app.js?v=resource-centre-3"></script>
+    <script src="transfer.js?v=resource-centre-3"></script>
 
     <script>
     (function() {

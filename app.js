@@ -831,40 +831,52 @@ function getNodeSummaries() {
 }
 
 // Update all elements with data-i18n / data-i18n-html / data-i18n-aria attributes.
+const reportedMissingTranslations = new Set();
+
+function getElementTranslation(key) {
+    const value = t(key);
+    if (value !== key) return value;
+    if (!reportedMissingTranslations.has(key)) {
+        console.error(`Missing translation: ${key}. Keeping the existing readable label.`);
+        reportedMissingTranslations.add(key);
+    }
+    return undefined;
+}
+
 function applyTranslations() {
     // Plain text content
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.dataset.i18n;
-        const val = t(key);
+        const val = getElementTranslation(key);
         if (typeof val === 'string') el.textContent = val;
     });
     // innerHTML (for elements containing HTML like <strong>, <span>, <br>)
     document.querySelectorAll('[data-i18n-html]').forEach(el => {
         const key = el.dataset.i18nHtml;
-        const val = t(key);
+        const val = getElementTranslation(key);
         if (typeof val === 'string') el.innerHTML = val;
     });
     // aria-label attribute
     document.querySelectorAll('[data-i18n-aria]').forEach(el => {
         const key = el.dataset.i18nAria;
-        const val = t(key);
+        const val = getElementTranslation(key);
         if (typeof val === 'string') el.setAttribute('aria-label', val);
     });
     // <option> text (data-i18n-opt)
     document.querySelectorAll('[data-i18n-opt]').forEach(el => {
         const key = el.dataset.i18nOpt;
-        const val = t(key);
+        const val = getElementTranslation(key);
         if (typeof val === 'string') el.textContent = val;
     });
     // title attribute
     document.querySelectorAll('[data-i18n-title]').forEach(el => {
-        const val = t(el.dataset.i18nTitle);
+        const val = getElementTranslation(el.dataset.i18nTitle);
         if (typeof val === 'string') el.setAttribute('title', val);
     });
     // placeholder attribute
     document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
         const key = el.dataset.i18nPlaceholder;
-        const val = t(key);
+        const val = getElementTranslation(key);
         if (typeof val === 'string') el.setAttribute('placeholder', val);
     });
     // Keep the collapsed side-nav hover tooltips in sync with the current language
@@ -876,6 +888,7 @@ function applyTranslations() {
     document.documentElement.lang = appState.language;
     // Update the page <title>
     document.title = t('page_title');
+    updateResourceCentreText();
     updateMobilePageTitle();
 }
 
@@ -1099,7 +1112,124 @@ function openLiteracyPillars(trigger) {
 // ============================================
 // Navigation
 // ============================================
+const RESOURCE_CENTRE_PAGES = ['favourites', 'scores', 'pillars', 'resources', 'faq', 'about'];
+let resourceCentrePage = 'favourites';
+
+function getNavigationPage(pageName) {
+    if (pageName === 'home') return 'flowchart';
+    return RESOURCE_CENTRE_PAGES.includes(pageName) ? 'resource-centre' : pageName;
+}
+
+function setupResourceCentre() {
+    const host = document.querySelector('.resource-centre-panels');
+    RESOURCE_CENTRE_PAGES.forEach(page => {
+        const panel = document.getElementById(`${page}-section`);
+        panel.classList.remove('content-section', 'active');
+        panel.classList.add('resource-centre-panel');
+        panel.setAttribute('role', 'tabpanel');
+        panel.setAttribute('aria-labelledby', `rc-tab-${page}`);
+        panel.setAttribute('tabindex', '0');
+        host.append(panel);
+    });
+    const tablist = document.querySelector('.resource-centre-tablist');
+    const compact = window.matchMedia('(max-width: 900px)');
+    const drawer = document.getElementById('resource-centre-drawer');
+    const updateNavigation = () => {
+        closeResourceCentreDrawer();
+        const navigation = document.querySelector(compact.matches
+            ? '.resource-centre-drawer-navigation' : '.resource-centre-navigation');
+        navigation.append(tablist);
+        tablist.setAttribute('aria-orientation', 'vertical');
+    };
+    compact.addEventListener('change', updateNavigation);
+    updateNavigation();
+    drawer.addEventListener('close', () => {
+        document.getElementById('resource-centre-browse').setAttribute('aria-expanded', 'false');
+    });
+    drawer.addEventListener('click', event => {
+        if (event.target !== drawer) return;
+        const bounds = drawer.getBoundingClientRect();
+        if (event.clientX < bounds.left || event.clientX > bounds.right ||
+            event.clientY < bounds.top || event.clientY > bounds.bottom) closeResourceCentreDrawer();
+    });
+    tablist.addEventListener('click', event => {
+        const tab = event.target.closest('[role="tab"]');
+        if (tab) {
+            selectResourceCentrePage(tab.dataset.page);
+            if (drawer.open) {
+                closeResourceCentreDrawer();
+                document.getElementById('resource-centre-reader-title').focus({ preventScroll: true });
+            }
+        }
+    });
+    tablist.addEventListener('keydown', event => {
+        const tab = event.target.closest('[role="tab"]');
+        if (!tab) return;
+        const index = RESOURCE_CENTRE_PAGES.indexOf(tab.dataset.page);
+        let next;
+        if (event.key === 'Home') next = 0;
+        else if (event.key === 'End') next = RESOURCE_CENTRE_PAGES.length - 1;
+        else if (['ArrowRight', 'ArrowDown'].includes(event.key)) next = (index + 1) % RESOURCE_CENTRE_PAGES.length;
+        else if (['ArrowLeft', 'ArrowUp'].includes(event.key)) next = (index + RESOURCE_CENTRE_PAGES.length - 1) % RESOURCE_CENTRE_PAGES.length;
+        else return;
+        event.preventDefault();
+        selectResourceCentrePage(RESOURCE_CENTRE_PAGES[next]);
+        document.getElementById(`rc-tab-${resourceCentrePage}`).focus({ preventScroll: true });
+    });
+    selectResourceCentrePage(resourceCentrePage);
+}
+
+function openResourceCentreDrawer() {
+    const drawer = document.getElementById('resource-centre-drawer');
+    if (!drawer.open) drawer.showModal();
+    document.getElementById('resource-centre-browse').setAttribute('aria-expanded', 'true');
+    document.getElementById(`rc-tab-${resourceCentrePage}`).focus({ preventScroll: true });
+}
+
+function closeResourceCentreDrawer() {
+    const drawer = document.getElementById('resource-centre-drawer');
+    if (drawer.open) drawer.close();
+}
+
+function updateResourceCentreText() {
+    const title = document.getElementById('resource-centre-reader-title');
+    if (!title) return;
+    const index = RESOURCE_CENTRE_PAGES.indexOf(resourceCentrePage);
+    const label = page => document.querySelector(`#rc-tab-${page} .resource-centre-tab-label`).textContent;
+    title.textContent = label(resourceCentrePage);
+    document.getElementById('resource-centre-reader-description').textContent =
+        document.querySelector(`#${resourceCentrePage}-section .section-subtitle`).textContent;
+    document.getElementById('resource-centre-position').textContent = `${index + 1} / ${RESOURCE_CENTRE_PAGES.length}`;
+    document.getElementById('resource-centre-previous-title').textContent =
+        label(RESOURCE_CENTRE_PAGES[(index + RESOURCE_CENTRE_PAGES.length - 1) % RESOURCE_CENTRE_PAGES.length]);
+    document.getElementById('resource-centre-next-title').textContent =
+        label(RESOURCE_CENTRE_PAGES[(index + 1) % RESOURCE_CENTRE_PAGES.length]);
+}
+
+function selectResourceCentrePage(page) {
+    if (!RESOURCE_CENTRE_PAGES.includes(page)) throw new Error(`Unknown Resource Centre section: ${page}`);
+    resourceCentrePage = page;
+    RESOURCE_CENTRE_PAGES.forEach(name => {
+        const selected = name === page;
+        document.getElementById(`${name}-section`).hidden = !selected;
+        const tab = document.getElementById(`rc-tab-${name}`);
+        tab.classList.toggle('active', selected);
+        tab.setAttribute('aria-selected', String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+    });
+    updateResourceCentreText();
+    if (page === 'favourites') renderFavourites();
+}
+
+function cycleResourceCentre(direction) {
+    const index = RESOURCE_CENTRE_PAGES.indexOf(resourceCentrePage);
+    const next = (index + direction + RESOURCE_CENTRE_PAGES.length) % RESOURCE_CENTRE_PAGES.length;
+    selectResourceCentrePage(RESOURCE_CENTRE_PAGES[next]);
+    document.getElementById('resource-centre-reader-title').focus({ preventScroll: true });
+}
+
 function setupNavigation() {
+    setupResourceCentre();
     // Desktop navigation
     document.querySelectorAll('.nav-link[data-page]').forEach(link => {
         link.addEventListener('click', (e) => {
@@ -1130,11 +1260,14 @@ function updateMobilePageTitle() {
     const titleEl = document.getElementById('mobile-page-title');
     if (!titleEl) return;
     const page = appState.currentPage || 'home';
-    const heading = document.querySelector(`#${page}-section .hero-area .section-title`);
+    const heading = document.querySelector(`#${page}-section .section-title`);
     titleEl.textContent = heading ? heading.textContent.trim() : '';
 }
 
 function navigateToPage(pageName, { sessionNotesOnly = false } = {}) {
+    closeResourceCentreDrawer();
+    const centrePage = RESOURCE_CENTRE_PAGES.includes(pageName) ? pageName : resourceCentrePage;
+    if (RESOURCE_CENTRE_PAGES.includes(pageName)) pageName = 'resource-centre';
     if (pageName === 'flowchart' && !appReady) return;
     // Home is the flowchart's first step: until a pathway has been started
     // (or can be resumed), the Flowchart menu item shows the Home setup.
@@ -1152,7 +1285,7 @@ function navigateToPage(pageName, { sessionNotesOnly = false } = {}) {
     updateMobilePageTitle();
     
     // Update active states in desktop nav
-    const navPage = pageName === 'home' ? 'flowchart' : pageName;
+    const navPage = getNavigationPage(pageName);
     document.querySelectorAll('.nav-link').forEach(link => {
         const isActive = link.dataset.page === navPage;
         link.classList.toggle('active', isActive);
@@ -1182,10 +1315,14 @@ function navigateToPage(pageName, { sessionNotesOnly = false } = {}) {
         // Every visit re-syncs the filters to whatever was chosen last —
         // here or during a flowchart drilldown — so context always carries over.
         initializeInterventionsFilterMenu();
-    } else if (pageName === 'favourites') {
-        renderFavourites();
+    } else if (pageName === 'resource-centre') {
+        selectResourceCentrePage(centrePage);
     }
     updateGuidedHome();
+
+    if (pageName === 'resource-centre') {
+        document.getElementById('resource-centre-reader-title').focus({ preventScroll: true });
+    }
     
     // Smooth scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
