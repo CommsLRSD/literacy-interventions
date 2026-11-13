@@ -46,6 +46,10 @@ const TRANSLATIONS = {
         resource_centre_navigation: 'Resource Centre sections',
         // ── Manual progress transfer ──
         settings_title: 'Settings',
+        settings_appearance: 'Appearance',
+        settings_dark_mode: 'Dark mode',
+        settings_theme_hint: 'Use darker backgrounds. This preference is saved on this device.',
+        settings_theme_storage_error: 'Your appearance preference could not be saved or read. It will only apply during this visit.',
         settings_reset_description: 'Permanently delete all saved data on this device.',
         settings_transfer_title: 'Transfer saved data',
         progress_monitoring_tools: 'Progress Monitoring tools',
@@ -585,6 +589,10 @@ const TRANSLATIONS = {
         resource_centre_navigation: 'Sections du Centre de ressources',
         // ── Transfert manuel de la progression ──
         settings_title: 'Paramètres',
+        settings_appearance: 'Apparence',
+        settings_dark_mode: 'Mode sombre',
+        settings_theme_hint: 'Utilisez des arrière-plans plus sombres. Ce choix est enregistré sur cet appareil.',
+        settings_theme_storage_error: 'Votre choix d’apparence n’a pas pu être enregistré ou lu. Il ne s’appliquera que pendant cette visite.',
         settings_reset_description: 'Supprimez définitivement toutes les données enregistrées sur cet appareil.',
         settings_transfer_title: 'Transférer les données enregistrées',
         progress_monitoring_tools: 'Outils de suivi des progrès',
