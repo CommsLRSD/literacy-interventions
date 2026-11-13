@@ -8,16 +8,16 @@
 // the user is online, and the last successful response is served if the
 // network is unavailable.
 
-const CACHE_NAME = 'literacy-interventions-v6';
+const CACHE_NAME = 'literacy-interventions-v7';
 
 // Minimal shell cached up front so the app can still start while offline.
 const PRECACHE_URLS = [
     './',
     'index.html',
-    'styles.css',
-    'app.js',
-    'transfer.js',
-    'translations.js',
+    'styles.css?v=resource-centre-2',
+    'app.js?v=resource-centre-2',
+    'transfer.js?v=resource-centre-2',
+    'translations.js?v=resource-centre-2',
     'manifest.webmanifest'
 ];
 

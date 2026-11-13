@@ -169,7 +169,7 @@ test('checklist help is outside checkbox labels and the reference guide is part 
     assert.doesNotMatch(page, /data-page="pillars"|id="pillars-section"/);
     assert.match(page, /class="nav-link" data-page="resource-centre"/);
     assert.match(page, /class="mobile-nav-item" data-page="resource-centre"/);
-    assert.match(page, /class="resource-centre-card" onclick="navigateToPage\('resources'\)"/);
+    assert.match(page, /id="rc-tab-resources".*role="tab".*aria-controls="resources-section"/);
     const resources = page.slice(page.indexOf('<section id="resources-section"'), page.indexOf('<!-- /.resources-page-wrapper -->'));
     assert.match(resources, /id="resources-pillars-title"/);
     assert.match(resources, /id="literacy-pillars-reference"/);

@@ -7,8 +7,10 @@ const vm = require('node:vm');
 const read = file => readFileSync(join(__dirname, '..', file), 'utf8');
 
 function setup() {
+    const errors = [];
     const context = vm.createContext({
         URL,
+        console: { error: message => errors.push(message) },
         document: {
             addEventListener() {},
             getElementById: () => null,
@@ -27,7 +29,7 @@ function setup() {
     const run = source => vm.runInContext(source, context);
     run(read('translations.js'));
     run(read('app.js'));
-    return { run, context };
+    return { run, context, errors };
 }
 
 test('both main menus group supporting pages under Resource Centre', () => {
@@ -40,8 +42,10 @@ test('both main menus group supporting pages under Resource Centre', () => {
         assert.match(menu, /onclick="openProgressTransfer\(\)"/);
     }
     const centre = html.slice(html.indexOf('<section id="resource-centre-section"'), html.indexOf('<!-- ── FLOWCHART'));
-    assert.deepEqual([...centre.matchAll(/onclick="navigateToPage\('([^']+)'\)"/g)].map(match => match[1]),
+    assert.deepEqual([...centre.matchAll(/role="tab" data-page="([^"]+)"/g)].map(match => match[1]),
         ['favourites', 'scores', 'resources', 'faq', 'about']);
+    assert.match(centre, /onclick="cycleResourceCentre\(-1\)"/);
+    assert.match(centre, /onclick="cycleResourceCentre\(1\)"/);
     for (const page of ['favourites', 'scores', 'resources', 'faq', 'about']) {
         assert.match(html, new RegExp(`id="${page}-section"`));
     }
@@ -58,7 +62,7 @@ test('direct supporting-page destinations highlight Resource Centre without chan
     assert.equal(run("getNavigationPage('home')"), 'flowchart');
 });
 
-test('Saved Items card badge includes sessions and bookmarked resources', () => {
+test('Saved Items tab badge includes sessions and bookmarked resources', () => {
     const { run, context } = setup();
     const badges = [0, 1].map(() => ({
         textContent: '',
@@ -85,4 +89,138 @@ test('Saved Items card badge includes sessions and bookmarked resources', () => 
         assert.equal(badge.textContent, '0');
         assert.equal(badge.classList['is-empty'], true);
     }
+});
+
+function setupCentre() {
+    const setupResult = setup();
+    const { run, context } = setupResult;
+    const pages = ['favourites', 'scores', 'resources', 'faq', 'about'];
+    const elements = new Map();
+    const element = (id, text = '') => {
+        const classes = new Set(['content-section']);
+        const node = {
+            id, textContent: text, dataset: {}, attributes: {}, hidden: false, scrollTop: 0,
+            classList: {
+                add: (...names) => names.forEach(name => classes.add(name)),
+                remove: (...names) => names.forEach(name => classes.delete(name)),
+                contains: name => classes.has(name),
+                toggle(name, value) { if (value) classes.add(name); else classes.delete(name); }
+            },
+            setAttribute(name, value) { this.attributes[name] = value; },
+            getAttribute(name) { return this.attributes[name]; },
+            addEventListener(name, handler) { this[name] = handler; },
+            focus() { context.document.activeElement = this; },
+            close() {}
+        };
+        elements.set(id, node);
+        return node;
+    };
+    const host = element('host');
+    host.children = [];
+    host.append = node => { host.children.push(node); node.parentElement = host; };
+    const tablist = element('tablist');
+    for (const page of pages) {
+        element(`${page}-section`);
+        const tab = element(`rc-tab-${page}`);
+        tab.dataset.page = page;
+        tab.parentElement = tablist;
+    }
+    for (const id of ['resource-centre-reader-title', 'resource-centre-reader-description',
+        'resource-centre-position', 'resource-centre-previous-title', 'resource-centre-next-title',
+        'pathway-sessions-drawer', 'resource-centre-section', 'home-section', 'interventions-section']) element(id);
+    const nav = element('nav');
+    nav.dataset.page = 'resource-centre';
+    context.document.body = { dataset: {} };
+    context.document.getElementById = id => elements.get(id) || null;
+    context.document.querySelector = selector => {
+        if (selector === '.resource-centre-panels') return host;
+        if (selector === '.resource-centre-tablist') return tablist;
+        if (selector.includes('.resource-centre-tab-label') || selector.includes('.section-subtitle')) {
+            return { textContent: selector };
+        }
+        return null;
+    };
+    context.document.querySelectorAll = selector => {
+        if (selector === '.nav-link' || selector === '.mobile-nav-item') return [nav];
+        if (selector === '.content-section') return [...elements.values()].filter(node =>
+            node.id.endsWith('-section') && node.classList.contains('content-section'));
+        return [];
+    };
+    context.window.scrollTo = () => {};
+    run(`
+        setHomeDrawerOpen = () => {};
+        clearFavouriteFeedback = () => {};
+        closeVisualFlowchartModal = () => {};
+        updateMobilePageTitle = () => {};
+        updateGuidedHome = () => {};
+        renderFavourites = () => {};
+        setupResourceCentre();
+    `);
+    return { ...setupResult, elements, host, tablist, nav, pages };
+}
+
+test('all existing content is mounted inside one screen, with only the selected panel exposed', () => {
+    const { run, host, elements, pages } = setupCentre();
+    assert.deepEqual(host.children.map(node => node.id), pages.map(page => `${page}-section`));
+    for (const page of pages) {
+        run(`selectResourceCentrePage('${page}')`);
+        for (const name of pages) {
+            const panel = elements.get(`${name}-section`);
+            assert.equal(panel.hidden, name !== page);
+            assert.equal(panel.classList.contains('content-section'), false);
+            assert.equal(panel.attributes.role, 'tabpanel');
+            assert.equal(elements.get(`rc-tab-${name}`).tabIndex, name === page ? 0 : -1);
+        }
+    }
+    assert.throws(() => run("selectResourceCentrePage('missing')"), /Unknown Resource Centre section/);
+});
+
+test('cycling wraps in both directions and direct shortcuts select a panel without leaving Resource Centre', () => {
+    const { run, elements, nav } = setupCentre();
+    run("cycleResourceCentre(-1)");
+    assert.equal(run('resourceCentrePage'), 'about');
+    run("cycleResourceCentre(1)");
+    assert.equal(run('resourceCentrePage'), 'favourites');
+    run("navigateToPage('scores')");
+    assert.equal(run('appState.currentPage'), 'resource-centre');
+    assert.equal(run('resourceCentrePage'), 'scores');
+    assert.equal(elements.get('resource-centre-section').classList.contains('active'), true);
+    assert.equal(nav.attributes['aria-selected'], 'true');
+    run("navigateToPage('resource-centre')");
+    assert.equal(run('resourceCentrePage'), 'scores');
+});
+
+test('tab keyboard controls cycle and expose just one keyboard tab stop', () => {
+    const { context, run, tablist, elements } = setupCentre();
+    let prevented = false;
+    tablist.keydown({
+        key: 'End',
+        target: { closest: () => elements.get('rc-tab-favourites') },
+        preventDefault() { prevented = true; }
+    });
+    assert.equal(prevented, true);
+    assert.equal(run('resourceCentrePage'), 'about');
+    assert.equal(context.document.activeElement.id, 'rc-tab-about');
+    tablist.keydown({
+        key: 'ArrowRight',
+        target: { closest: () => elements.get('rc-tab-about') },
+        preventDefault() {}
+    });
+    assert.equal(run('resourceCentrePage'), 'favourites');
+});
+
+test('stale translation dictionaries preserve readable labels rather than showing raw keys', () => {
+    const { run, context, errors } = setup();
+    const label = { dataset: { i18n: 'nav_resource_centre' }, textContent: 'Resource Centre' };
+    context.document.querySelectorAll = selector => selector === '[data-i18n]' ? [label] : [];
+    context.document.documentElement = {};
+    run(`
+        delete TRANSLATIONS.en.nav_resource_centre;
+        delete TRANSLATIONS.fr.nav_resource_centre;
+        applyTranslations();
+        applyTranslations();
+    `);
+    assert.equal(label.textContent, 'Resource Centre');
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /Missing translation: nav_resource_centre/);
 });
