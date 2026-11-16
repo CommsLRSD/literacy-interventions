@@ -7979,6 +7979,21 @@ body.step-review-modal-open { overflow: hidden; }
   height: auto;
 }
 
+.site-footer-division-logo--dark,
+.program-prompt-brand-division--dark {
+  display: none;
+}
+
+:root[data-theme="dark"] .site-footer-division-logo--light,
+:root[data-theme="dark"] .program-prompt-brand-division--light {
+  display: none;
+}
+
+:root[data-theme="dark"] .site-footer-division-logo--dark,
+:root[data-theme="dark"] .program-prompt-brand-division--dark {
+  display: block;
+}
+
 /* ------------------------------------------------------------
    22. ANIMATIONS
    ------------------------------------------------------------ */
