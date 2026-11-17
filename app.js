@@ -4224,6 +4224,7 @@ function refreshVisualFlowchartModal() {
     const getItemCardWidth = item => {
         if (item.type === 'tier-review') return wideCardWidth;
         if (item.type === 'entry') {
+            if (item.entry.isCurrent && item.entry.node.type === 'endpoint' && item.entry.node.approach === 'individual') return interactiveCardWidth;
             if (item.entry.isCurrent && item.entry.node.type !== 'endpoint') {
                 // Tier 2 / Tier 3 step 1 starts here and is then widened by
                 // fitVisualFlowchartCardToViewportHeight() once rendered.
@@ -4312,6 +4313,7 @@ function refreshVisualFlowchartModal() {
                 </button>`;
         }
         const entry = item.entry;
+        const isIndividualOutcome = entry.node.type === 'endpoint' && entry.node.approach === 'individual';
         const answer = entry.choice?.name || '';
         const usesChoiceAsTitle = !entry.isCurrent && entry.node.titleFromChoiceWhenAnswered && entry.choice?.name;
         const displayTitle = usesChoiceAsTitle ? entry.choice.name : getStepCardTitle(entry.node);
@@ -4349,7 +4351,7 @@ function refreshVisualFlowchartModal() {
             ? `${renderSessionDownloadButtonHtml('visual-flowchart-tier-review-btn')}
                <button type="button" class="visual-flowchart-tier-review-btn" onclick="closePathwaySession()">${escapeHtml(t('session_end'))}</button>`
             : '';
-        return `<${tag} data-tier="${escapeAttr(entry.tierId)}" class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ' visual-flowchart-card-completed'}${item.expandedTierId ? ' visual-flowchart-card-expanded-tier' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
+        return `<${tag} data-tier="${escapeAttr(entry.tierId)}" class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ' visual-flowchart-card-completed'}${isIndividualOutcome ? ' individual-outcome' : ''}${item.expandedTierId ? ' visual-flowchart-card-expanded-tier' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
                     style="left:${position.x}px;top:${position.y}px;width:${position.width}px" ${revisit}>
                 <span class="visual-flowchart-step-number">${entry.number}</span>
                 <span class="visual-flowchart-card-icon">${cardIcon}</span>
@@ -4358,8 +4360,8 @@ function refreshVisualFlowchartModal() {
                     <strong>${escapeHtml(displayTitle)}</strong>
                     ${entry.node.approach === 'individual' && !isInteractive ? `<h3 class="visual-flowchart-individual-heading">${escapeHtml(entry.node.title)}</h3>` : ''}
                     ${!usesChoiceAsTitle && answer && !isDuplicateStepSummary(answer, displayTitle) ? `<span class="visual-flowchart-card-answer">${escapeHtml(answer)}</span>` : ''}
-                    ${entry.node.type === 'endpoint' && endpointDescription ? `<span class="visual-flowchart-card-answer">${endpointDescription}</span>` : ''}
-                    ${entry.node.type === 'endpoint' && !item.expandedTierId ? endpointAction + sessionActions : ''}
+                    ${entry.node.type === 'endpoint' && endpointDescription ? `<span class="${isIndividualOutcome ? 'individual-recommendation' : 'visual-flowchart-card-answer'}">${endpointDescription}</span>` : ''}
+                    ${entry.node.type === 'endpoint' && !item.expandedTierId ? (isIndividualOutcome ? `<span class="individual-outcome-actions">${endpointAction + sessionActions}</span>` : endpointAction + sessionActions) : ''}
                     ${collapseLabelHTML}
                 </span>
                 ${isInteractive ? '<div class="visual-flowchart-active-host"></div>' : ''}
@@ -5587,13 +5589,13 @@ function createIntegratedEndpointNode(nodeData) {
     ` : '';
     
     return `
-        <div class="endpoint-card endpoint-${nodeData.status}">
+        <div class="endpoint-card endpoint-${nodeData.status}${nodeData.approach === 'individual' ? ' individual-outcome' : ''}">
             <div class="endpoint-icon">
                 ${ICONS[nodeData.status] || ICONS.info}
             </div>
             <h2>${nodeData.title}</h2>
             ${nodeData.approach && nodeData.approach !== 'individual' ? `<p class="step-approach-label">${escapeHtml(getApproachLabel(nodeData))}</p>` : ''}
-            ${nodeData.descriptionHtml ? `<p>${nodeData.descriptionHtml}</p>` : nodeData.description ? `<p>${escapeHtml(nodeData.description)}</p>` : ''}
+            ${nodeData.descriptionHtml || nodeData.description ? `<p${nodeData.approach === 'individual' ? ' class="individual-recommendation"' : ''}>${nodeData.descriptionHtml || escapeHtml(nodeData.description)}</p>` : ''}
             ${warningBoxHTML}
             ${recommendationsHTML}
             <div class="endpoint-actions">

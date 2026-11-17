@@ -13115,6 +13115,60 @@ details.pathway-session[open] { box-shadow: none; }
 .session-route-download.action-btn:hover,
 .session-route-download.visual-flowchart-tier-review-btn:hover { background: #08564f; border-color: #08564f; }
 .session-route-download:focus-visible { outline: 3px solid #a66b00; outline-offset: 3px; }
+
+.individual-outcome .individual-recommendation {
+  display: block;
+  margin: 0.75rem 0 1.25rem;
+  color: var(--text);
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.visual-flowchart-card.individual-outcome .visual-flowchart-card-copy {
+  grid-column: 1 / -1;
+}
+
+.individual-outcome-actions,
+.individual-outcome .endpoint-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  margin-top: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.individual-outcome .visual-flowchart-tier-review-btn,
+.individual-outcome .endpoint-actions .action-btn {
+  width: auto;
+  min-height: 36px;
+  margin: 0;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--primary-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.3;
+  box-shadow: none;
+}
+
+.individual-outcome .visual-flowchart-tier-review-btn:hover,
+.individual-outcome .endpoint-actions .action-btn:hover {
+  background: var(--primary-faint);
+  border-color: var(--primary-text);
+  color: var(--primary-text);
+}
+
+.individual-outcome .visual-flowchart-tier-review-btn:focus-visible,
+.individual-outcome .endpoint-actions .action-btn:focus-visible {
+  outline: 3px solid var(--border-focus);
+  outline-offset: 3px;
+}
+
 .pathway-session-label {
   margin: 0.6rem 0 0.2rem;
   padding: 0;
