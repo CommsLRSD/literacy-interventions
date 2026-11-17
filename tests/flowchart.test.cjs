@@ -377,3 +377,102 @@ test('the approach choice follows Step 2 and is replaced by either approach at S
         }
     }
 });
+
+test('individual cards use an approach title and a prominent skill heading without the redundant question', () => {
+    for (const language of ['en', 'fr']) {
+        const { run } = setupIndividualPathway(language);
+        const nodes = run('Object.values(getTier1ApproachNodes()).filter(node => node.approach === "individual")');
+        for (const node of nodes) {
+            run(`studentNode = getTier1ApproachNodes()[${JSON.stringify(node.id)}]`);
+            assert.equal(run('getStepCardTitle(studentNode)'), run('t("tier1_individual")'));
+            if (node.type !== 'decision') continue;
+            const html = run('createIntegratedDecisionNode(studentNode)');
+            const body = html.slice(html.indexOf('<div class="step-content">'));
+            assert.ok(body.includes(`<h3>${node.title}</h3>`));
+            assert.ok(body.includes(node.description));
+            assert.ok(!body.includes(run('t("tier1_individual")')));
+            assert.equal(node.subtitle, undefined);
+            assert.ok(body.includes(run('t("tier1_weak")')));
+            assert.ok(body.includes(run('t("tier1_proficient")')));
+        }
+    }
+});
+
+test('the approach chooser and individual outcomes show only their primary message above the actions', () => {
+    for (const language of ['en', 'fr']) {
+        const { run } = setupIndividualPathway(language);
+        const chooser = run('createIntegratedDecisionNode(getTier1ApproachNodes()["tier1-approach"])');
+        assert.ok(chooser.includes(`<h3>${language === 'en' ? 'Choose an approach' : 'Choisir une approche'}</h3>`));
+        assert.doesNotMatch(chooser, /<p>/);
+        for (const leaf of individualLeaves) {
+            const html = run(`createIntegratedEndpointNode(getTier1ApproachNodes()["tier1-student-outcome-${leaf.outcome}"])`);
+            const message = run(`t("tier1_recommend_${leaf.outcome}")`);
+            assert.ok(html.includes(`<h3 class="individual-recommendation">${message}</h3>`));
+            assert.doesNotMatch(html, /<h2>/);
+            assert.ok(html.includes('continueWholeClassIntegrated()'));
+            assert.ok(html.includes('closePathwaySession()'));
+        }
+    }
+});
+
+test('individual decisions route laterally for both choices without changing other decision routes', () => {
+    const { run } = setupIndividualPathway();
+    choose(run, 'individual');
+    for (let i = 0; i < 5; i++) {
+        choose(run, 'weak');
+        assert.equal(run(`getVisualFlowchartRouteDirection({
+            type: 'entry', entry: getVisualFlowchartEntries().at(-2),
+            variant: getVisualFlowchartEntries().at(-2).variant
+        })`), 'straight');
+    }
+    assert.equal(run(`getVisualFlowchartRouteDirection({
+        type: 'entry', entry: { node: getTier1ApproachNodes()['tier1-student-comprehension'] },
+        variant: 'effective'
+    })`), 'straight');
+    assert.equal(run(`getVisualFlowchartRouteDirection({
+        type: 'entry', entry: { node: { id: 'tier1-effectiveness' } }, variant: 'ineffective'
+    })`), 'down');
+    assert.equal(run(`getVisualFlowchartRouteDirection({
+        type: 'entry', entry: { node: { id: 'tier2-progress' } }, variant: 'effective'
+    })`), 'up');
+});
+
+test('returning to whole class collapses the reviewable individual detour and restores direct-route numbering', () => {
+    for (const language of ['en', 'fr']) {
+        for (const leaf of individualLeaves) {
+            const { run } = setupIndividualPathway(language);
+            choose(run, 'individual');
+            for (let i = 0; i < leaf.weakCount; i++) choose(run, 'weak');
+            choose(run, leaf.lastChoice);
+            assert.equal(run('buildVisualFlowchartDisplayItems(getVisualFlowchartEntries()).some(item => item.type === "collapsed")'), false);
+            run('continueWholeClassIntegrated()');
+            assert.equal(run('getActiveStepNumber()'), 3);
+            assert.equal(run('getVisualFlowchartEntries().at(-1).number'), 3);
+            const collapsed = run('buildVisualFlowchartDisplayItems(getVisualFlowchartEntries()).find(item => item.type === "collapsed")');
+            assert.equal(collapsed.tierId, 'tier1-individual');
+            assert.equal(collapsed.entries.length, leaf.weakCount + 2);
+            assert.equal(collapsed.entries.at(-1).node.type, 'endpoint');
+            assert.equal(run('getVisualFlowchartRouteDirection(buildVisualFlowchartDisplayItems(getVisualFlowchartEntries()).at(-2))'), 'straight');
+
+            run(`appState.visualFlowchartModal = { expandedTiers: new Set(), x: 10, y: 20, scale: 1 };
+                refreshVisualFlowchartModal = () => {};
+                applyVisualFlowchartTransform = () => {};
+                toggleVisualFlowchartTier('tier1-individual');`);
+            const expanded = run('buildVisualFlowchartDisplayItems(getVisualFlowchartEntries()).filter(item => item.expandedTierId === "tier1-individual")');
+            assert.equal(expanded.length, collapsed.entries.length);
+            assert.equal(expanded.at(-1).endsExpandedTier, true);
+            assert.equal(expanded[0].entry.node.id, 'tier1-student-comprehension');
+            assert.equal(run('getVisualFlowchartEntries().at(-1).number'), 3);
+            run("toggleVisualFlowchartTier('tier1-individual')");
+            assert.equal(run('buildVisualFlowchartDisplayItems(getVisualFlowchartEntries()).filter(item => item.type === "collapsed").length'), 1);
+            run(`appState.visualFlowchart = validateTierPathway(serializeTierPathway(appState.visualFlowchart));
+                appState.visualFlowchart.currentNodeId = appState.visualFlowchart.selectedPath.at(-1).nodeId;`);
+            assert.equal(run('getActiveStepNumber()'), 3);
+            assert.equal(run('buildVisualFlowchartDisplayItems(getVisualFlowchartEntries()).filter(item => item.type === "collapsed").length'), 1);
+            run('appState.visualFlowchartModal = null;');
+            choose(run, 'more-20');
+            assert.equal(run('getActiveStepNumber()'), 4);
+            assert.equal(run('getVisualFlowchartEntries().at(-1).number'), 4);
+        }
+    }
+});

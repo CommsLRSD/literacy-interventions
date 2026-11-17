@@ -829,7 +829,6 @@ function getTier1ApproachNodes() {
         'tier1-approach': {
             id: 'tier1-approach', type: 'decision',
             title: t('tier1_approach_title'), subtitle: t('tier1_approach_question'),
-            description: t('tier1_approach_description'),
             choices: [
                 { id: 'whole-class', label: t('tier1_whole_class'), type: 'info', nextNode: 'tier1-percentage' },
                 { id: 'individual', label: t('tier1_individual'), type: 'info', nextNode: 'tier1-student-comprehension' }
@@ -841,7 +840,6 @@ function getTier1ApproachNodes() {
         nodes[id] = {
             id, type: 'decision', approach: 'individual',
             title: t(`tier1_student_${skill}`),
-            subtitle: t('tier1_student_question'),
             description: `${t('tier1_subtests')}: ${subtests}`,
             choices: [
                 { id: 'weak', label: t('tier1_weak'), type: 'warning',
@@ -3158,6 +3156,20 @@ function getApproachLabel(nodeDef) {
     return nodeDef.approach === 'individual' ? t('tier1_individual') : t('tier1_whole_class');
 }
 
+function getStepCardTitle(nodeDef) {
+    return nodeDef.approach === 'individual' ? getApproachLabel(nodeDef) : getStepShortTitle(nodeDef);
+}
+
+// Individual findings stay in history without consuming whole-class steps.
+function getJourneyStepNumber(path, index, tierDef) {
+    const isIndividual = tierDef.nodes[path[index]?.nodeId]?.approach === 'individual';
+    return path.slice(0, index).filter(step => {
+        const node = tierDef.nodes[step.nodeId];
+        return node && (node.type !== 'endpoint' || node.nextNode)
+            && (isIndividual || node.approach !== 'individual');
+    }).length + 1;
+}
+
 // Keep the choice in saved history, but replace its card with the chosen
 // approach so selecting an approach does not consume another step number.
 function getJourneyDisplayPath(snapshot = appState.visualFlowchart) {
@@ -3294,7 +3306,7 @@ function buildCompletedTrailHTML(includeCurrent = false) {
     path.forEach((step, index) => {
         const nodeDef = tierDef.nodes[step.nodeId];
         if (!nodeDef || (nodeDef.type === 'endpoint' && !nodeDef.nextNode) || index > lastIndex) return;
-        number += 1;
+        number = getJourneyStepNumber(path, index, tierDef);
         html += `<div class="trail-item trail-item-done">
             ${buildTrailRailHTML(number, 'done')}
             ${buildTrailDoneCardHTML(nodeDef, number, getStepAnswerText(step.nodeId, nodeDef))}
@@ -3310,12 +3322,7 @@ function getActiveStepNumber() {
     const tierDef = getFlowchartDefs()[vf.tierId];
     const path = getJourneyDisplayPath(vf);
     if (!tierDef) return 1;
-    let completed = 0;
-    for (let i = 0; i < path.length - 1; i++) {
-        const node = tierDef.nodes[path[i].nodeId];
-        if (node && (node.type !== 'endpoint' || node.nextNode)) completed++;
-    }
-    return completed + 1;
+    return getJourneyStepNumber(path, path.length - 1, tierDef);
 }
 
 // Everything happens inside the current step's row in the panel; the track is
@@ -3450,7 +3457,7 @@ function renderJourneyHorizontal(direction = 'forward') {
         const nodeDef = tierDef.nodes[step.nodeId];
         if (!nodeDef || (nodeDef.type === 'endpoint' && !nodeDef.nextNode)) return;
         const isActive = index === path.length - 1;
-        stepNum++;
+        stepNum = getJourneyStepNumber(path, index, tierDef);
 
         if (stepNum > 1) {
             bubblesHTML += `<div class="horiz-connector" aria-hidden="true">
@@ -3603,7 +3610,7 @@ function getVisualFlowchartEntries() {
                 choice,
                 tierId: snapshot.tierId,
                 tierLabel: tierDef.title.split(':')[0].trim(),
-                number: index + 1,
+                number: getJourneyStepNumber(path, index, tierDef),
                 isCurrent,
                 canRevisit: snapshot.tierId === currentTierId && !isCurrent,
                 variant,
@@ -4108,6 +4115,25 @@ function buildVisualFlowchartDisplayItems(entries) {
                 i += 1;
             }
             items.push({ type: 'collapsed', tierId: entry.tierId, tierLabel: entry.tierLabel, entries: group, variant: group[group.length - 1].variant });
+        } else if (entry.node.approach === 'individual'
+            && entries.some(later => later.tierId === entry.tierId && later.node.id === 'tier1-percentage')) {
+            const group = [];
+            while (i < entries.length && entries[i].tierId === entry.tierId && entries[i].node.approach === 'individual') {
+                group.push(entries[i]);
+                i += 1;
+            }
+            const groupId = 'tier1-individual';
+            if (expandedTiers.has(groupId)) {
+                group.forEach((individualEntry, index) => items.push({
+                    type: 'entry', entry: individualEntry, variant: individualEntry.variant,
+                    expandedTierId: groupId, endsExpandedTier: index === group.length - 1
+                }));
+            } else {
+                items.push({
+                    type: 'collapsed', tierId: groupId, tierLabel: t('tier1_individual'),
+                    entries: group, variant: 'step1'
+                });
+            }
         } else {
             const expandedTierId = entry.tierId !== currentTierId && expandedTiers.has(entry.tierId) ? entry.tierId : null;
             items.push({ type: 'entry', entry, variant: entry.variant, expandedTierId,
@@ -4149,6 +4175,7 @@ function getVisualFlowchartRouteDirection(item) {
     if (item.type === 'collapsed') return 'straight';
     if (item.type === 'entry') {
         const entry = item.entry;
+        if (entry?.node?.approach === 'individual') return 'straight';
         if (entry?.node?.id === 'tier1-percentage' && entry.choice?.id === 'less-20') return 'straight';
     }
     if (item.variant === 'effective') return 'up';
@@ -4196,6 +4223,7 @@ function refreshVisualFlowchartModal() {
     const getItemCardWidth = item => {
         if (item.type === 'tier-review') return wideCardWidth;
         if (item.type === 'entry') {
+            if (item.entry.isCurrent && item.entry.node.type === 'endpoint' && item.entry.node.approach === 'individual') return interactiveCardWidth;
             if (item.entry.isCurrent && item.entry.node.type !== 'endpoint') {
                 // Tier 2 / Tier 3 step 1 starts here and is then widened by
                 // fitVisualFlowchartCardToViewportHeight() once rendered.
@@ -4248,14 +4276,18 @@ function refreshVisualFlowchartModal() {
         const position = positions[index];
         if (item.type === 'tier-review') {
             const targetNum = String(item.targetTierId).replace(/\D/g, '');
-            const number = entries.filter(entry => entry.tierId === appState.visualFlowchart.tierId).length + 1;
+            const number = (entries.filter(entry => entry.tierId === appState.visualFlowchart.tierId).at(-1)?.number || 0) + 1;
             return `<div class="visual-flowchart-card visual-flowchart-card-tier-review visual-flowchart-card-current"
                         style="left:${position.x}px;top:${position.y}px;width:${position.width}px" role="group" aria-label="${escapeHtml(t('fc_visual_tier_review_label'))}">
-                    <span class="visual-flowchart-step-number">${number}</span>
-                    <span class="visual-flowchart-card-icon"><span class="material-symbols-rounded" aria-hidden="true" translate="no">fact_check</span></span>
+                    <span class="visual-flowchart-card-header">
+                        <span class="visual-flowchart-step-number">${number}</span>
+                        <span class="visual-flowchart-card-icon"><span class="material-symbols-rounded" aria-hidden="true" translate="no">fact_check</span></span>
+                        <span class="visual-flowchart-card-heading">
+                            <span class="visual-flowchart-card-meta">${escapeHtml(t('fc_visual_tier_review_label'))}</span>
+                            <strong>${escapeHtml(t('go_to_tier'))} ${escapeHtml(targetNum)}</strong>
+                        </span>
+                    </span>
                     <span class="visual-flowchart-card-copy">
-                        <span class="visual-flowchart-card-meta">${escapeHtml(t('fc_visual_tier_review_label'))}</span>
-                        <strong>${escapeHtml(t('go_to_tier'))} ${escapeHtml(targetNum)}</strong>
                         <span class="visual-flowchart-card-answer">${escapeHtml(t('go_to_tier_note'))}</span>
                         <button type="button" class="visual-flowchart-tier-review-btn" onclick="confirmVisualFlowchartTierTransition()">
                             ${escapeHtml(t('continue_to_tier'))} ${escapeHtml(targetNum)}
@@ -4265,31 +4297,37 @@ function refreshVisualFlowchartModal() {
         }
         if (item.type === 'collapsed') {
             const variant = item.variant || 'step1';
+            const isIndividual = item.tierId === 'tier1-individual';
             const tierNum = item.tierLabel.replace(/\D/g, '');
-            const collapsedLabel = typeof t('fc_visual_tier_collapsed') === 'function'
+            const collapsedLabel = isIndividual
+                ? t('fc_visual_individual_completed')
+                : typeof t('fc_visual_tier_collapsed') === 'function'
                 ? t('fc_visual_tier_collapsed')(tierNum, item.entries.length)
                 : `${item.tierLabel} · ${item.entries.length} steps`;
             return `<button type="button" class="visual-flowchart-card visual-flowchart-card-collapsed visual-flowchart-card-${escapeAttr(variant)}"
                         data-tier="${escapeAttr(item.tierId)}" aria-expanded="false"
-                        style="left:${position.x}px;top:${position.y}px;width:${position.width}px" onclick="toggleVisualFlowchartTier('${escapeAttr(item.tierId)}')" aria-label="${escapeHtml(collapsedLabel)}">
+                        style="left:${position.x}px;top:${position.y}px;width:${position.width}px" onclick="toggleVisualFlowchartTier('${escapeAttr(item.tierId)}')" aria-label="${escapeAttr(isIndividual ? `${item.tierLabel}: ${collapsedLabel}` : collapsedLabel)}">
                     <span class="visual-flowchart-card-icon"><span class="material-symbols-rounded" aria-hidden="true" translate="no">unfold_more</span></span>
                     <span class="visual-flowchart-card-copy">
-                        <span class="visual-flowchart-card-meta">${escapeHtml(item.tierLabel)}</span>
-                        <strong>${escapeHtml(collapsedLabel)}</strong>
+                        <span class="visual-flowchart-card-meta">${escapeHtml(isIndividual ? t('step_type_outcome') : item.tierLabel)}</span>
+                        <strong>${escapeHtml(isIndividual ? item.tierLabel : collapsedLabel)}</strong>
+                        ${isIndividual ? `<span class="visual-flowchart-card-answer">${escapeHtml(collapsedLabel)}</span>` : ''}
                     </span>
                 </button>`;
         }
         const entry = item.entry;
+        const isIndividualOutcome = entry.node.type === 'endpoint' && entry.node.approach === 'individual';
         const answer = entry.choice?.name || '';
         const usesChoiceAsTitle = !entry.isCurrent && entry.node.titleFromChoiceWhenAnswered && entry.choice?.name;
-        const displayTitle = usesChoiceAsTitle ? entry.choice.name : getStepShortTitle(entry.node);
+        const displayTitle = usesChoiceAsTitle ? entry.choice.name : getStepCardTitle(entry.node);
         const variant = entry.variant || 'step1';
         const cardIcon = entry.node.type === 'endpoint'
             ? (ICONS[entry.node.status] || ICONS.info)
             : getStepTypeIcon(entry.node.type);
         const isInteractive = entry.isCurrent && entry.node.type !== 'endpoint';
         const tag = item.expandedTierId || (entry.canRevisit && entry.node.type !== 'endpoint') ? 'button' : 'article';
-        const collapseLabel = t('fc_visual_tier_collapse');
+        const collapseLabel = t(item.expandedTierId === 'tier1-individual'
+            ? 'fc_visual_individual_collapse' : 'fc_visual_tier_collapse');
         const revisit = item.expandedTierId
             ? ` type="button" data-visual-collapse-tier="${escapeAttr(item.expandedTierId)}" aria-expanded="true" aria-label="${escapeAttr(`${collapseLabel}: ${entry.tierLabel} · ${displayTitle}`)}"`
             : tag === 'button'
@@ -4316,16 +4354,21 @@ function refreshVisualFlowchartModal() {
             ? `${renderSessionDownloadButtonHtml('visual-flowchart-tier-review-btn')}
                <button type="button" class="visual-flowchart-tier-review-btn" onclick="closePathwaySession()">${escapeHtml(t('session_end'))}</button>`
             : '';
-        return `<${tag} data-tier="${escapeAttr(entry.tierId)}" class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ' visual-flowchart-card-completed'}${item.expandedTierId ? ' visual-flowchart-card-expanded-tier' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
+        return `<${tag} data-tier="${escapeAttr(entry.tierId)}" class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ' visual-flowchart-card-completed'}${isIndividualOutcome ? ' individual-outcome' : ''}${item.expandedTierId ? ' visual-flowchart-card-expanded-tier' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
                     style="left:${position.x}px;top:${position.y}px;width:${position.width}px" ${revisit}>
-                <span class="visual-flowchart-step-number">${entry.number}</span>
-                <span class="visual-flowchart-card-icon">${cardIcon}</span>
+                <span class="visual-flowchart-card-header">
+                    <span class="visual-flowchart-step-number">${entry.number}</span>
+                    <span class="visual-flowchart-card-icon">${cardIcon}</span>
+                    <span class="visual-flowchart-card-heading">
+                        <span class="visual-flowchart-card-meta">${escapeHtml(getStepTypeLabel(entry.node.type))}${entry.isCurrent ? ` · ${escapeHtml(t('fc_in_progress'))}` : ''}</span>
+                        <strong>${escapeHtml(displayTitle)}</strong>
+                    </span>
+                </span>
                 <span class="visual-flowchart-card-copy">
-                    <span class="visual-flowchart-card-meta">${escapeHtml(getStepTypeLabel(entry.node.type))}${entry.isCurrent ? ` · ${escapeHtml(t('fc_in_progress'))}` : ''}</span>
-                    <strong>${escapeHtml(displayTitle)}</strong>
+                    ${entry.node.approach === 'individual' && !isInteractive && !isIndividualOutcome ? `<h3 class="visual-flowchart-individual-heading">${escapeHtml(entry.node.title)}</h3>` : ''}
                     ${!usesChoiceAsTitle && answer && !isDuplicateStepSummary(answer, displayTitle) ? `<span class="visual-flowchart-card-answer">${escapeHtml(answer)}</span>` : ''}
-                    ${entry.node.type === 'endpoint' && endpointDescription ? `<span class="visual-flowchart-card-answer">${endpointDescription}</span>` : ''}
-                    ${entry.node.type === 'endpoint' && !item.expandedTierId ? endpointAction + sessionActions : ''}
+                    ${entry.node.type === 'endpoint' && endpointDescription ? (isIndividualOutcome ? `<h3 class="individual-recommendation">${endpointDescription}</h3>` : `<span class="visual-flowchart-card-answer">${endpointDescription}</span>`) : ''}
+                    ${entry.node.type === 'endpoint' && !item.expandedTierId ? (isIndividualOutcome ? `<span class="individual-outcome-actions">${endpointAction + sessionActions}</span>` : endpointAction + sessionActions) : ''}
                     ${collapseLabelHTML}
                 </span>
                 ${isInteractive ? '<div class="visual-flowchart-active-host"></div>' : ''}
@@ -4707,7 +4750,7 @@ function renderJourneyMap(activeNumber) {
         if (!nodeDef) return;
         const isActive = index === path.length - 1;
         if (nodeDef.type === 'endpoint' && !nodeDef.nextNode && !isActive) return;
-        number += 1;
+        number = getJourneyStepNumber(path, index, tierDef);
         const doneChoice = isActive ? null : vf.choices[nodeDef.id];
         const usesChoiceAsTitle = !isActive && nodeDef.titleFromChoiceWhenAnswered && doneChoice?.name;
         entries.push({
@@ -5391,7 +5434,8 @@ function fwSelectItem(itemId, itemName) {
 
 // Create integrated decision node
 function createIntegratedDecisionNode(nodeData) {
-    const questionHTML = nodeData.id === 'tier1-percentage' && nodeData.guidancePhrase
+    const questionHTML = nodeData.approach === 'individual' ? escapeHtml(nodeData.title)
+        : nodeData.id === 'tier1-percentage' && nodeData.guidancePhrase
         ? escapeHtml(nodeData.subtitle).replace(escapeHtml(nodeData.guidancePhrase), () =>
             `<button type="button" class="benchmark-guidance-link" onclick="toggleTier1Guidance(this.closest('#visual-flowchart-modal') ? 'visual-flowchart' : 'flowchart')" aria-haspopup="dialog">${escapeHtml(nodeData.guidancePhrase)}</button>`)
         : nodeData.subtitle;
@@ -5429,7 +5473,7 @@ function createIntegratedDecisionNode(nodeData) {
     
     return `
         <div class="step-header">
-            <div class="step-badge"><span class="step-badge-icon">${getStepTypeIcon(nodeData.type)}</span>${nodeData.title}</div>
+            <div class="step-badge"><span class="step-badge-icon">${getStepTypeIcon(nodeData.type)}</span>${nodeData.approach === 'individual' ? escapeHtml(getStepCardTitle(nodeData)) : nodeData.title}</div>
             <button class="undo-btn" onclick="undoToStep('${nodeData.id}')" title="Return to this step">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="11 17 6 12 11 7"/><path d="M18 17v-2a4 4 0 0 0-4-4H6"/>
@@ -5437,7 +5481,7 @@ function createIntegratedDecisionNode(nodeData) {
             </button>
         </div>
         <div class="step-content">
-            ${nodeData.approach ? `<p class="step-approach-label">${escapeHtml(getApproachLabel(nodeData))}</p>` : ''}
+            ${nodeData.approach && nodeData.approach !== 'individual' ? `<p class="step-approach-label">${escapeHtml(getApproachLabel(nodeData))}</p>` : ''}
             <h3>${questionHTML}</h3>
             ${nodeData.description ? `<p>${nodeData.description}</p>` : ''}
             ${warningBoxHTML}
@@ -5552,13 +5596,15 @@ function createIntegratedEndpointNode(nodeData) {
     ` : '';
     
     return `
-        <div class="endpoint-card endpoint-${nodeData.status}">
+        <div class="endpoint-card endpoint-${nodeData.status}${nodeData.approach === 'individual' ? ' individual-outcome' : ''}">
             <div class="endpoint-icon">
                 ${ICONS[nodeData.status] || ICONS.info}
             </div>
-            <h2>${nodeData.title}</h2>
-            ${nodeData.approach ? `<p class="step-approach-label">${escapeHtml(getApproachLabel(nodeData))}</p>` : ''}
-            ${nodeData.descriptionHtml ? `<p>${nodeData.descriptionHtml}</p>` : nodeData.description ? `<p>${escapeHtml(nodeData.description)}</p>` : ''}
+            ${nodeData.approach === 'individual' ? '' : `<h2>${nodeData.title}</h2>`}
+            ${nodeData.approach && nodeData.approach !== 'individual' ? `<p class="step-approach-label">${escapeHtml(getApproachLabel(nodeData))}</p>` : ''}
+            ${nodeData.descriptionHtml || nodeData.description ? (nodeData.approach === 'individual'
+                ? `<h3 class="individual-recommendation">${nodeData.descriptionHtml || escapeHtml(nodeData.description)}</h3>`
+                : `<p>${nodeData.descriptionHtml || escapeHtml(nodeData.description)}</p>`) : ''}
             ${warningBoxHTML}
             ${recommendationsHTML}
             <div class="endpoint-actions">
@@ -6710,6 +6756,10 @@ function continueWholeClassIntegrated() {
         return;
     }
     closeFinalSummaryDialog({ immediate: true });
+    appState.visualFlowchartModal?.expandedTiers.delete('tier1-individual');
+    if (appState.visualFlowchartModal?.tierViewMemory) {
+        delete appState.visualFlowchartModal.tierViewMemory['tier1-individual'];
+    }
     vf.choices[node.id] = resolveSavedChoice(node, 'whole-class', vf.tierId);
     vf.summaryEndpointNodeData = null;
     showIntegratedNode(node.nextNode, node.id, 'whole-class');
