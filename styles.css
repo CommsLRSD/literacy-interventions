@@ -9625,6 +9625,13 @@ body.step-review-modal-open { overflow: hidden; }
     line-height: 1.35;
   }
 
+  .visual-flowchart-individual-heading {
+    margin: 0.5rem 0;
+    color: var(--text);
+    font-size: 1.15rem;
+    line-height: 1.3;
+  }
+
   .visual-flowchart-active-host {
     grid-column: 1 / -1;
     min-width: 0;
