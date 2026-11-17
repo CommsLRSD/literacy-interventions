@@ -444,6 +444,28 @@ const TRANSLATIONS = {
 
         // ── Flowchart UI (dynamic) ──
         fc_back: 'Restart',
+        tier1_approach_title: 'Step 3: Choose an Approach',
+        tier1_approach_question: 'Would you like to continue with the Whole Class Approach or the Individual Student Approach?',
+        tier1_approach_description: 'Choose an approach to continue Step 3 in this card. The Individual Student Approach reviews one student’s screening results. At the end, you can return to the Whole Class Approach. Your individual-student decisions and recommendation remain in your session notes and downloaded .docx summary.',
+        tier1_whole_class: 'Whole Class Approach',
+        tier1_individual: 'Individual Student Approach',
+        tier1_return_whole_class: 'Return to Whole Class Approach',
+        tier1_individual_outcome: 'Individual Student Approach: Recommendation',
+        tier1_student_question: 'Is this individual student weak or proficient in this area?',
+        tier1_subtests: 'Subtests',
+        tier1_weak: 'Weak',
+        tier1_proficient: 'Proficient',
+        tier1_student_comprehension: 'Look at Comprehension',
+        tier1_student_rate: 'Look at Text-Level Rate',
+        tier1_student_accuracy: 'Look at Text-Level Accuracy',
+        tier1_student_decoding: 'Look at Decoding',
+        'tier1_student_phonemic-awareness': 'Look at Phonemic Awareness',
+        tier1_recommend_curriculum: 'Continue to provide evidence-based, curriculum-aligned instruction.',
+        tier1_recommend_vocabulary: 'Teach vocabulary, syntax, knowledge, and comprehension strategies.',
+        tier1_recommend_fluency: 'Consider fluency instruction (repeated reading, etc.) with lots of oral practice.',
+        tier1_recommend_multisyllabic: 'Teach multisyllabic decoding, providing lots of text-level reading.',
+        tier1_recommend_phonics: 'Provide explicit, systematic instruction in phonics, decoding, and spelling.',
+        tier1_recommend_awareness: 'Teach phonemic awareness and phonics.',
         fc_your_decisions: 'Your Decisions',
         fc_summary_view: 'Summary View',
         fc_standard_view: 'Alt View',
@@ -995,6 +1017,28 @@ const TRANSLATIONS = {
 
         // ── Flowchart UI (dynamic) ──
         fc_back: 'Recommencer',
+        tier1_approach_title: 'Étape 3 : Choisir une approche',
+        tier1_approach_question: 'Souhaitez-vous continuer avec l’approche pour toute la classe ou l’approche individuelle pour un élève ?',
+        tier1_approach_description: 'Choisissez une approche pour poursuivre l’étape 3 dans cette carte. L’approche individuelle examine les résultats de dépistage d’un seul élève. À la fin, vous pouvez revenir à l’approche pour toute la classe. Les décisions et la recommandation concernant cet élève sont conservées dans les notes de séance et le résumé .docx téléchargé.',
+        tier1_whole_class: 'Approche pour toute la classe',
+        tier1_individual: 'Approche individuelle pour un élève',
+        tier1_return_whole_class: 'Revenir à l’approche pour toute la classe',
+        tier1_individual_outcome: 'Approche individuelle pour un élève : Recommandation',
+        tier1_student_question: 'Cet élève a-t-il des difficultés ou maîtrise-t-il cette compétence ?',
+        tier1_subtests: 'Sous-tests',
+        tier1_weak: 'Faible',
+        tier1_proficient: 'Maîtrisé',
+        tier1_student_comprehension: 'Examiner la compréhension',
+        tier1_student_rate: 'Examiner la vitesse de lecture de texte',
+        tier1_student_accuracy: 'Examiner la précision de lecture de texte',
+        tier1_student_decoding: 'Examiner le décodage',
+        'tier1_student_phonemic-awareness': 'Examiner la conscience phonémique',
+        tier1_recommend_curriculum: 'Continuer à offrir un enseignement fondé sur des données probantes et aligné sur le curriculum.',
+        tier1_recommend_vocabulary: 'Enseigner le vocabulaire, la syntaxe, les connaissances et les stratégies de compréhension.',
+        tier1_recommend_fluency: 'Envisager un enseignement de la fluidité (lecture répétée, etc.) avec beaucoup de pratique orale.',
+        tier1_recommend_multisyllabic: 'Enseigner le décodage des mots multisyllabiques en offrant de nombreuses occasions de lire des textes.',
+        tier1_recommend_phonics: 'Offrir un enseignement explicite et systématique de la phonétique, du décodage et de l’orthographe.',
+        tier1_recommend_awareness: 'Enseigner la conscience phonémique et la phonétique.',
         fc_your_decisions: 'Vos décisions',
         fc_summary_view: 'Vue sommaire',
         fc_standard_view: 'Vue alternative',
@@ -1139,12 +1183,12 @@ const FLOWCHART_DEFINITIONS_FR = {
             'tier1-effectiveness': {
                 id: 'tier1-effectiveness',
                 type: 'decision',
-                title: '\u00c9tape 3\u00a0: R\u00e9sultat',
+                title: '\u00c9tape 2\u00a0: R\u00e9sultat',
                 subtitle: 'D\u2019apr\u00e8s {{screener}}, l\u2019enseignement \u00e9tait-il efficace\u00a0?',
                 description: '',
                 choices: [
                     { id: 'effective', label: 'Enseignement efficace', sublabel: 'R\u00e9sultat du sous-test Bleu ou Vert', indicators: ['blue', 'green'], type: 'success', nextNode: 'tier1-success' },
-                    { id: 'ineffective', label: 'Enseignement inefficace', sublabel: 'R\u00e9sultat du sous-test Jaune ou Rouge', indicators: ['yellow', 'red'], type: 'warning', nextNode: 'tier1-percentage' }
+                    { id: 'ineffective', label: 'Enseignement inefficace', sublabel: 'R\u00e9sultat du sous-test Jaune ou Rouge', indicators: ['yellow', 'red'], type: 'warning', nextNode: 'tier1-approach' }
                 ]
             },
             'tier1-success': {
@@ -1156,8 +1200,9 @@ const FLOWCHART_DEFINITIONS_FR = {
             },
             'tier1-percentage': {
                 id: 'tier1-percentage',
+                approach: 'whole-class',
                 type: 'decision',
-                title: '\u00c9tape 4\u00a0: Enseignement inefficace',
+                title: '\u00c9tape 3\u00a0: Enseignement inefficace',
                 subtitle: 'D’après les résultats du dépistage, quel pourcentage d’élèves sont en dessous du niveau de référence\u00a0?',
                 guidancePhrase: 'en dessous du niveau de référence',
                 choices: [
@@ -1167,6 +1212,7 @@ const FLOWCHART_DEFINITIONS_FR = {
             },
             'tier1-move-tier2': {
                 id: 'tier1-move-tier2',
+                approach: 'whole-class',
                 type: 'endpoint',
                 status: 'info',
                 title: 'Continuer vers le palier 2\u00a0: Interventions en petits groupes',
@@ -1175,6 +1221,7 @@ const FLOWCHART_DEFINITIONS_FR = {
             },
             'tier1-reteach': {
                 id: 'tier1-reteach',
+                approach: 'whole-class',
                 type: 'endpoint',
                 status: 'warning',
                 title: 'Réenseigner le curriculum général',
