@@ -181,14 +181,14 @@ test('unavailable pillars cannot be selected through the flowchart toggle handle
     assert.equal(run('appState.fwState.pillars.length'), 0);
 });
 
-function setupIndividualPathway(language = 'en', { atResult = false } = {}) {
-    const { run } = setup({ language, emptyResources: false });
+function setupIndividualPathway(language = 'en', { atResult = false, grade = ['3'] } = {}) {
+    const { run } = setup({ language, grade, emptyResources: false });
     run(`
         document.querySelector = () => null;
         document.getElementById = id => id === 'flowchart-steps' ? { innerHTML: '' } : null;
         appState.tierFlowchartData = ${readFileSync(join(__dirname, '..', 'data/tier-flowcharts.json'), 'utf8')};
         appState.selectedProgram = PROGRAM_ENGLISH;
-        pathwayContext = { program: PROGRAM_ENGLISH, screener: 'dibels', grades: ['1'] };
+        pathwayContext = { program: PROGRAM_ENGLISH, screener: 'dibels', grades: ${JSON.stringify(grade)} };
         renderJourney = () => {};
         completeJourneyMap = () => {};
         updateGuidedHome = () => {};
@@ -262,6 +262,43 @@ test('all six PDF routes reach the correct recommendation and return without era
         assert.equal(run('getSessionNotes(pathwaySessions[0]).outcomes.length'), 2);
         assert.equal(run('getSessionNotes(pathwaySessions[0]).outcomes[0].final'), undefined);
         assert.equal(run('getSessionNotes(pathwaySessions[0]).outcomes[1].final'), true);
+    }
+});
+
+test('Kindergarten through Grade 2 use the risk-area pathway and the phonemic-awareness success follow-up', () => {
+    const riskAreas = [
+        ['phonemic-awareness', 'tier1-student-k2-awareness', 'tier1_recommend_awareness'],
+        ['decoding', 'tier1-student-k2-decoding', 'tier1_recommend_phonics'],
+        ['accuracy', 'tier1-student-k2-accuracy', 'tier1_recommend_multisyllabic'],
+        ['rate', 'tier1-student-k2-rate', 'tier1_k2_recommend_fluency'],
+        ['comprehension', 'tier1-student-k2-comprehension', 'tier1_k2_recommend_comprehension']
+    ];
+    for (const grade of ['K', '1', '2']) {
+        for (const language of ['en', 'fr']) {
+            for (const [riskArea, nextNode, recommendation] of riskAreas) {
+                const { run } = setupIndividualPathway(language, { grade: [grade] });
+                choose(run, 'individual');
+                assert.equal(run('appState.visualFlowchart.currentNodeId'), 'tier1-student-risk');
+                assert.deepEqual(
+                    JSON.parse(run('JSON.stringify(getFlowchartDefs().tier1.nodes["tier1-student-risk"].choices.map(choice => choice.id))')),
+                    riskAreas.map(([id]) => id)
+                );
+                choose(run, riskArea);
+                if (riskArea === 'phonemic-awareness') {
+                    assert.equal(run('appState.visualFlowchart.currentNodeId'), nextNode);
+                    assert.equal(run('getFlowchartDefs().tier1.nodes[appState.visualFlowchart.currentNodeId].title'),
+                        run('t("tier1_k2_recommend_awareness")'));
+                    choose(run, 'successful');
+                    assert.equal(run('appState.visualFlowchart.currentNodeId'), 'tier1-student-k2-outcome-phonics');
+                    assert.equal(run('getFlowchartDefs().tier1.nodes[appState.visualFlowchart.currentNodeId].description'),
+                        run('t("tier1_recommend_phonics")'));
+                } else {
+                    assert.equal(run('appState.visualFlowchart.currentNodeId'), nextNode);
+                    assert.equal(run('getFlowchartDefs().tier1.nodes[appState.visualFlowchart.currentNodeId].description'),
+                        run(`t(${JSON.stringify(recommendation)})`));
+                }
+            }
+        }
     }
 });
 

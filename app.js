@@ -501,11 +501,18 @@ function validateTierPathway(raw, program = appState.selectedProgram) {
                 const inserted = def.nodes[next];
                 // Older sessions went straight to the whole-class result.
                 const legacyApproach = next === 'tier1-approach' && step.nodeId === 'tier1-percentage';
-                if (!legacyApproach && (inserted?.type !== 'info' || !next.endsWith('-screener') || inserted.nextNode !== step.nodeId)) return null;
-                choices[next] = resolveSavedChoice(inserted, legacyApproach ? 'whole-class' : 'acknowledged', raw.tierId);
-                seen.add(next);
-                selectedPath.push({ nodeId: next, fromNodeId: previous.nodeId, choiceId: prevChoice.id });
-                previous = selectedPath[selectedPath.length - 1];
+                const legacyEarlyIndividual = raw.tierId === 'tier1' && next === 'tier1-student-risk' &&
+                    prevNode.id === 'tier1-approach' && prevChoice.id === 'individual' &&
+                    step.nodeId === 'tier1-student-comprehension' &&
+                    pathwayContext?.grades?.some(grade => ['K', '1', '2'].includes(grade));
+                if (!legacyApproach && !legacyEarlyIndividual &&
+                    (inserted?.type !== 'info' || !next.endsWith('-screener') || inserted.nextNode !== step.nodeId)) return null;
+                if (!legacyEarlyIndividual) {
+                    choices[next] = resolveSavedChoice(inserted, legacyApproach ? 'whole-class' : 'acknowledged', raw.tierId);
+                    seen.add(next);
+                    selectedPath.push({ nodeId: next, fromNodeId: previous.nodeId, choiceId: prevChoice.id });
+                    previous = selectedPath[selectedPath.length - 1];
+                }
             }
         }
         selectedPath.push({ nodeId: step.nodeId, fromNodeId: previous?.nodeId || null, choiceId: previous ? choices[previous.nodeId]?.id : null });
@@ -818,6 +825,8 @@ function getFlowchartDefs() {
 }
 
 function getTier1ApproachNodes() {
+    const earlyGrades = ['K', '1', '2'];
+    const usesEarlyGradePathway = pathwayContext?.grades?.some(grade => earlyGrades.includes(grade)) === true;
     const assessments = [
         ['comprehension', 'rate', 'curriculum', 'MAZE, Reading Comprehension, etc.'],
         ['rate', 'accuracy', 'vocabulary', 'ORF-Words Correct'],
@@ -831,7 +840,8 @@ function getTier1ApproachNodes() {
             title: t('tier1_approach_title'), subtitle: t('tier1_approach_question'),
             choices: [
                 { id: 'whole-class', label: t('tier1_whole_class'), type: 'info', nextNode: 'tier1-percentage' },
-                { id: 'individual', label: t('tier1_individual'), type: 'info', nextNode: 'tier1-student-comprehension' }
+                { id: 'individual', label: t('tier1_individual'), type: 'info',
+                    nextNode: usesEarlyGradePathway ? 'tier1-student-risk' : 'tier1-student-comprehension' }
             ]
         }
     };
@@ -859,6 +869,56 @@ function getTier1ApproachNodes() {
             actionButton: { text: t('tier1_return_whole_class'), action: 'continueWholeClass' }
         };
     });
+    if (usesEarlyGradePathway) {
+        const earlyRiskAreas = [
+            ['phonemic-awareness', 'tier1_k2_phonemic_awareness', 'tier1-student-k2-awareness'],
+            ['decoding', 'tier1_k2_decoding', 'tier1-student-k2-decoding'],
+            ['accuracy', 'tier1_k2_accuracy', 'tier1-student-k2-accuracy'],
+            ['rate', 'tier1_k2_rate', 'tier1-student-k2-rate'],
+            ['comprehension', 'tier1_k2_comprehension', 'tier1-student-k2-comprehension']
+        ];
+        nodes['tier1-student-risk'] = {
+            id: 'tier1-student-risk', type: 'decision', approach: 'individual',
+            title: t('tier1_k2_risk_question'),
+            choices: earlyRiskAreas.map(([id, label, nextNode]) => ({
+                id, label: t(label), type: 'warning', nextNode
+            }))
+        };
+        const earlyRecommendations = [
+            ['awareness', 'tier1_k2_recommend_awareness'],
+            ['decoding', 'tier1_recommend_phonics'],
+            ['accuracy', 'tier1_recommend_multisyllabic'],
+            ['rate', 'tier1_k2_recommend_fluency'],
+            ['comprehension', 'tier1_k2_recommend_comprehension']
+        ];
+        earlyRecommendations.forEach(([recommendation, description]) => {
+            const id = `tier1-student-k2-${recommendation}`;
+            nodes[id] = {
+                id, type: recommendation === 'awareness' ? 'decision' : 'endpoint',
+                approach: 'individual',
+                ...(recommendation === 'awareness' ? {
+                    title: t(description),
+                    choices: [{
+                        id: 'successful', label: t('tier1_k2_successful'), type: 'success',
+                        nextNode: 'tier1-student-k2-outcome-phonics'
+                    }]
+                } : {
+                    status: 'info',
+                    title: t('recommendations_title'),
+                    description: t(description),
+                    nextNode: 'tier1-percentage',
+                    actionButton: { text: t('tier1_return_whole_class'), action: 'continueWholeClass' }
+                })
+            };
+        });
+        nodes['tier1-student-k2-outcome-phonics'] = {
+            id: 'tier1-student-k2-outcome-phonics', type: 'endpoint', approach: 'individual', status: 'info',
+            title: t('recommendations_title'),
+            description: t('tier1_recommend_phonics'),
+            nextNode: 'tier1-percentage',
+            actionButton: { text: t('tier1_return_whole_class'), action: 'continueWholeClass' }
+        };
+    }
     return nodes;
 }
 
