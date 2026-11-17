@@ -445,8 +445,7 @@ const TRANSLATIONS = {
         // ── Flowchart UI (dynamic) ──
         fc_back: 'Restart',
         tier1_approach_title: 'Step 3: Choose an Approach',
-        tier1_approach_question: 'Would you like to continue with the Whole Class Approach or the Individual Student Approach?',
-        tier1_approach_description: 'Choose an approach to continue Step 3 in this card. The Individual Student Approach reviews one student’s screening results. Returning to the Whole Class Approach collapses the individual pathway for review and resumes at Step 3. Your individual-student decisions and recommendation remain in your session notes and downloaded .docx summary.',
+        tier1_approach_question: 'Choose an approach',
         tier1_whole_class: 'Whole Class Approach',
         tier1_individual: 'Individual Student Approach',
         tier1_return_whole_class: 'Return to Whole Class Approach',
@@ -1019,8 +1018,7 @@ const TRANSLATIONS = {
         // ── Flowchart UI (dynamic) ──
         fc_back: 'Recommencer',
         tier1_approach_title: 'Étape 3 : Choisir une approche',
-        tier1_approach_question: 'Souhaitez-vous continuer avec l’approche pour toute la classe ou l’approche individuelle pour un élève ?',
-        tier1_approach_description: 'Choisissez une approche pour poursuivre l’étape 3 dans cette carte. L’approche individuelle examine les résultats de dépistage d’un seul élève. Le retour à l’approche pour toute la classe replie le parcours individuel, qui reste consultable, et reprend à l’étape 3. Les décisions et la recommandation concernant cet élève sont conservées dans les notes de séance et le résumé .docx téléchargé.',
+        tier1_approach_question: 'Choisir une approche',
         tier1_whole_class: 'Approche pour toute la classe',
         tier1_individual: 'Approche individuelle pour un élève',
         tier1_return_whole_class: 'Revenir à l’approche pour toute la classe',

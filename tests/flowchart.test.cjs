@@ -398,6 +398,23 @@ test('individual cards use an approach title and a prominent skill heading witho
     }
 });
 
+test('the approach chooser and individual outcomes show only their primary message above the actions', () => {
+    for (const language of ['en', 'fr']) {
+        const { run } = setupIndividualPathway(language);
+        const chooser = run('createIntegratedDecisionNode(getTier1ApproachNodes()["tier1-approach"])');
+        assert.ok(chooser.includes(`<h3>${language === 'en' ? 'Choose an approach' : 'Choisir une approche'}</h3>`));
+        assert.doesNotMatch(chooser, /<p>/);
+        for (const leaf of individualLeaves) {
+            const html = run(`createIntegratedEndpointNode(getTier1ApproachNodes()["tier1-student-outcome-${leaf.outcome}"])`);
+            const message = run(`t("tier1_recommend_${leaf.outcome}")`);
+            assert.ok(html.includes(`<h3 class="individual-recommendation">${message}</h3>`));
+            assert.doesNotMatch(html, /<h2>/);
+            assert.ok(html.includes('continueWholeClassIntegrated()'));
+            assert.ok(html.includes('closePathwaySession()'));
+        }
+    }
+});
+
 test('individual decisions route laterally for both choices without changing other decision routes', () => {
     const { run } = setupIndividualPathway();
     choose(run, 'individual');
