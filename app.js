@@ -500,7 +500,7 @@ function validateTierPathway(raw, program = appState.selectedProgram) {
             if (next !== step.nodeId) {
                 const inserted = def.nodes[next];
                 // Older sessions went straight to the whole-class result.
-                const legacyApproach = next === 'tier1-approach' && step.nodeId === 'tier1-effectiveness';
+                const legacyApproach = next === 'tier1-approach' && step.nodeId === 'tier1-percentage';
                 if (!legacyApproach && (inserted?.type !== 'info' || !next.endsWith('-screener') || inserted.nextNode !== step.nodeId)) return null;
                 choices[next] = resolveSavedChoice(inserted, legacyApproach ? 'whole-class' : 'acknowledged', raw.tierId);
                 seen.add(next);
@@ -831,7 +831,7 @@ function getTier1ApproachNodes() {
             title: t('tier1_approach_title'), subtitle: t('tier1_approach_question'),
             description: t('tier1_approach_description'),
             choices: [
-                { id: 'whole-class', label: t('tier1_whole_class'), type: 'info', nextNode: 'tier1-effectiveness' },
+                { id: 'whole-class', label: t('tier1_whole_class'), type: 'info', nextNode: 'tier1-percentage' },
                 { id: 'individual', label: t('tier1_individual'), type: 'info', nextNode: 'tier1-student-comprehension' }
             ]
         }
@@ -857,7 +857,7 @@ function getTier1ApproachNodes() {
             id, type: 'endpoint', approach: 'individual', status: 'info',
             title: t('recommendations_title'),
             description: t(`tier1_recommend_${recommendation}`),
-            nextNode: 'tier1-effectiveness',
+            nextNode: 'tier1-percentage',
             actionButton: { text: t('tier1_return_whole_class'), action: 'continueWholeClass' }
         };
     });
@@ -2484,24 +2484,22 @@ const FLOWCHART_DEFINITIONS = {
                     'Is progress being tracked?',
                     'Does Instruction incorporate the simple view of reading?'
                 ],
-                nextNode: 'tier1-approach',
+                nextNode: 'tier1-effectiveness',
                 buttonText: 'Continue to Results'
             },
             'tier1-effectiveness': {
                 id: 'tier1-effectiveness',
-                approach: 'whole-class',
                 type: 'decision',
-                title: 'Step 3: Result',
+                title: 'Step 2: Result',
                 subtitle: 'Based on {{screener}}, was the instruction effective?',
                 description: '',
                 choices: [
                     { id: 'effective', label: 'Instruction Effective', sublabel: 'Subtest result Blue or Green', indicators: ['blue', 'green'], type: 'success', nextNode: 'tier1-success' },
-                    { id: 'ineffective', label: 'Instruction Ineffective', sublabel: 'Subtest result Yellow or Red', indicators: ['yellow', 'red'], type: 'warning', nextNode: 'tier1-percentage' }
+                    { id: 'ineffective', label: 'Instruction Ineffective', sublabel: 'Subtest result Yellow or Red', indicators: ['yellow', 'red'], type: 'warning', nextNode: 'tier1-approach' }
                 ]
             },
             'tier1-success': {
                 id: 'tier1-success',
-                approach: 'whole-class',
                 type: 'endpoint',
                 status: 'success',
                 title: 'Instruction Effective!',
@@ -2511,7 +2509,7 @@ const FLOWCHART_DEFINITIONS = {
                 id: 'tier1-percentage',
                 approach: 'whole-class',
                 type: 'decision',
-                title: 'Step 4: Instruction Ineffective',
+                title: 'Step 3: Instruction Ineffective',
                 subtitle: 'Based on screener results, what percentage of students are below the benchmark?',
                 guidancePhrase: 'below the benchmark',
                 choices: [
@@ -3160,6 +3158,13 @@ function getApproachLabel(nodeDef) {
     return nodeDef.approach === 'individual' ? t('tier1_individual') : t('tier1_whole_class');
 }
 
+// Keep the choice in saved history, but replace its card with the chosen
+// approach so selecting an approach does not consume another step number.
+function getJourneyDisplayPath(snapshot = appState.visualFlowchart) {
+    return snapshot.selectedPath.filter((step, index, path) =>
+        step.nodeId !== 'tier1-approach' || index === path.length - 1);
+}
+
 // The title to show for a completed step. Nodes flagged with
 // titleFromChoiceWhenAnswered (currently just Tier 1's "% unsuccessful"
 // decision) already have a choice label that reads as a complete sentence,
@@ -3281,7 +3286,7 @@ function buildCompletedTrailHTML(includeCurrent = false) {
     const tierDef = getFlowchartDefs()[vf.tierId];
     if (!tierDef) return '';
 
-    const path = vf.selectedPath;
+    const path = getJourneyDisplayPath(vf);
     const lastIndex = includeCurrent ? path.length - 1 : path.length - 2;
     let html = '';
     let number = 0;
@@ -3303,7 +3308,7 @@ function buildCompletedTrailHTML(includeCurrent = false) {
 function getActiveStepNumber() {
     const vf = appState.visualFlowchart;
     const tierDef = getFlowchartDefs()[vf.tierId];
-    const path = vf.selectedPath;
+    const path = getJourneyDisplayPath(vf);
     if (!tierDef) return 1;
     let completed = 0;
     for (let i = 0; i < path.length - 1; i++) {
@@ -3361,7 +3366,7 @@ function renderJourneyStandard(direction = 'forward') {
     const tierDef = getFlowchartDefs()[vf.tierId];
     if (!tierDef) return;
 
-    const path = vf.selectedPath;
+    const path = getJourneyDisplayPath(vf);
     const activeStep = path[path.length - 1];
     const activeNode = activeStep ? tierDef.nodes[activeStep.nodeId] : null;
 
@@ -3416,7 +3421,7 @@ function renderJourneyHorizontal(direction = 'forward') {
 
     if (track) track.innerHTML = '';
 
-    const path = vf.selectedPath;
+    const path = getJourneyDisplayPath(vf);
     const activeStep = path[path.length - 1];
     const activeNode = activeStep ? tierDef.nodes[activeStep.nodeId] : null;
     const activeNumber = getActiveStepNumber();
@@ -3581,11 +3586,12 @@ function getVisualFlowchartEntries() {
     snapshots.forEach(snapshot => {
         const tierDef = getFlowchartDefs()[snapshot.tierId];
         if (!tierDef) return;
-        snapshot.selectedPath.forEach((step, index) => {
+        const path = getJourneyDisplayPath(snapshot);
+        path.forEach((step, index) => {
             const node = tierDef.nodes[step.nodeId];
             if (!node) return;
             const isCurrent = snapshot.tierId === currentTierId
-                && index === snapshot.selectedPath.length - 1;
+                && index === path.length - 1;
             const choice = snapshot.choices[node.id];
             let variant = getStepSummaryVariant(node, choice);
             if (node.type === 'endpoint') {
@@ -4692,7 +4698,7 @@ function renderJourneyMap(activeNumber) {
     const tierDef = getFlowchartDefs()[vf.tierId];
     if (!list || !tierDef) return;
 
-    const path = vf.selectedPath;
+    const path = getJourneyDisplayPath(vf);
     const entries = [];
     let number = 0;
 
@@ -6229,7 +6235,7 @@ function showFinalSummary(endpointNodeData) {
             kind: 'tier'
         });
 
-        tierSnapshot.selectedPath.forEach((step, stepIndex) => {
+        getJourneyDisplayPath(tierSnapshot).forEach((step, stepIndex) => {
             const nodeDef = tierDef.nodes[step.nodeId];
             if (!nodeDef) return;
 
@@ -6507,7 +6513,7 @@ function showRouteCompleteGate(endpointNodeData) {
     fullJourney.forEach(tierSnapshot => {
         const tierDef = getFlowchartDefs()[tierSnapshot.tierId];
         if (tierDef) tierNames.push(tierDef.title.split(':')[0].trim());
-        tierSnapshot.selectedPath.forEach(step => {
+        getJourneyDisplayPath(tierSnapshot).forEach(step => {
             const nodeDef = tierDef?.nodes[step.nodeId];
             if (nodeDef && nodeDef.type !== 'endpoint') totalSteps++;
         });
@@ -6730,7 +6736,7 @@ function selectTier1ScreenerVisualIntegrated(nodeId, screenerId, screenerName) {
     // in later tiers, drill-downs, interventions, or the interventions menu.
     setRememberedScreener(screenerName || screenerId);
 
-    showIntegratedNode('tier1-approach', nodeId, screenerId);
+    showIntegratedNode('tier1-effectiveness', nodeId, screenerId);
 }
 
 // Handler functions for integrated tier 2
@@ -7526,7 +7532,7 @@ function selectTier1ScreenerVisual(nodeId, screenerId, screenerName) {
 
     setRememberedScreener(screenerName || screenerId);
 
-    showFlowchartNode('tier1-approach', nodeId, screenerId);
+    showFlowchartNode('tier1-effectiveness', nodeId, screenerId);
 }
 
 // Handler functions for tier 2

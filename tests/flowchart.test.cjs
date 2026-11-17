@@ -181,7 +181,7 @@ test('unavailable pillars cannot be selected through the flowchart toggle handle
     assert.equal(run('appState.fwState.pillars.length'), 0);
 });
 
-function setupIndividualPathway(language = 'en') {
+function setupIndividualPathway(language = 'en', { atResult = false } = {}) {
     const { run } = setup({ language, emptyResources: false });
     run(`
         document.querySelector = () => null;
@@ -201,6 +201,7 @@ function setupIndividualPathway(language = 'en') {
         };
         showIntegratedNode(getFlowchartDefs().tier1.nodes['tier1-principles'].nextNode, 'tier1-principles', 'completed');
     `);
+    if (!atResult) choose(run, 'ineffective');
     return { run };
 }
 
@@ -245,18 +246,17 @@ test('all six PDF routes reach the correct recommendation and return without era
         const original = JSON.parse(before);
         assert.deepEqual(after.selectedPath.slice(0, -1), original.selectedPath);
         for (const [id, choice] of Object.entries(original.choices)) assert.deepEqual(after.choices[id], choice);
-        assert.equal(after.selectedPath.at(-1).nodeId, 'tier1-effectiveness');
+        assert.equal(after.selectedPath.at(-1).nodeId, 'tier1-percentage');
         assert.equal(run('getSessionNotes(pathwaySessions[0]).outcomes.at(-1).final'), undefined);
-        assert.match(run('getSessionNotes(pathwaySessions[0]).next'), /Whole Class Approach: Step 3: Result/);
+        assert.match(run('getSessionNotes(pathwaySessions[0]).next'), /Whole Class Approach: Step 3: Instruction Ineffective/);
 
         // Validate the same serialized state used by reloads and progress transfers.
         run(`savedPathway = readSavedPathway(JSON.parse(JSON.stringify(savedPathway)));
             pathwaySessions = readPathwaySessions(JSON.parse(JSON.stringify(pathwaySessions)));`);
-        assert.equal(run('savedPathway.current.selectedPath.at(-1).nodeId'), 'tier1-effectiveness');
+        assert.equal(run('savedPathway.current.selectedPath.at(-1).nodeId'), 'tier1-percentage');
         assert.equal(run('pathwaySessions[0].pathway.current.choices["tier1-approach"].id'), 'individual');
         assert.equal(run('getSessionNotes(pathwaySessions[0]).outcomes[0].response'), leaf.recommendation);
 
-        choose(run, 'ineffective');
         choose(run, 'more-20');
         assert.equal(run('appState.visualFlowchart.currentNodeId'), 'tier1-reteach');
         assert.equal(run('getSessionNotes(pathwaySessions[0]).outcomes.length'), 2);
@@ -266,11 +266,18 @@ test('all six PDF routes reach the correct recommendation and return without era
 });
 
 test('choosing whole class follows the existing result pathways without adding student decisions', () => {
-    for (const choice of ['effective', 'ineffective']) {
+    const { run: effectiveRun } = setupIndividualPathway('en', { atResult: true });
+    choose(effectiveRun, 'effective');
+    assert.equal(effectiveRun('appState.visualFlowchart.currentNodeId'), 'tier1-success');
+    assert.equal(effectiveRun('appState.visualFlowchart.selectedPath.some(step => step.nodeId === "tier1-approach")'), false);
+
+    for (const [choice, endpoint] of [['more-20', 'tier1-reteach'], ['less-20', 'tier1-move-tier2']]) {
         const { run } = setupIndividualPathway();
         choose(run, 'whole-class');
+        assert.equal(run('appState.visualFlowchart.currentNodeId'), 'tier1-percentage');
+        run('window.startTier2VisualIntegrated = () => {}');
         choose(run, choice);
-        assert.equal(run('appState.visualFlowchart.currentNodeId'), choice === 'effective' ? 'tier1-success' : 'tier1-percentage');
+        assert.equal(run('appState.visualFlowchart.currentNodeId'), endpoint);
         assert.equal(run('appState.visualFlowchart.selectedPath.some(step => step.nodeId.startsWith("tier1-student-"))'), false);
     }
 });
@@ -280,14 +287,14 @@ test('older whole-class sessions migrate in both languages and invalid student s
         const { run } = setupIndividualPathway(language);
         run(`const legacy = {
             tierId: 'tier1',
-            selectedPath: [{ nodeId: 'tier1-principles' }, { nodeId: 'tier1-effectiveness' }, { nodeId: 'tier1-success' }],
-            choices: { 'tier1-principles': { id: 'completed' }, 'tier1-effectiveness': { id: 'effective' } }
+            selectedPath: [{ nodeId: 'tier1-principles' }, { nodeId: 'tier1-effectiveness' }, { nodeId: 'tier1-percentage' }],
+            choices: { 'tier1-principles': { id: 'completed' }, 'tier1-effectiveness': { id: 'ineffective' } }
         };`);
         assert.equal(run('validateTierPathway(legacy).choices["tier1-approach"].id'), 'whole-class');
-        assert.equal(run('validateTierPathway(legacy).selectedPath[1].nodeId'), 'tier1-approach');
+        assert.equal(run('validateTierPathway(legacy).selectedPath[2].nodeId'), 'tier1-approach');
         choose(run, 'individual');
         run(`const invalid = serializeTierPathway(appState.visualFlowchart);
-            invalid.selectedPath.push({ nodeId: 'tier1-effectiveness' });`);
+            invalid.selectedPath.push({ nodeId: 'tier1-percentage' });`);
         assert.equal(run('validateTierPathway(invalid)'), null);
     }
 });
@@ -299,7 +306,7 @@ test('DOCX records the scoped student findings, recommendation, return, and whol
         choose(run, 'weak');
         choose(run, 'proficient');
         run('continueWholeClassIntegrated()');
-        choose(run, 'effective');
+        choose(run, 'more-20');
         const notes = run('getSessionNotes(pathwaySessions[0])');
         const blob = run('buildSessionNotesDocx(getSessionNotes(pathwaySessions[0]))');
         const zip = Buffer.from(await blob.arrayBuffer());
@@ -321,7 +328,7 @@ test('DOCX records the scoped student findings, recommendation, return, and whol
         const rate = `${individualLabel}: ${run('t("tier1_student_rate")')}`;
         const recommendation = run('t("tier1_recommend_vocabulary")');
         const returnAction = run('t("tier1_return_whole_class")');
-        const result = `${wholeClassLabel}: ${run('stripEmoji(getFlowchartDefs().tier1.nodes["tier1-effectiveness"].title)')}`;
+        const result = `${wholeClassLabel}: ${run('stripEmoji(getFlowchartDefs().tier1.nodes["tier1-percentage"].title)')}`;
         const stepsText = text.slice(text.indexOf(comprehension));
         const ordered = [comprehension, rate, recommendation, returnAction, result];
         let lastIndex = -1;
@@ -334,5 +341,39 @@ test('DOCX records the scoped student findings, recommendation, return, and whol
         assert.ok(notes.outcomes[1].title.startsWith(wholeClassLabel));
         assert.equal(notes.outcomes[1].final, true);
         assert.equal(notes.steps.filter(step => step.response === recommendation).length, 1);
+    }
+});
+
+test('the approach choice follows Step 2 and is replaced by either approach at Step 3', () => {
+    for (const language of ['en', 'fr']) {
+        for (const approach of ['whole-class', 'individual']) {
+            const { run } = setupIndividualPathway(language, { atResult: true });
+            assert.equal(run('appState.visualFlowchart.currentNodeId'), 'tier1-effectiveness');
+            assert.equal(run('getActiveStepNumber()'), 2);
+            assert.equal(run('getVisualFlowchartEntries().at(-1).number'), 2);
+            choose(run, 'ineffective');
+            assert.equal(run('appState.visualFlowchart.currentNodeId'), 'tier1-approach');
+            assert.equal(run('getActiveStepNumber()'), 3);
+            assert.equal(run('getVisualFlowchartEntries().at(-1).number'), 3);
+
+            choose(run, approach);
+            const nextId = approach === 'whole-class' ? 'tier1-percentage' : 'tier1-student-comprehension';
+            assert.equal(run('appState.visualFlowchart.currentNodeId'), nextId);
+            assert.equal(run('getActiveStepNumber()'), 3);
+            assert.equal(run('getVisualFlowchartEntries().at(-1).number'), 3);
+            assert.equal(run('getJourneyDisplayPath().some(step => step.nodeId === "tier1-approach")'), false);
+            assert.equal(run('getVisualFlowchartEntries().some(entry => entry.node.id === "tier1-approach")'), false);
+            assert.doesNotMatch(run('buildCompletedTrailHTML()'), /tier1-approach/);
+            assert.equal(run('appState.visualFlowchart.choices["tier1-approach"].id'), approach);
+            run(`const restored = validateTierPathway(serializeTierPathway(appState.visualFlowchart));`);
+            assert.equal(run('getJourneyDisplayPath(restored).at(-1).nodeId'), nextId);
+            assert.equal(run('getJourneyDisplayPath(restored).length'), 3);
+
+            run('goToPreviousStep()');
+            assert.equal(run('appState.visualFlowchart.currentNodeId'), 'tier1-approach');
+            assert.equal(run('getActiveStepNumber()'), 3);
+            choose(run, approach === 'whole-class' ? 'individual' : 'whole-class');
+            assert.equal(run('getActiveStepNumber()'), 3);
+        }
     }
 });

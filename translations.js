@@ -446,7 +446,7 @@ const TRANSLATIONS = {
         fc_back: 'Restart',
         tier1_approach_title: 'Step 3: Choose an Approach',
         tier1_approach_question: 'Would you like to continue with the Whole Class Approach or the Individual Student Approach?',
-        tier1_approach_description: 'The Individual Student Approach reviews one student’s screening results. At the end, you can return to the Whole Class Approach. Your individual-student decisions and recommendation remain in your session notes and downloaded .docx summary.',
+        tier1_approach_description: 'Choose an approach to continue Step 3 in this card. The Individual Student Approach reviews one student’s screening results. At the end, you can return to the Whole Class Approach. Your individual-student decisions and recommendation remain in your session notes and downloaded .docx summary.',
         tier1_whole_class: 'Whole Class Approach',
         tier1_individual: 'Individual Student Approach',
         tier1_return_whole_class: 'Return to Whole Class Approach',
@@ -1019,7 +1019,7 @@ const TRANSLATIONS = {
         fc_back: 'Recommencer',
         tier1_approach_title: 'Étape 3 : Choisir une approche',
         tier1_approach_question: 'Souhaitez-vous continuer avec l’approche pour toute la classe ou l’approche individuelle pour un élève ?',
-        tier1_approach_description: 'L’approche individuelle examine les résultats de dépistage d’un seul élève. À la fin, vous pouvez revenir à l’approche pour toute la classe. Les décisions et la recommandation concernant cet élève sont conservées dans les notes de séance et le résumé .docx téléchargé.',
+        tier1_approach_description: 'Choisissez une approche pour poursuivre l’étape 3 dans cette carte. L’approche individuelle examine les résultats de dépistage d’un seul élève. À la fin, vous pouvez revenir à l’approche pour toute la classe. Les décisions et la recommandation concernant cet élève sont conservées dans les notes de séance et le résumé .docx téléchargé.',
         tier1_whole_class: 'Approche pour toute la classe',
         tier1_individual: 'Approche individuelle pour un élève',
         tier1_return_whole_class: 'Revenir à l’approche pour toute la classe',
@@ -1177,24 +1177,22 @@ const FLOWCHART_DEFINITIONS_FR = {
                     'Les progr\u00e8s sont-ils suivis\u00a0?',
                     'L\u2019enseignement int\u00e8gre-t-il la conception simple de la lecture\u00a0?'
                 ],
-                nextNode: 'tier1-approach',
+                nextNode: 'tier1-effectiveness',
                 buttonText: 'Continuer vers les résultats'
             },
             'tier1-effectiveness': {
                 id: 'tier1-effectiveness',
-                approach: 'whole-class',
                 type: 'decision',
-                title: '\u00c9tape 3\u00a0: R\u00e9sultat',
+                title: '\u00c9tape 2\u00a0: R\u00e9sultat',
                 subtitle: 'D\u2019apr\u00e8s {{screener}}, l\u2019enseignement \u00e9tait-il efficace\u00a0?',
                 description: '',
                 choices: [
                     { id: 'effective', label: 'Enseignement efficace', sublabel: 'R\u00e9sultat du sous-test Bleu ou Vert', indicators: ['blue', 'green'], type: 'success', nextNode: 'tier1-success' },
-                    { id: 'ineffective', label: 'Enseignement inefficace', sublabel: 'R\u00e9sultat du sous-test Jaune ou Rouge', indicators: ['yellow', 'red'], type: 'warning', nextNode: 'tier1-percentage' }
+                    { id: 'ineffective', label: 'Enseignement inefficace', sublabel: 'R\u00e9sultat du sous-test Jaune ou Rouge', indicators: ['yellow', 'red'], type: 'warning', nextNode: 'tier1-approach' }
                 ]
             },
             'tier1-success': {
                 id: 'tier1-success',
-                approach: 'whole-class',
                 type: 'endpoint',
                 status: 'success',
                 title: 'Enseignement efficace\u00a0!',
@@ -1204,7 +1202,7 @@ const FLOWCHART_DEFINITIONS_FR = {
                 id: 'tier1-percentage',
                 approach: 'whole-class',
                 type: 'decision',
-                title: '\u00c9tape 4\u00a0: Enseignement inefficace',
+                title: '\u00c9tape 3\u00a0: Enseignement inefficace',
                 subtitle: 'D’après les résultats du dépistage, quel pourcentage d’élèves sont en dessous du niveau de référence\u00a0?',
                 guidancePhrase: 'en dessous du niveau de référence',
                 choices: [
