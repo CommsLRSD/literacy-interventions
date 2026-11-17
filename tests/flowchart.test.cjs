@@ -418,6 +418,16 @@ test('DOCX records the scoped student findings, recommendation, return, and whol
             assert.ok(index > lastIndex, `${language}: missing or out-of-order ${value}`);
             lastIndex = index;
         }
+        const tableRows = [...documentXml.matchAll(/<w:tr>([\s\S]*?)<\/w:tr>/g)].map(match => match[1]);
+        const rowFor = value => tableRows.find(row => row.includes(`<w:t xml:space="preserve">${value}</w:t>`));
+        for (const value of [comprehension, rate]) {
+            const row = rowFor(value);
+            assert.ok(row, `${language}: missing DOCX row for ${value}`);
+            assert.equal((row.match(/<w:shd w:val="clear" w:color="auto" w:fill="F4CCCC"\/>/g) || []).length, 3);
+        }
+        const wholeClassRow = rowFor(result);
+        assert.ok(wholeClassRow, `${language}: missing DOCX row for ${result}`);
+        assert.doesNotMatch(wholeClassRow, /w:fill="F4CCCC"/);
         assert.ok(notes.outcomes[0].title.startsWith(individualLabel));
         assert.ok(notes.outcomes[1].title.startsWith(wholeClassLabel));
         assert.equal(notes.outcomes[1].final, true);

@@ -9446,12 +9446,12 @@ function getSessionNotes(session) {
         if (!resolved) return [];
         const tier = tierNum(choice.tierId);
         const label = node.approach ? `${getApproachLabel(node)}: ` : '';
-        const rows = [{ tier, title: `${label}${plain(node.title || node.subtitle)}`, response: plain(resolved.name) }];
+        const rows = [{ tier, approach: node.approach, title: `${label}${plain(node.title || node.subtitle)}`, response: plain(resolved.name) }];
         const targetId = node.type === 'decision'
             ? node.choices.find(item => item.id === choice.choiceId)?.nextNode : node.nextNode;
         const endpoint = nodes[targetId];
         if (endpoint?.type === 'endpoint') {
-            rows.push({ tier, outcome: true, continues: ['startTier2Visual', 'startTier3Visual'].includes(endpoint.actionButton?.action),
+            rows.push({ tier, approach: endpoint.approach, outcome: true, continues: ['startTier2Visual', 'startTier3Visual'].includes(endpoint.actionButton?.action),
                 title: endpoint.approach === 'individual' ? t('tier1_individual_outcome')
                     : `${endpoint.approach ? `${getApproachLabel(endpoint)}: ` : ''}${t('notes_tier_outcome')(tier)}`,
                 response: plain(endpoint.approach === 'individual' ? endpoint.description : endpoint.title || endpoint.subtitle) });
@@ -9644,11 +9644,11 @@ function buildSessionNotesDocx(notes) {
         return `<w:hyperlink r:id="${id}"><w:r><w:rPr><w:color w:val="0A7F8A"/><w:u w:val="single"/></w:rPr><w:t xml:space="preserve">${xml(text)}</w:t></w:r></w:hyperlink>`;
     };
     const cell = (content, width, fill) => `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/>${fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>` : ''}</w:tcPr><w:p><w:pPr><w:spacing w:after="0"/></w:pPr>${content}</w:p></w:tc>`;
-    const table = (widths, rows, header) => {
+    const table = (widths, rows, header, rowFill) => {
         const border = side => `<w:${side} w:val="single" w:sz="4" w:space="0" w:color="D5DDE7"/>`;
         return `<w:tbl><w:tblPr><w:tblW w:w="${widths.reduce((a, b) => a + b, 0)}" w:type="dxa"/><w:tblBorders>${['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(border).join('')}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="70" w:type="dxa"/><w:left w:w="110" w:type="dxa"/><w:bottom w:w="70" w:type="dxa"/><w:right w:w="110" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${widths.map(w => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${
             header ? `<w:tr><w:trPr><w:tblHeader/></w:trPr>${header.map((text, i) => cell(run(text, { bold: true, color: 'FFFFFF' }), widths[i], '0C315A')).join('')}</w:tr>` : ''}${
-            rows.map(row => `<w:tr><w:trPr><w:cantSplit/></w:trPr>${row.map((content, i) => cell(content, widths[i], !header && i === 0 ? 'EEF3F8' : '')).join('')}</w:tr>`).join('')}</w:tbl>`;
+            rows.map((row, rowIndex) => `<w:tr><w:trPr><w:cantSplit/></w:trPr>${row.map((content, i) => cell(content, widths[i], rowFill?.(rowIndex) || (!header && i === 0 ? 'EEF3F8' : ''))).join('')}</w:tr>`).join('')}</w:tbl>`;
     };
     const tierLabel = n => (n ? t('fw_context_tier')(n) : '');
     const locale = appState.language === 'fr' ? 'fr-CA' : 'en-CA';
@@ -9670,7 +9670,8 @@ function buildSessionNotesDocx(notes) {
                 const title = step.final ? `${t('notes_final_outcome')} · ${step.title}` : step.title;
                 const style = step.outcome ? { bold: true, color: step.final ? '0A7F8A' : '0C315A' } : {};
                 return [run(tierLabel(step.tier), style), run(title, style), run(step.response, style)];
-            }), [t('filter_tier_label'), t('notes_step'), t('notes_response')])
+            }), [t('filter_tier_label'), t('notes_step'), t('notes_response')], index =>
+                notes.steps[index].approach === 'individual' ? 'F4CCCC' : '')
             : para(run('—')),
         notes.next ? para(`${run(`${t('notes_next')}: `, { bold: true })}${run(notes.next)}`, { before: 120 }) : '',
         heading(t('notes_resources')),
