@@ -336,7 +336,10 @@ test('phonemic-awareness follow-up clearly indicates successful instruction befo
         choose(run, 'phonemic-awareness');
         const html = run('createIntegratedDecisionNode(getTier1ApproachNodes()["tier1-student-k2-awareness"])');
         assert.ok(html.includes(run('t("tier1_k2_successful")')));
-        assert.ok(html.includes(run('t("tier1_k2_successful_hint")')));
+        const hint = `<p class="decision-hint"><em>${run('t("tier1_k2_successful_hint")')}</em></p>`;
+        assert.ok(html.includes(hint));
+        assert.ok(html.indexOf(hint) > html.indexOf('</button>', html.indexOf('class="decision-btn')));
+        assert.match(html, /class="decision-grid decision-grid-with-hint"/);
         assert.match(html, /class="decision-trend-icon" aria-hidden="true">✓/);
         choose(run, 'successful');
         assert.equal(run('appState.visualFlowchart.currentNodeId'), 'tier1-student-k2-outcome-phonics');

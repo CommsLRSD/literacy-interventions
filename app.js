@@ -899,9 +899,9 @@ function getTier1ApproachNodes() {
                 approach: 'individual',
                 ...(recommendation === 'awareness' ? {
                     title: t(description),
+                    decisionHint: t('tier1_k2_successful_hint'),
                     choices: [{
                         id: 'successful', label: t('tier1_k2_successful'), type: 'success', icon: '✓',
-                        sublabel: t('tier1_k2_successful_hint'),
                         nextNode: 'tier1-student-k2-outcome-phonics'
                     }]
                 } : {
@@ -5559,9 +5559,10 @@ function createIntegratedDecisionNode(nodeData) {
             ${nodeData.description ? `<p>${nodeData.description}</p>` : ''}
             ${warningBoxHTML}
             ${infoBoxHTML}
-            ${nodeData.choiceDisplay === 'dropdown' ? renderDecisionDropdown(nodeData) : `<div class="decision-grid">
+            ${nodeData.choiceDisplay === 'dropdown' ? renderDecisionDropdown(nodeData) : `<div class="decision-grid${nodeData.decisionHint ? ' decision-grid-with-hint' : ''}">
                 ${choicesHTML}
             </div>`}
+            ${nodeData.decisionHint ? `<p class="decision-hint"><em>${escapeHtml(nodeData.decisionHint)}</em></p>` : ''}
         </div>
     `;
 }

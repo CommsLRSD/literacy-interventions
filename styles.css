@@ -5502,6 +5502,16 @@ details > p {
 .warning-box p { font-size: 0.85rem; line-height: 1.55; margin: 0; }
 
 /* Decision grid */
+.decision-grid.decision-grid-with-hint {
+  margin-top: var(--space-md);
+}
+
+.step-content .decision-hint {
+  margin: var(--space-xs) 0 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
 .decision-grid,
 .decision-buttons {
   display: flex;
