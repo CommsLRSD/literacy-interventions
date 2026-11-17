@@ -9580,7 +9580,7 @@ body.step-review-modal-open { overflow: hidden; }
   .visual-flowchart-card-header {
     display: grid;
     grid-column: 1 / -1;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: auto auto minmax(0, 1fr);
     align-items: center;
     gap: 10px;
   }

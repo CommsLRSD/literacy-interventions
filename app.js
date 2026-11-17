@@ -4281,11 +4281,11 @@ function refreshVisualFlowchartModal() {
                         style="left:${position.x}px;top:${position.y}px;width:${position.width}px" role="group" aria-label="${escapeHtml(t('fc_visual_tier_review_label'))}">
                     <span class="visual-flowchart-card-header">
                         <span class="visual-flowchart-step-number">${number}</span>
+                        <span class="visual-flowchart-card-icon"><span class="material-symbols-rounded" aria-hidden="true" translate="no">fact_check</span></span>
                         <span class="visual-flowchart-card-heading">
                             <span class="visual-flowchart-card-meta">${escapeHtml(t('fc_visual_tier_review_label'))}</span>
                             <strong>${escapeHtml(t('go_to_tier'))} ${escapeHtml(targetNum)}</strong>
                         </span>
-                        <span class="visual-flowchart-card-icon"><span class="material-symbols-rounded" aria-hidden="true" translate="no">fact_check</span></span>
                     </span>
                     <span class="visual-flowchart-card-copy">
                         <span class="visual-flowchart-card-answer">${escapeHtml(t('go_to_tier_note'))}</span>
@@ -4358,11 +4358,11 @@ function refreshVisualFlowchartModal() {
                     style="left:${position.x}px;top:${position.y}px;width:${position.width}px" ${revisit}>
                 <span class="visual-flowchart-card-header">
                     <span class="visual-flowchart-step-number">${entry.number}</span>
+                    <span class="visual-flowchart-card-icon">${cardIcon}</span>
                     <span class="visual-flowchart-card-heading">
                         <span class="visual-flowchart-card-meta">${escapeHtml(getStepTypeLabel(entry.node.type))}${entry.isCurrent ? ` · ${escapeHtml(t('fc_in_progress'))}` : ''}</span>
                         <strong>${escapeHtml(displayTitle)}</strong>
                     </span>
-                    <span class="visual-flowchart-card-icon">${cardIcon}</span>
                 </span>
                 <span class="visual-flowchart-card-copy">
                     ${entry.node.approach === 'individual' && !isInteractive && !isIndividualOutcome ? `<h3 class="visual-flowchart-individual-heading">${escapeHtml(entry.node.title)}</h3>` : ''}
