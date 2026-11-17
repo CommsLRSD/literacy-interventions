@@ -506,26 +506,71 @@ test('the approach chooser and individual outcomes show only their primary messa
     }
 });
 
-test('individual decisions route laterally for both choices without changing other decision routes', () => {
+function renderVisualPathway(run) {
+    run(`
+        globalThis.testStage = { style: {}, innerHTML: '', querySelector: () => null };
+        document.getElementById = id => id === 'visual-flowchart-stage' ? testStage
+            : id === 'visual-flowchart-viewport' ? {} : null;
+        requestAnimationFrame = () => {};
+        wireVisualFlowchartPanZoom = () => {};
+        updateVisualFlowchartTierBar = () => {};
+        fitVisualFlowchartCardToViewportHeight = () => {};
+        autoFitVisualFlowchartActiveCard = () => {};
+        refreshVisualFlowchartModal();
+    `);
+    return run('testStage.innerHTML');
+}
+
+function assertSingleRow(html) {
+    const tops = [...html.matchAll(/style="left:(\d+)px;top:(\d+)px;width:(\d+)px"/g)];
+    assert.ok(tops.length > 1);
+    assert.equal(new Set(tops.map(match => match[2])).size, 1);
+    for (let i = 1; i < tops.length; i++) {
+        assert.ok(Number(tops[i][1]) > Number(tops[i - 1][1]) + Number(tops[i - 1][3]));
+    }
+    const connectors = [...html.matchAll(/d="M \d+ (\d+) C \d+ (\d+), \d+ (\d+), \d+ (\d+)"/g)];
+    assert.equal(connectors.length, tops.length - 1);
+    for (const connector of connectors) assert.equal(new Set(connector.slice(1)).size, 1);
+}
+
+test('individual decisions and outcomes remain on a single row', () => {
     const { run } = setupIndividualPathway();
+    run('appState.visualFlowchartModal = { expandedTiers: new Set() };');
     choose(run, 'individual');
     for (let i = 0; i < 5; i++) {
         choose(run, 'weak');
-        assert.equal(run(`getVisualFlowchartRouteDirection({
-            type: 'entry', entry: getVisualFlowchartEntries().at(-2),
-            variant: getVisualFlowchartEntries().at(-2).variant
-        })`), 'straight');
+        assertSingleRow(renderVisualPathway(run));
     }
-    assert.equal(run(`getVisualFlowchartRouteDirection({
-        type: 'entry', entry: { node: getTier1ApproachNodes()['tier1-student-comprehension'] },
-        variant: 'effective'
-    })`), 'straight');
-    assert.equal(run(`getVisualFlowchartRouteDirection({
-        type: 'entry', entry: { node: { id: 'tier1-effectiveness' } }, variant: 'ineffective'
-    })`), 'down');
-    assert.equal(run(`getVisualFlowchartRouteDirection({
-        type: 'entry', entry: { node: { id: 'tier2-progress' } }, variant: 'effective'
-    })`), 'up');
+});
+
+test('tier changes, expanded history and review cards keep one row and independent card variants', () => {
+    const { run } = setupIndividualPathway();
+    run(`
+        appState.visualFlowchart.tierId = 'tier3';
+        appState.visualFlowchart.currentNodeId = null;
+        appState.visualFlowchart.pendingTierTransition = 'tier2';
+        appState.visualFlowchartModal = { expandedTiers: new Set(['tier1', 'tier2']) };
+        getVisualFlowchartEntries = () => ['tier1', 'tier2', 'tier3'].flatMap(tierId =>
+            ['effective', 'ineffective'].map((variant, index) => ({
+                tierId, tierLabel: tierId, variant, number: index + 1,
+                node: { id: tierId + '-' + variant, type: 'info', title: variant }
+            }))
+        );
+    `);
+    const expanded = renderVisualPathway(run);
+    assertSingleRow(expanded);
+    for (const tier of ['tier1', 'tier2', 'tier3']) {
+        for (const variant of ['effective', 'ineffective']) {
+            assert.match(expanded, new RegExp(`data-tier="${tier}" class="visual-flowchart-card visual-flowchart-card-${variant}`));
+        }
+    }
+    assert.match(expanded, /visual-flowchart-card-tier-review visual-flowchart-card-current"\s+data-tier="tier3"/);
+    run('appState.visualFlowchartModal.expandedTiers.clear();');
+    const collapsed = renderVisualPathway(run);
+    assertSingleRow(collapsed);
+    for (const tier of ['tier1', 'tier2']) {
+        assert.match(collapsed, new RegExp(`visual-flowchart-card-collapsed visual-flowchart-card-ineffective"\\s+data-tier="${tier}"`));
+    }
 });
 
 test('returning to whole class collapses the reviewable individual detour and restores direct-route numbering', () => {
@@ -543,7 +588,7 @@ test('returning to whole class collapses the reviewable individual detour and re
             assert.equal(collapsed.tierId, 'tier1-individual');
             assert.equal(collapsed.entries.length, leaf.weakCount + 2);
             assert.equal(collapsed.entries.at(-1).node.type, 'endpoint');
-            assert.equal(run('getVisualFlowchartRouteDirection(buildVisualFlowchartDisplayItems(getVisualFlowchartEntries()).at(-2))'), 'straight');
+            assert.equal(collapsed.entries[0].tierId, 'tier1');
 
             run(`appState.visualFlowchartModal = { expandedTiers: new Set(), x: 10, y: 20, scale: 1 };
                 refreshVisualFlowchartModal = () => {};

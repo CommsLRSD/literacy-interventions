@@ -4232,19 +4232,6 @@ function isVisualFlowchartFitHeightEntry(entry) {
     return !!entry && entry.isTierFirstStep && entry.tierId !== 'tier1';
 }
 
-function getVisualFlowchartRouteDirection(item) {
-    if (!item) return 'straight';
-    if (item.type === 'collapsed') return 'straight';
-    if (item.type === 'entry') {
-        const entry = item.entry;
-        if (entry?.node?.approach === 'individual') return 'straight';
-        if (entry?.node?.id === 'tier1-percentage' && entry.choice?.id === 'less-20') return 'straight';
-    }
-    if (item.variant === 'effective') return 'up';
-    if (item.variant === 'ineffective') return 'down';
-    return 'straight';
-}
-
 function refreshVisualFlowchartModal() {
     const stage = document.getElementById('visual-flowchart-stage');
     const viewport = document.getElementById('visual-flowchart-viewport');
@@ -4299,28 +4286,16 @@ function refreshVisualFlowchartModal() {
         return item.type === 'collapsed' ? 220 : cardWidth;
     };
     const columnGap = 50;
-    const rowGap = 180;
-    let routeRow = 0;
     let cursorX = 90;
-    const positions = items.map((item, index) => {
-        if (index > 0) {
-            const priorDirection = getVisualFlowchartRouteDirection(items[index - 1]);
-            if (priorDirection === 'up') routeRow -= 1;
-            if (priorDirection === 'down') routeRow += 1;
-        }
+    const positions = items.map(item => {
         const width = getItemCardWidth(item);
-        const position = { x: cursorX, routeRow, width };
+        const position = { x: cursorX, y: 90, width };
         cursorX += width + columnGap;
         return position;
     });
-    const rows = positions.map(position => position.routeRow);
-    const minRow = Math.min(0, ...rows);
-    const maxRow = Math.max(0, ...rows);
     const cardMidY = 90;
-    const topPadding = cardMidY - minRow * rowGap;
-    positions.forEach(position => { position.y = topPadding + position.routeRow * rowGap; });
     const stageWidth = Math.max(900, cursorX - columnGap + 90);
-    const stageHeight = Math.max(560, topPadding + maxRow * rowGap + 460);
+    const stageHeight = 560;
 
     const connectorHtml = items.slice(1).map((item, index) => {
         const from = positions[index];
@@ -4340,6 +4315,7 @@ function refreshVisualFlowchartModal() {
             const targetNum = String(item.targetTierId).replace(/\D/g, '');
             const number = (entries.filter(entry => entry.tierId === appState.visualFlowchart.tierId).at(-1)?.number || 0) + 1;
             return `<div class="visual-flowchart-card visual-flowchart-card-tier-review visual-flowchart-card-current"
+                        data-tier="${escapeAttr(appState.visualFlowchart.tierId)}"
                         style="left:${position.x}px;top:${position.y}px;width:${position.width}px" role="group" aria-label="${escapeHtml(t('fc_visual_tier_review_label'))}">
                     <span class="visual-flowchart-card-header">
                         <span class="visual-flowchart-step-number">${number}</span>
@@ -4367,7 +4343,7 @@ function refreshVisualFlowchartModal() {
                 ? t('fc_visual_tier_collapsed')(tierNum, item.entries.length)
                 : `${item.tierLabel} · ${item.entries.length} steps`;
             return `<button type="button" class="visual-flowchart-card visual-flowchart-card-collapsed visual-flowchart-card-${escapeAttr(variant)}"
-                        data-tier="${escapeAttr(item.tierId)}" aria-expanded="false"
+                        data-tier="${escapeAttr(item.entries[0].tierId)}" aria-expanded="false"
                         style="left:${position.x}px;top:${position.y}px;width:${position.width}px" onclick="toggleVisualFlowchartTier('${escapeAttr(item.tierId)}')" aria-label="${escapeAttr(isIndividual ? `${item.tierLabel}: ${collapsedLabel}` : collapsedLabel)}">
                     <span class="visual-flowchart-card-icon"><span class="material-symbols-rounded" aria-hidden="true" translate="no">unfold_more</span></span>
                     <span class="visual-flowchart-card-copy">
