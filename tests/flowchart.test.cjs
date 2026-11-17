@@ -302,6 +302,47 @@ test('Kindergarten through Grade 2 use the risk-area pathway and the phonemic-aw
     }
 });
 
+test('risk-area dropdown routes each selection and shows the saved choice read-only in review', () => {
+    for (const language of ['en', 'fr']) {
+        for (const riskArea of ['phonemic-awareness', 'decoding', 'accuracy', 'rate', 'comprehension']) {
+            const { run } = setupIndividualPathway(language, { grade: ['1'] });
+            choose(run, 'individual');
+            const html = run('createIntegratedDecisionNode(getTier1ApproachNodes()["tier1-student-risk"])');
+            assert.match(html, /<select class="fw-select" aria-label="[^"]+"/);
+            assert.match(html, /<option value="" disabled selected>/);
+            assert.equal((html.match(/data-next-node=/g) || []).length, 5);
+            assert.doesNotMatch(html, /class="decision-btn/);
+            const handler = html.match(/onchange="([^"]+)"/)[1];
+            run(`{
+                const node = getTier1ApproachNodes()["tier1-student-risk"];
+                const choice = node.choices.find(item => item.id === ${JSON.stringify(riskArea)});
+                (function () { ${handler} }).call({
+                    value: choice.id, selectedOptions: [{ dataset: { nextNode: choice.nextNode } }]
+                });
+            }`);
+            assert.equal(run('appState.visualFlowchart.choices["tier1-student-risk"].id'), riskArea);
+            const review = run('buildStepReviewContent(getTier1ApproachNodes()["tier1-student-risk"], appState.visualFlowchart.choices["tier1-student-risk"])');
+            assert.match(review, /<select[^>]+disabled/);
+            assert.match(review, new RegExp(`<option value="${riskArea}"\\s+data-next-node="[^"]+" selected>`));
+            assert.doesNotMatch(review, /onchange=/);
+        }
+    }
+});
+
+test('phonemic-awareness follow-up clearly indicates successful instruction before continuing', () => {
+    for (const language of ['en', 'fr']) {
+        const { run } = setupIndividualPathway(language, { grade: ['K'] });
+        choose(run, 'individual');
+        choose(run, 'phonemic-awareness');
+        const html = run('createIntegratedDecisionNode(getTier1ApproachNodes()["tier1-student-k2-awareness"])');
+        assert.ok(html.includes(run('t("tier1_k2_successful")')));
+        assert.ok(html.includes(run('t("tier1_k2_successful_hint")')));
+        assert.match(html, /class="decision-trend-icon" aria-hidden="true">✓/);
+        choose(run, 'successful');
+        assert.equal(run('appState.visualFlowchart.currentNodeId'), 'tier1-student-k2-outcome-phonics');
+    }
+});
+
 test('choosing whole class follows the existing result pathways without adding student decisions', () => {
     const { run: effectiveRun } = setupIndividualPathway('en', { atResult: true });
     choose(effectiveRun, 'effective');

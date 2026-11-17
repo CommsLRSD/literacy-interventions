@@ -879,6 +879,7 @@ function getTier1ApproachNodes() {
         ];
         nodes['tier1-student-risk'] = {
             id: 'tier1-student-risk', type: 'decision', approach: 'individual',
+            choiceDisplay: 'dropdown',
             title: t('tier1_k2_risk_question'),
             choices: earlyRiskAreas.map(([id, label, nextNode]) => ({
                 id, label: t(label), type: 'warning', nextNode
@@ -899,7 +900,8 @@ function getTier1ApproachNodes() {
                 ...(recommendation === 'awareness' ? {
                     title: t(description),
                     choices: [{
-                        id: 'successful', label: t('tier1_k2_successful'), type: 'success',
+                        id: 'successful', label: t('tier1_k2_successful'), type: 'success', icon: '✓',
+                        sublabel: t('tier1_k2_successful_hint'),
                         nextNode: 'tier1-student-k2-outcome-phonics'
                     }]
                 } : {
@@ -4894,7 +4896,9 @@ function createCompletedStepElement(nodeData) {
                 </div>
             </div>`;
         }).join('');
-        html = `${subtitleHtml}<div class="decision-grid completed-grid">${buttonsHtml}</div>`;
+        html = `${subtitleHtml}${nodeData.choiceDisplay === 'dropdown'
+            ? renderDecisionDropdown(nodeData, choice, true)
+            : `<div class="decision-grid completed-grid">${buttonsHtml}</div>`}`;
     } else if (nodeData.type === 'selection' && choice) {
         if (nodeData.options === 'screeners') {
             // Show all screener options: chosen highlighted, others greyed out
@@ -5492,6 +5496,15 @@ function fwSelectItem(itemId, itemName) {
 }
 
 
+function renderDecisionDropdown(nodeData, choice, readOnly = false) {
+    return `<select class="fw-select" aria-label="${escapeAttr(nodeData.title)}"
+        ${readOnly ? 'disabled' : `onchange="makeIntegratedDecision('${nodeData.id}', this.value, this.selectedOptions[0].dataset.nextNode)"`}>
+        <option value="" disabled${choice ? '' : ' selected'}>${escapeHtml(t('tier1_k2_select_risk'))}</option>
+        ${nodeData.choices.map(option => `<option value="${escapeAttr(option.id)}"
+            data-next-node="${escapeAttr(option.nextNode)}"${choice?.id === option.id ? ' selected' : ''}>${escapeHtml(option.label)}</option>`).join('')}
+    </select>`;
+}
+
 // Create integrated decision node
 function createIntegratedDecisionNode(nodeData) {
     const questionHTML = nodeData.approach === 'individual' ? escapeHtml(nodeData.title)
@@ -5546,9 +5559,9 @@ function createIntegratedDecisionNode(nodeData) {
             ${nodeData.description ? `<p>${nodeData.description}</p>` : ''}
             ${warningBoxHTML}
             ${infoBoxHTML}
-            <div class="decision-grid">
+            ${nodeData.choiceDisplay === 'dropdown' ? renderDecisionDropdown(nodeData) : `<div class="decision-grid">
                 ${choicesHTML}
-            </div>
+            </div>`}
         </div>
     `;
 }
@@ -6743,7 +6756,8 @@ function buildStepReviewContent(nodeDef, choice) {
                 </div>
             </div>`;
         }).join('');
-        html += `<div class="decision-grid completed-grid">${buttonsHTML}</div>`;
+        html += nodeDef.choiceDisplay === 'dropdown' ? renderDecisionDropdown(nodeDef, choice, true)
+            : `<div class="decision-grid completed-grid">${buttonsHTML}</div>`;
     } else if (type === 'selection') {
         if (choice) {
             if (choice.pathway && choice.pathway.length > 0) {
