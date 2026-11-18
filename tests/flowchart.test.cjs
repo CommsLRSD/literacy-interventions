@@ -606,7 +606,7 @@ test('fitting pins the row high and keeps a tall active card visible when the vi
             } };
         })()
     `);
-    assert.ok(initialTop >= 90 && initialTop <= 145);
+    assert.ok(initialTop >= 40 && initialTop <= 60);
     assert.ok(resizedScale < 1);
     assert.ok(resizedCard.left >= 0 && resizedCard.right <= 640);
     assert.ok(resizedCard.top >= 0 && resizedCard.bottom <= 255);

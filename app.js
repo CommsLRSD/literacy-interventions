@@ -4631,7 +4631,7 @@ function getVisualFlowchartPadding() {
 // which is sized to fill the viewport height at 100% zoom.
 const VISUAL_FLOWCHART_FIT_HEIGHT_PADDING = 20;
 function getVisualFlowchartRowInset(viewport) {
-    return Math.max(getVisualFlowchartPadding().top, viewport.clientHeight * 0.14);
+    return Math.max(getVisualFlowchartPadding().top, viewport.clientHeight * 0.06);
 }
 
 // Measure the real bounding box of the rendered cards (in unscaled stage
