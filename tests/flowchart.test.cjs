@@ -181,6 +181,63 @@ test('unavailable pillars cannot be selected through the flowchart toggle handle
     assert.equal(run('appState.fwState.pillars.length'), 0);
 });
 
+test('resource choices use highlighted toggle buttons without checkbox graphics', () => {
+    for (const resourceType of ['Drill Down Assessment', 'Intervention']) {
+        const { run, results } = setupPillarMenu({ resourceType });
+        results.querySelectorAll = () => [];
+        results.querySelector = () => null;
+        run(`
+            appState.interventionMenuData.resources[0].tags[0].recommended = true;
+            appState.interventionMenuData.resources[0].tags[0].evidence = '**';
+            appState.fwState.selectedIds = ['matching-resource'];
+            fwLoadResults();
+        `);
+        assert.doesNotMatch(results.innerHTML, /fw-result-check|role="checkbox"|aria-checked/);
+        assert.match(results.innerHTML, /resource-recommended-badge[^>]*>★/);
+        assert.doesNotMatch(results.innerHTML, /badge-evidence|evidence-legend-trigger/);
+        if (resourceType === 'Drill Down Assessment') {
+            assert.match(results.innerHTML, /class="fw-result-item is-recommended is-selected" role="button" aria-pressed="true"/);
+            assert.match(results.innerHTML, /event\.key==='Enter'\|\|event\.key===' '/);
+            assert.doesNotMatch(results.innerHTML, /fw-result-arrow/);
+        } else {
+            assert.match(results.innerHTML, /class="fw-result-item[^"]*" role="button" tabindex="0"/);
+            assert.match(results.innerHTML, /fw-result-arrow/);
+        }
+    }
+});
+
+test('the pathway picker shows only the recommendation legend in both languages', () => {
+    for (const [language, label] of [['en', 'Recommended resources'], ['fr', 'Ressources recommandées']]) {
+        const { run } = setupPillarMenu({ language, resourceType: 'Drill Down Assessment' });
+        const html = run("createIntegratedSelectionNode({ id: 'test-node', options: 'drillDownAssessments' })");
+        assert.match(html, new RegExp(`class="fw-recommended-swatch"[^>]*>★</span>${label}</p>`));
+        assert.doesNotMatch(html, /evidence-legend-trigger/);
+    }
+});
+
+test('toggling multiple resources updates highlights, accessible state and continuation without rerendering', () => {
+    const { run, results } = setup({ resourceType: 'Drill Down Assessment', emptyResources: false });
+    const items = ['first', 'second'].map(resourceId => ({
+        dataset: { resourceId },
+        classList: { toggle(name, selected) { this[name] = selected; } },
+        setAttribute(name, value) { this[name] = value; }
+    }));
+    const count = { textContent: '' };
+    const button = { disabled: true };
+    results.innerHTML = 'preserve focused resource';
+    results.querySelectorAll = () => items;
+    results.querySelector = selector => selector === '.fw-multi-count' ? count : button;
+    run('appState.fwState.selectedIds = []');
+    for (const [id, expected] of [['first', [true, false]], ['second', [true, true]], ['first', [false, true]], ['second', [false, false]]]) {
+        run(`fwToggleItem('${id}')`);
+        assert.deepEqual(items.map(item => item.classList['is-selected']), expected);
+        assert.deepEqual(items.map(item => item['aria-pressed']), expected.map(String));
+        assert.equal(button.disabled, !expected.some(Boolean));
+        assert.equal(count.textContent, run("t('fw_selected_count')(appState.fwState.selectedIds.length)"));
+        assert.equal(results.innerHTML, 'preserve focused resource');
+    }
+});
+
 function setupIndividualPathway(language = 'en', { atResult = false, grade = ['3'] } = {}) {
     const { run } = setup({ language, grade, emptyResources: false });
     run(`

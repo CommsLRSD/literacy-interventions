@@ -516,13 +516,22 @@ strong { font-weight: 600; }
 }
 
 .progress-monitoring-tools ul {
-  padding-left: 1.25rem;
+  padding-left: 0;
   margin-bottom: 0;
-  list-style: disc outside;
+  list-style: none;
 }
 
-.progress-monitoring-tools li + li { margin-top: var(--space-sm); }
-.progress-monitoring-tools a { overflow-wrap: anywhere; }
+.progress-monitoring-tools > p,
+.progress-monitoring-tools .pathway-card-action {
+  font-size: 0.9rem;
+}
+
+.progress-monitoring-tools .pathway-card-action {
+  display: inline-block;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
 .progress-monitoring-tools a .material-symbols-rounded {
   font-size: 1em;
   margin-left: 0.35em;
@@ -3486,7 +3495,7 @@ details > p {
   border-color: var(--primary-lighter);
 }
 
-.interventions-results-panel .resource-card:not(.is-recommended) {
+.interventions-results-panel .resource-card {
   border-color: var(--card-blue-border);
   background: var(--card-blue-bg);
 }
@@ -3736,84 +3745,6 @@ details > p {
   font-weight: 600;
   background: var(--primary-faint);
   color: var(--primary-text);
-}
-
-.badge-evidence {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  border: none;
-  border-radius: var(--radius-pill);
-  font-size: 0.65rem;
-  font-family: inherit;
-  font-weight: 600;
-  background: var(--success-light);
-  color: #065f46;
-  cursor: pointer;
-}
-
-.evidence-marker-group { white-space: nowrap; }
-
-/* Shared hover/tap trigger that reveals the evidence & research based
-   definitions in a floating tooltip/dialog. Used both as the compact "*"/"**"
-   badge on intervention items and as the inline "* Evidence Based / **
-   Research Based" legend elsewhere. */
-.evidence-legend-trigger {
-  position: relative;
-  border: none;
-  background: transparent;
-  padding: 0;
-  font: inherit;
-  cursor: pointer;
-}
-
-.evidence-legend-label {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
-}
-
-.evidence-legend-tooltip {
-  position: fixed;
-  z-index: 3000;
-  visibility: hidden;
-  opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  width: min(360px, 80vw);
-  padding: var(--space-md);
-  text-align: left;
-  pointer-events: none;
-}
-
-.evidence-legend-tooltip.evidence-legend-tooltip-visible {
-  visibility: visible;
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.evidence-definition-block + .evidence-definition-block {
-  margin-top: var(--space-md);
-}
-
-.evidence-definition-block strong {
-  display: block;
-  color: var(--text-primary);
-}
-
-.evidence-definition-block p {
-  margin-top: 6px;
-  color: var(--text-secondary);
-  line-height: 1.5;
 }
 
 .badge-tier {
@@ -4961,20 +4892,6 @@ details > p {
 .favourite-toggle:hover { background: var(--primary-faint); }
 .favourite-toggle[aria-pressed="true"]:hover { background: #ffe39a; }
 
-.is-recommended,
-.resource-card.is-recommended,
-.legacy-resource-option.is-recommended,
-.fw-result-item.is-recommended {
-  background: var(--recommended-bg);
-  border-color: var(--card-yellow-border);
-  box-shadow: inset 4px 0 var(--card-yellow-border);
-}
-
-.fw-result-item.is-recommended:hover {
-  background: var(--recommended-hover-bg);
-  border-color: var(--accent-dark);
-}
-
 .resource-recommended-badge {
   display: inline-block;
   margin: 0 0.5rem;
@@ -5169,27 +5086,6 @@ details > p {
   padding-bottom: var(--space-sm);
 }
 
-.pathway-resource-legends {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: center;
-  gap: var(--space-md);
-  margin-top: var(--space-lg);
-}
-
-.pathway-resource-legends > .fw-recommended-legend {
-  margin: 0;
-}
-
-.pathway-resource-legends .fw-recommended-swatch {
-  flex-shrink: 0;
-}
-
-.pathway-resource-legends > .evidence-legend-trigger {
-  min-width: 0;
-  text-align: right;
-}
-
 .fw-results-list {
   display: flex;
   flex-direction: column;
@@ -5203,7 +5099,7 @@ details > p {
   gap: var(--space-sm);
   width: 100%;
   padding: 0.65rem var(--space-md);
-  background: var(--bg-muted);
+  background: var(--bg);
   border: 1.5px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
@@ -5281,15 +5177,13 @@ details > p {
 
 .fw-recommended-swatch {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 16px;
   height: 16px;
-  border: 1px solid var(--card-yellow-border);
-  border-radius: 4px;
-  background: var(--recommended-bg);
   color: var(--recommended-text);
-  font-size: 0.65rem;
+  font-size: 1.2rem;
   line-height: 1;
 }
 
@@ -5308,32 +5202,13 @@ details > p {
   color: var(--text-secondary);
 }
 
-.fw-result-check {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  border: 2px solid var(--step);
-  border-radius: 6px;
-  background: var(--bg);
-  color: transparent;
-}
-
-.fw-result-check svg { width: 14px; height: 14px; }
-
 .fw-result-item .fw-result-info { flex: 1; min-width: 0; }
 
 .fw-result-item.is-selected {
+  background: var(--step-header);
   border-color: var(--step);
   outline: 2px solid var(--step);
   outline-offset: -1px;
-}
-
-.fw-result-item.is-selected .fw-result-check {
-  background: var(--step);
-  color: #fff;
 }
 
 .fw-result-item:focus-visible {
@@ -13215,6 +13090,7 @@ details.pathway-session[open] { box-shadow: none; }
   margin-inline: -14px;
   margin-bottom: -14px;
   border-radius: 0 0 15px 15px;
+  background: var(--bg-muted);
 }
 
 .visual-flowchart-active-host .step-content:has(> .pathway-resource-selection) {
@@ -13248,7 +13124,7 @@ details.pathway-session[open] { box-shadow: none; }
   margin-bottom: calc(-1 * var(--space-md));
 }
 
-.pathway-card-actions > .pathway-card-action {
+.pathway-card-action {
   position: relative;
   width: auto;
   min-width: 24px;
@@ -13264,17 +13140,18 @@ details.pathway-session[open] { box-shadow: none; }
   font-size: 0.78rem;
   font-weight: 600;
   line-height: 1.4;
-  text-align: right;
   box-shadow: none;
   cursor: pointer;
 }
 
+.pathway-card-actions > .pathway-card-action { text-align: right; }
+
 @media (hover: hover) {
-  .pathway-card-actions > .pathway-card-action:hover {
+  .pathway-card-action:hover {
     color: color-mix(in srgb, var(--primary-text) 35%, var(--primary-light-text));
   }
 
-  .pathway-card-actions > .pathway-card-action:hover::before {
+  .pathway-card-action:hover::before {
     content: "";
     position: absolute;
     top: 50%;
@@ -13285,7 +13162,7 @@ details.pathway-session[open] { box-shadow: none; }
   }
 }
 
-.pathway-card-actions > .pathway-card-action:focus-visible {
+.pathway-card-action:focus-visible {
   outline: 3px solid var(--border-focus);
   outline-offset: 3px;
 }

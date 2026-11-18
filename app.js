@@ -350,7 +350,7 @@ async function hardResetApp() {
     appState.rememberedMenuFilters = {};
     appState.currentPath = [];
     Object.assign(menuState, { tier: '', program: MENU_LANGUAGE_DEFAULT, resourceType: '', pillar: '',
-        screener: '', subtest: '', grade: '', evidence: '', search: '' });
+        screener: '', subtest: '', grade: '', search: '' });
     menuUiState.view = 'search';
     menuUiState.editingField = '';
     activeScheduleGradeIds = [];
@@ -5330,10 +5330,7 @@ function createIntegratedSelectionNode(nodeData) {
                         </details>
                     </div>`}
                     <div id="fw-results" class="fw-results"></div>
-                    <div class="pathway-resource-legends">
-                        <p class="fw-recommended-legend"><span class="fw-recommended-swatch" aria-hidden="true">★</span>${escapeHtml(t('fw_recommended_legend'))}</p>
-                        ${getEvidenceLegendTriggerHtml()}
-                    </div>
+                    <p class="fw-recommended-legend"><span class="fw-recommended-swatch" aria-hidden="true">★</span>${escapeHtml(t('fw_recommended_legend'))}</p>
                     ${nodeData.options === 'interventions' ? buildProgressMonitoringLinksHtml(tierId) : ''}
                 </div>
             </div>
@@ -5480,25 +5477,20 @@ function fwLoadResults() {
                 const matchingTags = getMatchingTags(item, sectionState);
                 const gradeText = uniqueSorted(matchingTags.map(tag => tag.gradeRangeText)).join('; ') ||
                     uniqueSorted(matchingTags.flatMap(tag => tag.gradeFilter || [])).join(', ');
-                const evidenceBadge = getEvidenceBadgeHtml(getResourceEvidenceLevel({ tags: matchingTags }));
                 const linkHtml = getResourceUrls(item, sectionState).map(url => {
                     const lang = getResourceUrlLang(item, url);
                     const title = lang ? `${t('filter_view_resource')} (${lang})` : t('filter_view_resource');
                     return `<a class="fw-result-link resource-action" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" aria-label="${escapeAttr(title)}" data-tooltip="${escapeAttr(title)}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
                 }).join('');
                 const isSelected = selected.has(item.id);
-                const indicator = multiSelect
-                    ? `<span class="fw-result-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>`
-                    : '<svg class="fw-result-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M9 18l6-6-6-6"/></svg>';
-                return `<div class="fw-result-item${recommended.includes(item) ? ' is-recommended' : ''}${isSelected ? ' is-selected' : ''}" role="${multiSelect ? 'checkbox' : 'button'}"${multiSelect ? ` aria-checked="${isSelected}"` : ''} tabindex="0" data-resource-id="${escapeAttr(item.id)}" data-resource-name="${escapeAttr(item.name)}" onclick="${activate}" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();${activate}}">
-                    ${multiSelect ? indicator : ''}
+                return `<div class="fw-result-item${recommended.includes(item) ? ' is-recommended' : ''}${isSelected ? ' is-selected' : ''}" role="button"${multiSelect ? ` aria-pressed="${isSelected}"` : ''} tabindex="0" data-resource-id="${escapeAttr(item.id)}" data-resource-name="${escapeAttr(item.name)}" onclick="${activate}" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();${activate}}">
                     <div class="fw-result-info">
-                        <div class="fw-result-name">${escapeHtml(item.name)}${buildResourceRecommendationBadgeHtml(item, sectionState)}${evidenceBadge}</div>
+                        <div class="fw-result-name">${escapeHtml(item.name)}${buildResourceRecommendationBadgeHtml(item, sectionState)}</div>
                         ${gradeText ? `<div class="fw-result-meta">${escapeHtml(t('fw_grade_prefix'))} ${escapeHtml(gradeText)}</div>` : ''}
                     </div>
                     ${buildFavouriteButtonHtml(item)}
                     ${linkHtml}
-                    ${multiSelect ? '' : indicator}
+                    ${multiSelect ? '' : '<svg class="fw-result-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M9 18l6-6-6-6"/></svg>'}
                 </div>`;
             }).join('')}</div>`;
         }).join('')}
@@ -5522,7 +5514,7 @@ function fwSyncSelectionUi() {
     resultsEl.querySelectorAll('.fw-result-item[data-resource-id]').forEach(item => {
         const isSelected = selected.has(item.dataset.resourceId);
         item.classList.toggle('is-selected', isSelected);
-        item.setAttribute('aria-checked', String(isSelected));
+        item.setAttribute('aria-pressed', String(isSelected));
     });
     const count = resultsEl.querySelector('.fw-multi-count');
     if (count) count.textContent = t('fw_selected_count')(selected.size);
@@ -5538,7 +5530,7 @@ function fwToggleItem(itemId) {
     fwSyncSelectionUi();
 }
 
-// Continue with every resource ticked in a multi-select (drill-down) step.
+// Continue with every selected resource in a multi-select (drill-down) step.
 function fwConfirmSelection() {
     const state = appState.fwState;
     if (!state?.multiSelect) return;
@@ -8676,7 +8668,7 @@ function buildLegacyResourceOptionHtml(item, state, handler, nodeData = null, bu
             data-resource-name="${escapeAttr(item.name)}"${nodeData ? ` data-node-id="${escapeAttr(nodeData.id)}" data-handler="${escapeAttr(nodeData.nextHandler)}"` : ''}
             onclick="${escapeAttr(handler)}(${args})">
             <div class="${contentClass}">
-                <h4>${escapeHtml(item.name)}${buildResourceRecommendationBadgeHtml(item, state)}${getEvidenceBadgeHtml(getResourceEvidenceLevel({ tags: matchingTags }))}</h4>
+                <h4>${escapeHtml(item.name)}${buildResourceRecommendationBadgeHtml(item, state)}</h4>
                 ${notes ? `<p>${escapeHtml(notes)}</p>` : ''}
                 <div class="resource-card-pill-row">${buildResourceMetaPillsHtml(matchingTags)}</div>
             </div>
@@ -8699,13 +8691,13 @@ function buildProgressMonitoringLinksHtml(tier) {
     };
     const links = getFilteredResources(state).flatMap(item =>
         getResourceUrls(item, state).map(url =>
-            `<li><a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.name)}<span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a></li>`
+            `<li><a class="pathway-card-action" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.name)}<span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a></li>`
         )).join('');
     if (!links) return '';
     return `<section class="progress-monitoring-tools">
         <h4>${escapeHtml(t('progress_monitoring_tools'))}</h4>
         <p>${escapeHtml(t('progress_monitoring_tools_hint'))}</p>
-        <ul>${links}</ul>
+        <ul role="list">${links}</ul>
     </section>`;
 }
 
@@ -9041,150 +9033,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Shared markup for the two evidence/research definition blocks. Reused by
-// the hover-triggered legend tooltip (inline callouts, badges) and by the
-// static evidence sidebar next to the Interventions Menu (index.html).
-// `level` optionally narrows the output to a single definition ('*' for
-// evidence based, '**' for research based) so an asterisk marker beside a
-// resource name only explains its own rating.
-function getEvidenceDefinitionsBlocksHtml(level) {
-    const evidenceBased = `
-        <div class="evidence-definition-block">
-            <strong>${escapeHtml(t('evidence_eb_title'))}</strong>
-            <p>${escapeHtml(t('evidence_eb_desc'))}</p>
-        </div>
-    `;
-    const researchBased = `
-        <div class="evidence-definition-block">
-            <strong>${escapeHtml(t('evidence_rb_title'))}</strong>
-            <p>${escapeHtml(t('evidence_rb_desc'))}</p>
-        </div>
-    `;
-    if (level === '*') return evidenceBased;
-    if (level === '**') return researchBased;
-    return evidenceBased + researchBased;
-}
-
-// Inline "* Evidence Based / ** Research Based" legend. Shows the full
-// definitions in a floating tooltip on hover/focus (or tap, for touch
-// devices) via showEvidenceLegendTooltip()/toggleEvidenceLegendTooltip().
-function getEvidenceLegendTriggerHtml() {
-    return `
-        <button type="button" class="evidence-legend-trigger" aria-label="${escapeHtml(t('evidence_legend_aria'))}" onclick="event.stopPropagation(); toggleEvidenceLegendTooltip(this);">
-            <span class="evidence-legend-label">${escapeHtml(t('evidence_legend_label'))}</span>
-        </button>
-    `;
-}
-
-function getEvidenceBadgeHtml(evidenceLevel) {
-    if (evidenceLevel !== '*' && evidenceLevel !== '**') return '';
-    return `
-        <button type="button" class="badge-evidence evidence-legend-trigger" data-evidence-level="${escapeAttr(evidenceLevel)}" aria-label="${escapeHtml(evidenceLevel === '*' ? t('evidence_eb_title') : t('evidence_rb_title'))}" onclick="event.stopPropagation(); toggleEvidenceLegendTooltip(this);">
-            <span class="evidence-marker-text">${escapeHtml(evidenceLevel)}</span>
-        </button>
-    `;
-}
-
-// The tooltip is rendered once into <body> (rather than nested inside each
-// trigger) so it can never be clipped by scrollable/overflow:hidden
-// ancestors such as .result-card-compact or .visual-flowchart-card.
-let evidenceLegendTooltipEl = null;
-let evidenceLegendActiveTrigger = null;
-
-function getEvidenceLegendTooltipEl() {
-    if (!evidenceLegendTooltipEl || !document.body.contains(evidenceLegendTooltipEl)) {
-        evidenceLegendTooltipEl = document.createElement('div');
-        evidenceLegendTooltipEl.className = 'evidence-legend-tooltip';
-        evidenceLegendTooltipEl.setAttribute('role', 'tooltip');
-        document.body.appendChild(evidenceLegendTooltipEl);
-    }
-    return evidenceLegendTooltipEl;
-}
-
-function positionEvidenceLegendTooltip(trigger) {
-    const tooltip = getEvidenceLegendTooltipEl();
-    const rect = trigger.getBoundingClientRect();
-    const margin = 8;
-    const tooltipWidth = tooltip.offsetWidth || 320;
-    let left = rect.left;
-    if (left + tooltipWidth > window.innerWidth - margin) {
-        left = Math.max(margin, window.innerWidth - tooltipWidth - margin);
-    }
-    tooltip.style.left = `${left}px`;
-    // Open above the trigger when there is not enough room below it.
-    const tooltipHeight = tooltip.offsetHeight || 0;
-    let top = rect.bottom + margin;
-    if (top + tooltipHeight > window.innerHeight - margin && rect.top - margin - tooltipHeight >= margin) {
-        top = rect.top - margin - tooltipHeight;
-    }
-    tooltip.style.top = `${Math.max(margin, Math.min(top, window.innerHeight - tooltipHeight - margin))}px`;
-}
-
-function showEvidenceLegendTooltip(trigger) {
-    const tooltip = getEvidenceLegendTooltipEl();
-    tooltip.innerHTML = getEvidenceDefinitionsBlocksHtml(trigger.dataset.evidenceLevel);
-    evidenceLegendActiveTrigger = trigger;
-    positionEvidenceLegendTooltip(trigger);
-    tooltip.classList.add('evidence-legend-tooltip-visible');
-}
-
-function hideEvidenceLegendTooltip() {
-    if (evidenceLegendActiveTrigger) evidenceLegendActiveTrigger.classList.remove('evidence-legend-open');
-    evidenceLegendActiveTrigger = null;
-    if (evidenceLegendTooltipEl) evidenceLegendTooltipEl.classList.remove('evidence-legend-tooltip-visible');
-}
-
-// Tap/click fallback for touch devices that can't hover. Only one legend
-// tooltip is kept open at a time.
-function toggleEvidenceLegendTooltip(trigger) {
-    const wasOpen = trigger.classList.contains('evidence-legend-open');
-    hideEvidenceLegendTooltip();
-    if (!wasOpen) {
-        trigger.classList.add('evidence-legend-open');
-        showEvidenceLegendTooltip(trigger);
-    }
-}
-
-document.addEventListener('mouseover', (event) => {
-    const trigger = event.target.closest('.evidence-legend-trigger');
-    if (trigger) showEvidenceLegendTooltip(trigger);
-});
-
-document.addEventListener('mouseout', (event) => {
-    const trigger = event.target.closest('.evidence-legend-trigger');
-    if (trigger && !trigger.classList.contains('evidence-legend-open') && !trigger.contains(event.relatedTarget)) {
-        hideEvidenceLegendTooltip();
-    }
-});
-
-document.addEventListener('focusin', (event) => {
-    const trigger = event.target.closest('.evidence-legend-trigger');
-    if (trigger) showEvidenceLegendTooltip(trigger);
-});
-
-document.addEventListener('focusout', (event) => {
-    const trigger = event.target.closest('.evidence-legend-trigger');
-    if (trigger && !trigger.classList.contains('evidence-legend-open')) hideEvidenceLegendTooltip();
-});
-
-document.addEventListener('click', (event) => {
-    if (event.target.closest('.evidence-legend-trigger')) return;
-    document.querySelectorAll('.evidence-legend-trigger.evidence-legend-open').forEach(el => {
-        el.classList.remove('evidence-legend-open');
-    });
-    hideEvidenceLegendTooltip();
-});
-
-document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape') return;
-    document.querySelectorAll('.evidence-legend-trigger.evidence-legend-open').forEach(el => {
-        el.classList.remove('evidence-legend-open');
-    });
-    hideEvidenceLegendTooltip();
-});
-
-document.addEventListener('scroll', () => hideEvidenceLegendTooltip(), true);
-
 // ============================================
 // Interventions Menu — Progressive Filter System
 // ============================================
@@ -9205,13 +9053,12 @@ const menuState = {
     subtest: '',
     tier: '',
     grade: '',
-    evidence: '',
     search: ''
 };
 
 const NO_SPECIFIC_SCREENER_VALUE = '__no_specific_screener__';
 const REQUIRED_MENU_FIELDS = ['resourceType', 'pillar', 'tier'];
-const MENU_CHIP_FIELDS = [...REQUIRED_MENU_FIELDS, 'screener', 'subtest', 'grade', 'evidence'];
+const MENU_CHIP_FIELDS = [...REQUIRED_MENU_FIELDS, 'screener', 'subtest', 'grade'];
 // 'search' = the full-panel filter form; 'results' = the results list with
 // independently editable criteria above it.
 const menuUiState = {
@@ -9853,7 +9700,7 @@ function setRememberedMenuFilters(partial) {
 }
 
 // A single tag matches `state` when every tier/pillar/resourceType/screener/
-// subtest/evidence filter it defines (other than `excludeField`) is
+// subtest filter it defines (other than `excludeField`) is
 // satisfied by that tag.
 function tagMatches(tag, state, excludeField) {
     // Each filter may be a single value or a list; a tag matches a list if it matches any value in it.
@@ -9871,7 +9718,6 @@ function tagMatches(tag, state, excludeField) {
     if (!matchesAny('screener', value => value === NO_SPECIFIC_SCREENER_VALUE
         ? !(tag.screeners || []).length : (tag.screeners || []).includes(value))) return false;
     if (!matchesAny('subtest', value => (tag.subtests || []).includes(value))) return false;
-    if (!matchesAny('evidence', value => (tag.evidence || '') === value)) return false;
     if (excludeField !== 'grade') {
         // Several grades may be chosen at once; a tag matches if it covers any of them.
         const grades = normalizeGradeList(state.grade);
@@ -9932,8 +9778,6 @@ function distinctTagValues(state, field) {
                 }
             } else if (field === 'subtest') {
                 (tag.subtests || []).forEach(s => values.add(s));
-            } else if (field === 'evidence') {
-                if (tag.evidence) values.add(tag.evidence);
             } else if (field === 'grade') {
                 (tag.gradeFilter || []).forEach(g => values.add(g));
             } else if (tag[field]) {
@@ -9961,7 +9805,6 @@ function getMenuFieldLabel(field) {
         screener: t('filter_screener_label'),
         subtest: t('filter_subtest_label'),
         grade: t('filter_grade_label'),
-        evidence: t('filter_evidence_label'),
         search: t('filter_search_label')
     };
     return labels[field] || field;
@@ -10041,22 +9884,6 @@ function translateGrade(grade) {
     return grade;
 }
 
-// Evidence ratings shown beside a resource name. `*` = evidence based,
-// `**` = research based; the marker opens the matching definition on
-// hover/tap (same tooltip used by the flowchart legend). The rating comes
-// straight from the data (tag.evidence) rather than a hardcoded name map.
-function getResourceEvidenceLevel(item) {
-    if (!item) return '';
-    const tag = (item.tags || []).find(tg => tg.evidence);
-    return tag ? tag.evidence : '';
-}
-
-function translateEvidence(level) {
-    if (level === '*') return t('filter_evidence_eb');
-    if (level === '**') return t('filter_evidence_rb');
-    return level || '';
-}
-
 // Row URLs stay scoped to the matching tags; old catalogs retain their
 // resource-level URL fallback.
 function getResourceUrls(item, state) {
@@ -10088,7 +9915,6 @@ function getMenuBaselineState() {
         subtest: '',
         tier: '',
         grade: '',
-        evidence: '',
         search: ''
     };
 }
@@ -10333,7 +10159,6 @@ function renderMenuFilterOptions() {
     renderMenuMultiselectOptions('pillar', 'pillar', translatePillar, 'filter_choose_pillars');
     renderMenuChoiceButtons('filter-subtest-chips', 'subtest', menuState.subtest);
     renderMenuChoiceButtons('filter-grade-chips', 'grade', menuState.grade, translateGrade);
-    renderMenuChoiceButtons('filter-evidence-chips', 'evidence', menuState.evidence, translateEvidence);
     updateMenuChipSeparators();
     updateMenuSearchHint();
 
@@ -10380,7 +10205,6 @@ function buildResourceMetaPillsHtml(matchingTags) {
 function buildResourceCardHtml(item, state = menuState) {
     const matchingTags = getMatchingTags(item, state);
     const notes = uniqueSorted(matchingTags.map(tag => tag.notes).filter(note => note !== 'MLL')).join('; ');
-    const evidenceLevel = getResourceEvidenceLevel({ tags: matchingTags });
 
     return `
         <div class="resource-card${isRecommendedResource(item, state) ? ' is-recommended' : ''}">
@@ -10388,7 +10212,6 @@ function buildResourceCardHtml(item, state = menuState) {
                 <div class="resource-card-name">
                     <span class="resource-card-name-text">${escapeHtml(item.name)}</span>
                     ${buildResourceRecommendationBadgeHtml(item, state)}
-                    ${getEvidenceBadgeHtml(evidenceLevel)}
                 </div>
                 <div class="resource-card-pill-row">${buildResourceMetaPillsHtml(matchingTags)}</div>
                 ${notes ? `<div class="resource-card-note-block"><span class="resource-card-note-label">${escapeHtml(t('filter_notes_label'))}</span><div class="resource-card-meta resource-card-notes">${escapeHtml(notes)}</div></div>` : ''}
@@ -10630,7 +10453,6 @@ const MENU_FILTER_CHIP_FIELDS = [
     { field: 'screener', labelKey: 'filter_screener_label', format: (v) => translateScreener(v) },
     { field: 'subtest', labelKey: 'filter_subtest_label' },
     { field: 'grade', labelKey: 'filter_grade_label', format: (v) => formatGradeList(v) },
-    { field: 'evidence', labelKey: 'filter_evidence_label', format: (v) => translateEvidence(v) },
     { field: 'search', labelKey: 'filter_search_label', format: (v) => `"${v}"` }
 ];
 
@@ -10641,8 +10463,7 @@ function getMenuFieldChoices(field) {
         tier: { format: value => t('filter_tier_option')(value) },
         screener: { format: translateScreener },
         subtest: {},
-        grade: { format: translateGrade },
-        evidence: { format: translateEvidence }
+        grade: { format: translateGrade }
     };
     const config = choiceConfig[field];
     const availableValues = new Set(getAvailableMenuFieldValues(field).map(String));
@@ -10735,7 +10556,7 @@ function applyMenuViewState() {
 function showMenuSearchView() {
     menuUiState.view = 'search';
     menuUiState.editingField = '';
-    ['screener', 'subtest', 'grade', 'evidence', 'search'].forEach(field => {
+    ['screener', 'subtest', 'grade', 'search'].forEach(field => {
         menuState[field] = '';
         if (field !== 'search') setRememberedMenuFilters({ [field]: null });
     });
@@ -10865,7 +10686,6 @@ function applyRememberedFiltersToMenu() {
     menuState.subtest = remembered.subtest || '';
     menuState.tier = remembered.tier ? String(remembered.tier) : '';
     menuState.grade = normalizeGradeList(remembered.grade);
-    menuState.evidence = remembered.evidence || '';
     menuState.search = '';
 
     syncMenuFilterControls();
