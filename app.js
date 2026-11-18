@@ -5487,18 +5487,14 @@ function fwLoadResults() {
                     return `<a class="fw-result-link resource-action" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" aria-label="${escapeAttr(title)}" data-tooltip="${escapeAttr(title)}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a>`;
                 }).join('');
                 const isSelected = selected.has(item.id);
-                const indicator = multiSelect
-                    ? `<span class="fw-result-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>`
-                    : '<svg class="fw-result-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M9 18l6-6-6-6"/></svg>';
-                return `<div class="fw-result-item${recommended.includes(item) ? ' is-recommended' : ''}${isSelected ? ' is-selected' : ''}" role="${multiSelect ? 'checkbox' : 'button'}"${multiSelect ? ` aria-checked="${isSelected}"` : ''} tabindex="0" data-resource-id="${escapeAttr(item.id)}" data-resource-name="${escapeAttr(item.name)}" onclick="${activate}" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();${activate}}">
-                    ${multiSelect ? indicator : ''}
+                return `<div class="fw-result-item${recommended.includes(item) ? ' is-recommended' : ''}${isSelected ? ' is-selected' : ''}" role="button"${multiSelect ? ` aria-pressed="${isSelected}"` : ''} tabindex="0" data-resource-id="${escapeAttr(item.id)}" data-resource-name="${escapeAttr(item.name)}" onclick="${activate}" onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();${activate}}">
                     <div class="fw-result-info">
                         <div class="fw-result-name">${escapeHtml(item.name)}${buildResourceRecommendationBadgeHtml(item, sectionState)}${evidenceBadge}</div>
                         ${gradeText ? `<div class="fw-result-meta">${escapeHtml(t('fw_grade_prefix'))} ${escapeHtml(gradeText)}</div>` : ''}
                     </div>
                     ${buildFavouriteButtonHtml(item)}
                     ${linkHtml}
-                    ${multiSelect ? '' : indicator}
+                    ${multiSelect ? '' : '<svg class="fw-result-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path d="M9 18l6-6-6-6"/></svg>'}
                 </div>`;
             }).join('')}</div>`;
         }).join('')}
@@ -5522,7 +5518,7 @@ function fwSyncSelectionUi() {
     resultsEl.querySelectorAll('.fw-result-item[data-resource-id]').forEach(item => {
         const isSelected = selected.has(item.dataset.resourceId);
         item.classList.toggle('is-selected', isSelected);
-        item.setAttribute('aria-checked', String(isSelected));
+        item.setAttribute('aria-pressed', String(isSelected));
     });
     const count = resultsEl.querySelector('.fw-multi-count');
     if (count) count.textContent = t('fw_selected_count')(selected.size);
@@ -5538,7 +5534,7 @@ function fwToggleItem(itemId) {
     fwSyncSelectionUi();
 }
 
-// Continue with every resource ticked in a multi-select (drill-down) step.
+// Continue with every selected resource in a multi-select (drill-down) step.
 function fwConfirmSelection() {
     const state = appState.fwState;
     if (!state?.multiSelect) return;

@@ -5189,7 +5189,7 @@ details > p {
   gap: var(--space-sm);
   width: 100%;
   padding: 0.65rem var(--space-md);
-  background: var(--bg-muted);
+  background: var(--bg);
   border: 1.5px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
@@ -5291,32 +5291,13 @@ details > p {
   color: var(--text-secondary);
 }
 
-.fw-result-check {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  border: 2px solid var(--step);
-  border-radius: 6px;
-  background: var(--bg);
-  color: transparent;
-}
-
-.fw-result-check svg { width: 14px; height: 14px; }
-
 .fw-result-item .fw-result-info { flex: 1; min-width: 0; }
 
 .fw-result-item.is-selected {
+  background: var(--step-header);
   border-color: var(--step);
   outline: 2px solid var(--step);
   outline-offset: -1px;
-}
-
-.fw-result-item.is-selected .fw-result-check {
-  background: var(--step);
-  color: #fff;
 }
 
 .fw-result-item:focus-visible {
