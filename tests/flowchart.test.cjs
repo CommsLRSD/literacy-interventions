@@ -566,6 +566,50 @@ test('classic layout restores outcome-based row shifts while keeping classic str
     assert.ok(classic.stageHeight > single.stageHeight);
 });
 
+test('the Settings layout choice changes card routing and persists across visits', () => {
+    function setupLayoutSettings(savedLayout) {
+        const { run } = setupIndividualPathway('en', { atResult: true });
+        choose(run, 'effective');
+        run(`
+            globalThis.storedLayout = ${JSON.stringify(savedLayout)};
+            globalThis.layoutSelect = {
+                addEventListener(event, listener) { this[event] = listener; }
+            };
+            const layoutStatus = { textContent: '' };
+            globalThis.localStorage = {
+                getItem: key => key === 'literacy-interventions-visual-flowchart-layout' ? storedLayout : null,
+                setItem: (key, value) => {
+                    if (key === 'literacy-interventions-visual-flowchart-layout') storedLayout = value;
+                }
+            };
+            const lookup = document.getElementById;
+            document.getElementById = id => id === 'settings-visual-flowchart-layout' ? layoutSelect
+                : id === 'settings-visual-flowchart-layout-status' ? layoutStatus : lookup(id);
+            initializeVisualFlowchartLayoutPreference();
+            appState.visualFlowchartModal = { expandedTiers: new Set() };
+        `);
+        return run;
+    }
+
+    const run = setupLayoutSettings(null);
+    assert.equal(run('layoutSelect.value'), 'single');
+    assertSingleRow(renderVisualPathway(run));
+
+    run('layoutSelect.value = "classic"; layoutSelect.change();');
+    const classic = renderVisualPathway(run);
+    const tops = [...classic.matchAll(/style="left:\d+px;top:(\d+)px;width:\d+px"/g)].map(match => Number(match[1]));
+    assert.ok(tops.at(-1) < tops.at(-2));
+    const saved = run('storedLayout');
+    assert.equal(saved, 'classic');
+    const returningVisit = setupLayoutSettings(saved);
+    assert.equal(returningVisit('layoutSelect.value'), 'classic');
+    assert.equal(renderVisualPathway(returningVisit), classic);
+
+    returningVisit('layoutSelect.value = "single"; layoutSelect.change();');
+    assertSingleRow(renderVisualPathway(returningVisit));
+    assert.equal(returningVisit('storedLayout'), 'single');
+});
+
 test('tier changes, expanded history and review cards keep one row and independent card variants', () => {
     const { run } = setupIndividualPathway();
     run(`

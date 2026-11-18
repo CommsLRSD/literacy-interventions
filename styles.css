@@ -13372,7 +13372,27 @@ details.pathway-session[open] { box-shadow: none; }
 }
 .settings-theme-copy { display: grid; gap: 0.35rem; }
 .settings-option-title { font-weight: 600; }
-#settings-theme-hint { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; }
+#settings-theme-hint,
+#settings-pathway-layout-hint { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; }
+.settings-pathway-layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-top: 1.25rem;
+}
+.settings-pathway-layout > div { flex: 1 1 18rem; }
+.settings-pathway-layout select {
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
 .settings-theme-toggle input {
   position: absolute;
   right: 0;
@@ -13408,6 +13428,7 @@ details.pathway-session[open] { box-shadow: none; }
   outline-offset: 4px;
 }
 #settings-theme-status:empty,
+#settings-visual-flowchart-layout-status:empty,
 #transfer-status:empty { display: none; }
 .transfer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; margin-top: 1.5rem; }
 .transfer-card-heading { display: flex; align-items: center; gap: 0.65rem; color: var(--primary-text); }

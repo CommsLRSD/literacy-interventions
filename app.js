@@ -1084,6 +1084,7 @@ window.cancelProgramPromptLanguage = cancelProgramPromptLanguage;
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Literacy Interventions - Initializing...');
     restoreProgramPreference();
+    initializeVisualFlowchartLayoutPreference();
 
     // Apply initial translations (English by default) and sync controls
     applyTranslations();
@@ -4251,8 +4252,34 @@ function isVisualFlowchartFitHeightEntry(entry) {
     return !!entry && entry.isTierFirstStep && entry.tierId !== 'tier1';
 }
 
-// Set to true to restore the classic branching rows without changing card styling or controls.
-const VISUAL_FLOWCHART_CLASSIC_ROWS = false;
+const VISUAL_FLOWCHART_LAYOUT_KEY = `${STORAGE_KEY_PREFIX}-visual-flowchart-layout`;
+let visualFlowchartLayout = 'single';
+
+function initializeVisualFlowchartLayoutPreference() {
+    const select = document.getElementById('settings-visual-flowchart-layout');
+    const status = document.getElementById('settings-visual-flowchart-layout-status');
+    if (!select || !status) return;
+
+    try {
+        visualFlowchartLayout = localStorage.getItem(VISUAL_FLOWCHART_LAYOUT_KEY) === 'classic' ? 'classic' : 'single';
+    } catch (error) {
+        console.warn('Unable to read the saved visual pathway layout.', error);
+        status.textContent = t('settings_pathway_layout_storage_error');
+    }
+
+    select.value = visualFlowchartLayout;
+    select.addEventListener('change', () => {
+        visualFlowchartLayout = select.value === 'classic' ? 'classic' : 'single';
+        try {
+            localStorage.setItem(VISUAL_FLOWCHART_LAYOUT_KEY, visualFlowchartLayout);
+            status.textContent = '';
+        } catch (error) {
+            console.warn('Unable to save the visual pathway layout.', error);
+            status.textContent = t('settings_pathway_layout_storage_error');
+        }
+        if (appState.visualFlowchartModal) refreshVisualFlowchartModal();
+    });
+}
 
 function getClassicVisualFlowchartRowShift(item) {
     if (item.type === 'collapsed') return 0;
@@ -4264,7 +4291,7 @@ function getClassicVisualFlowchartRowShift(item) {
     return 0;
 }
 
-function layoutVisualFlowchartCards(items, getCardWidth, classicRows = VISUAL_FLOWCHART_CLASSIC_ROWS) {
+function layoutVisualFlowchartCards(items, getCardWidth, classicRows = visualFlowchartLayout === 'classic') {
     const columnGap = 50;
     const rowGap = 180;
     const stagePadding = 90;
