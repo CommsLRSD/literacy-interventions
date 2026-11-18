@@ -4674,6 +4674,11 @@ details > p {
               background var(--duration) var(--ease);
 }
 
+.flowchart-step[data-node-id="tier2-principles"] .checklist-lines {
+  width: max-content;
+  max-width: 100%;
+}
+
 .checklist-line:hover {
   border-color: var(--tier-color, var(--step));
   background: color-mix(in srgb, var(--tier-color, var(--step)) 4%, var(--bg));
@@ -5164,9 +5169,24 @@ details > p {
   padding-bottom: var(--space-sm);
 }
 
-.step-content-resource-picker > .evidence-legend-trigger {
-  display: block;
-  margin: var(--space-sm) 0 0 auto;
+.pathway-resource-legends {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+
+.pathway-resource-legends > .fw-recommended-legend {
+  margin: 0;
+}
+
+.pathway-resource-legends .fw-recommended-swatch {
+  flex-shrink: 0;
+}
+
+.pathway-resource-legends > .evidence-legend-trigger {
+  min-width: 0;
   text-align: right;
 }
 
@@ -13180,57 +13200,92 @@ details.pathway-session[open] { box-shadow: none; }
 .pathway-session-close .material-symbols-rounded { font-size: 1rem; }
 .pathway-session-close:focus-visible,
 .pathway-session-download:focus-visible { outline: 3px solid #a66b00; outline-offset: 3px; }
-.session-route-download.action-btn,
-.session-route-download.visual-flowchart-tier-review-btn {
-  background: #0a6b63;
-  border: 1px solid #0a6b63;
-  color: #fff;
-  padding: 0.65rem 1rem;
-}
-.session-route-download.action-btn:hover,
-.session-route-download.visual-flowchart-tier-review-btn:hover { background: #08564f; border-color: #08564f; }
-.session-route-download:focus-visible { outline: 3px solid #a66b00; outline-offset: 3px; }
-
 .individual-outcome .individual-recommendation {
   margin: 0.75rem 0 var(--space-xs);
 }
 
-.individual-outcome-actions,
-.individual-outcome .endpoint-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: 0.5rem;
-  margin-top: 0;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--border);
+.pathway-resource-selection {
+  margin-block: var(--space-md) 0;
+  padding: 0.75rem 14px;
+  border-top: 1px solid color-mix(in srgb, var(--primary-light-text) 25%, var(--border));
+  background: color-mix(in srgb, var(--primary-light-text) 12%, var(--bg));
 }
 
-.individual-outcome .visual-flowchart-tier-review-btn,
-.individual-outcome .endpoint-actions .action-btn {
+.visual-flowchart-active-host .pathway-resource-selection {
+  margin-inline: -14px;
+  margin-bottom: -14px;
+  border-radius: 0 0 15px 15px;
+}
+
+.visual-flowchart-active-host .step-content:has(> .pathway-resource-selection) {
+  padding-inline: 0;
+  padding-bottom: 0;
+}
+
+.pathway-card-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-top: var(--space-md);
+  padding: 0.375rem var(--space-lg);
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  background: var(--bg-muted);
+}
+
+.visual-flowchart-card > .pathway-card-actions {
+  grid-column: 1 / -1;
+  margin: 8px -14px -14px;
+  padding-inline: 14px;
+  border-radius: 0 0 15px 15px;
+}
+
+.endpoint-card > .pathway-card-actions {
+  margin: var(--space-md) calc(-1 * var(--space-lg)) calc(-1 * var(--space-lg));
+}
+
+.journey-step-slot .endpoint-card > .pathway-card-actions {
+  margin-bottom: calc(-1 * var(--space-md));
+}
+
+.pathway-card-actions > .pathway-card-action {
+  position: relative;
   width: auto;
-  min-height: 36px;
+  min-width: 24px;
+  max-width: 100%;
+  min-height: 32px;
   margin: 0;
-  padding: 0.4rem 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg);
+  padding: 0.25rem 0 0.25rem 0.875rem;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
   color: var(--primary-text);
+  font: inherit;
   font-size: 0.78rem;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.4;
+  text-align: right;
   box-shadow: none;
+  cursor: pointer;
 }
 
-.individual-outcome .visual-flowchart-tier-review-btn:hover,
-.individual-outcome .endpoint-actions .action-btn:hover {
-  background: var(--primary-faint);
-  border-color: var(--primary-text);
-  color: var(--primary-text);
+@media (hover: hover) {
+  .pathway-card-actions > .pathway-card-action:hover {
+    color: color-mix(in srgb, var(--primary-text) 35%, var(--primary-light-text));
+  }
+
+  .pathway-card-actions > .pathway-card-action:hover::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    border-block: 0.25rem solid transparent;
+    border-left: 0.375rem solid currentColor;
+  }
 }
 
-.individual-outcome .visual-flowchart-tier-review-btn:focus-visible,
-.individual-outcome .endpoint-actions .action-btn:focus-visible {
+.pathway-card-actions > .pathway-card-action:focus-visible {
   outline: 3px solid var(--border-focus);
   outline-offset: 3px;
 }
