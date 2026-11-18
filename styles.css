@@ -3738,84 +3738,6 @@ details > p {
   color: var(--primary-text);
 }
 
-.badge-evidence {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  border: none;
-  border-radius: var(--radius-pill);
-  font-size: 0.65rem;
-  font-family: inherit;
-  font-weight: 600;
-  background: var(--success-light);
-  color: #065f46;
-  cursor: pointer;
-}
-
-.evidence-marker-group { white-space: nowrap; }
-
-/* Shared hover/tap trigger that reveals the evidence & research based
-   definitions in a floating tooltip/dialog. Used both as the compact "*"/"**"
-   badge on intervention items and as the inline "* Evidence Based / **
-   Research Based" legend elsewhere. */
-.evidence-legend-trigger {
-  position: relative;
-  border: none;
-  background: transparent;
-  padding: 0;
-  font: inherit;
-  cursor: pointer;
-}
-
-.evidence-legend-label {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
-}
-
-.evidence-legend-tooltip {
-  position: fixed;
-  z-index: 3000;
-  visibility: hidden;
-  opacity: 0;
-  transform: translateY(-4px);
-  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  width: min(360px, 80vw);
-  padding: var(--space-md);
-  text-align: left;
-  pointer-events: none;
-}
-
-.evidence-legend-tooltip.evidence-legend-tooltip-visible {
-  visibility: visible;
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.evidence-definition-block + .evidence-definition-block {
-  margin-top: var(--space-md);
-}
-
-.evidence-definition-block strong {
-  display: block;
-  color: var(--text-primary);
-}
-
-.evidence-definition-block p {
-  margin-top: 6px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
 .badge-tier {
   display: inline-block;
   padding: 2px 6px;
@@ -5155,27 +5077,6 @@ details > p {
   padding-bottom: var(--space-sm);
 }
 
-.pathway-resource-legends {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: center;
-  gap: var(--space-md);
-  margin-top: var(--space-lg);
-}
-
-.pathway-resource-legends > .fw-recommended-legend {
-  margin: 0;
-}
-
-.pathway-resource-legends .fw-recommended-swatch {
-  flex-shrink: 0;
-}
-
-.pathway-resource-legends > .evidence-legend-trigger {
-  min-width: 0;
-  text-align: right;
-}
-
 .fw-results-list {
   display: flex;
   flex-direction: column;
@@ -5267,6 +5168,7 @@ details > p {
 
 .fw-recommended-swatch {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 16px;

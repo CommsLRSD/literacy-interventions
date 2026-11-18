@@ -269,8 +269,6 @@ const TRANSLATIONS = {
         wizard_select_placeholder: 'Select...',
         wizard_all_pillars: 'All Pillars',
         wizard_start_over: 'Clear Filters',
-        wizard_evidence_info_label: 'Show evidence and research based definitions',
-        wizard_evidence_info_text: 'Evidence and research based definitions',
         filter_program_label: 'Program',
         filter_language_label: 'Language Program',
         filter_language_french: 'French Immersion',
@@ -288,9 +286,6 @@ const TRANSLATIONS = {
         filter_screener_label: 'Screener',
         filter_screener_none: 'None',
         filter_subtest_label: 'Subtest',
-        filter_evidence_label: 'Evidence Classification',
-        filter_evidence_eb: '* Evidence Based',
-        filter_evidence_rb: '** Research Based',
         filter_search_label: 'Search',
         filter_search_placeholder: 'Search by resource name…',
         toolkit_view_guided: 'Step by step',
@@ -318,7 +313,7 @@ const TRANSLATIONS = {
         fw_choose_pillar_label: 'Literacy Pillar',
         fw_choose_pillars_label: 'Literacy Pillars',
         fw_choose_pillars_none: 'Select literacy pillars',
-        fw_recommended_legend: 'Starred resources are recommended.',
+        fw_recommended_legend: 'Recommended resources',
         fw_choose_pillar_prompt: 'Select at least one literacy pillar to see matching resources.',
         fw_select_multiple_hint: 'Select every resource you plan to use, then continue.',
         fw_selected_count: (n) => n === 1 ? '1 resource selected' : `${n} resources selected`,
@@ -580,12 +575,6 @@ const TRANSLATIONS = {
         tier_complete: 'Tier complete',
 
         // ── Evidence popup ──
-        evidence_eb_title: '* Evidence Based: Most rigorous and trusted',
-        evidence_eb_desc: 'Definition: The program or practice has been tested through high-quality peer reviewed research (often randomized controlled trials or quasi-experimental studies) and has demonstrated statistically significant positive outcomes.',
-        evidence_rb_title: '** Research Based: Less rigorous than evidence-based',
-        evidence_rb_desc: 'Definition: The program is based on sound theories or methods that have been validated by some research, but the program itself may not have been directly studied for evidence of its effectiveness.',
-        evidence_legend_label: '* Evidence Based / ** Research Based',
-        evidence_legend_aria: 'Evidence and research based definitions',
 
         // ── FW results ──
         fw_no_results: (grade, pillars) => `No matching items found for ${[grade, pillars].filter(Boolean).join(' ')}.`,
@@ -860,8 +849,6 @@ const TRANSLATIONS = {
         wizard_select_placeholder: 'Sélectionner...',
         wizard_all_pillars: 'Tous les piliers',
         wizard_start_over: 'Effacer les filtres',
-        wizard_evidence_info_label: 'Afficher les définitions fondées sur des données probantes et la recherche',
-        wizard_evidence_info_text: 'Définitions fondées sur des données probantes et la recherche',
         filter_program_label: 'Programme',
         filter_language_label: 'Programme linguistique',
         filter_language_french: 'Immersion française',
@@ -879,9 +866,6 @@ const TRANSLATIONS = {
         filter_screener_label: 'Outil de dépistage',
         filter_screener_none: 'Aucun',
         filter_subtest_label: 'Sous-test',
-        filter_evidence_label: 'Classification des données probantes',
-        filter_evidence_eb: '* Fondé sur des données probantes',
-        filter_evidence_rb: '** Fondé sur la recherche',
         filter_search_label: 'Rechercher',
         filter_search_placeholder: 'Rechercher par nom de ressource…',
         toolkit_view_guided: 'Étape par étape',
@@ -909,7 +893,7 @@ const TRANSLATIONS = {
         fw_choose_pillar_label: 'Pilier de littératie',
         fw_choose_pillars_label: 'Piliers de littératie',
         fw_choose_pillars_none: 'Sélectionnez des piliers de littératie',
-        fw_recommended_legend: 'Les ressources étoilées sont recommandées.',
+        fw_recommended_legend: 'Ressources recommandées',
         fw_choose_pillar_prompt: 'Sélectionnez au moins un pilier de littératie pour voir les ressources correspondantes.',
         fw_select_multiple_hint: 'Sélectionnez toutes les ressources que vous prévoyez utiliser, puis continuez.',
         fw_selected_count: (n) => n === 1 ? '1 ressource sélectionnée' : `${n} ressources sélectionnées`,
@@ -1171,12 +1155,6 @@ const TRANSLATIONS = {
         tier_complete: 'Palier terminé',
 
         // ── Evidence popup ──
-        evidence_eb_title: '* Fondé sur des données probantes : Le plus rigoureux et fiable',
-        evidence_eb_desc: 'Définition : Le programme ou la pratique a été testé dans le cadre de recherches évaluées par des pairs de haute qualité (souvent des essais contrôlés randomisés ou des études quasi-expérimentales) et a démontré des résultats positifs statistiquement significatifs.',
-        evidence_rb_title: '** Fondé sur la recherche : Moins rigoureux que fondé sur des données probantes',
-        evidence_rb_desc: 'Définition : Le programme est fondé sur des théories ou méthodes solides validées par certaines recherches, mais le programme lui-même n\'a peut-être pas été directement étudié pour des preuves de son efficacité.',
-        evidence_legend_label: '* Fondé sur des données probantes / ** Fondé sur la recherche',
-        evidence_legend_aria: 'Définitions fondées sur des données probantes et la recherche',
 
         // ── FW results ──
         fw_no_results: (grade, pillars) => `Aucun élément correspondant pour ${[grade, pillars].filter(Boolean).join(' ')}.`,
