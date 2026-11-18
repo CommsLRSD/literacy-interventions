@@ -5318,7 +5318,7 @@ function createIntegratedSelectionNode(nodeData) {
                 ${nodeData.description ? `<p>${escapeHtml(nodeData.description)}</p>` : ''}
                 ${infoBoxHTML}
                 ${warningBoxHTML}
-                <div class="fw-wizard">
+                <div class="fw-wizard pathway-resource-selection">
                     <div class="pillar-help-heading">
                         <span id="fw-pillar-label" class="fw-select-label">${escapeHtml(t('fw_choose_pillars_label'))}</span>
                         ${getPillarHelpTriggerHtml()}

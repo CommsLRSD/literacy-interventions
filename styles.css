@@ -13184,6 +13184,21 @@ details.pathway-session[open] { box-shadow: none; }
   margin: 0.75rem 0 var(--space-xs);
 }
 
+.pathway-resource-selection {
+  margin-block: var(--space-md);
+  padding: 0.75rem 14px;
+  border-block: 1px solid color-mix(in srgb, var(--primary-light-text) 25%, var(--border));
+  background: color-mix(in srgb, var(--primary-light-text) 12%, var(--bg));
+}
+
+.visual-flowchart-active-host .pathway-resource-selection {
+  margin-inline: -14px;
+}
+
+.visual-flowchart-active-host .step-content:has(> .pathway-resource-selection) {
+  padding-inline: 0;
+}
+
 .pathway-card-actions {
   display: flex;
   flex-direction: column;
