@@ -509,14 +509,16 @@ test('the approach chooser and individual outcomes show only their primary messa
 function renderVisualPathway(run) {
     run(`
         globalThis.testStage = { style: {}, innerHTML: '', querySelector: () => null };
-        document.getElementById = id => id === 'visual-flowchart-stage' ? testStage
-            : id === 'visual-flowchart-viewport' ? {} : null;
-        requestAnimationFrame = () => {};
-        wireVisualFlowchartPanZoom = () => {};
-        updateVisualFlowchartTierBar = () => {};
-        fitVisualFlowchartCardToViewportHeight = () => {};
-        autoFitVisualFlowchartActiveCard = () => {};
-        refreshVisualFlowchartModal();
+        {
+            const lookup = document.getElementById;
+            document.getElementById = id => id === 'visual-flowchart-stage' ? testStage
+                : id === 'visual-flowchart-viewport' ? {} : lookup(id);
+            requestAnimationFrame = () => {};
+            wireVisualFlowchartPanZoom = () => {};
+            updateVisualFlowchartTierBar = () => {};
+            refreshVisualFlowchartModal();
+            document.getElementById = lookup;
+        }
     `);
     return run('testStage.innerHTML');
 }
@@ -573,6 +575,43 @@ test('tier changes, expanded history and review cards keep one row and independe
     }
 });
 
+test('fitting pins the row high and keeps a tall active card visible when the viewport shrinks', () => {
+    const { run } = setupIndividualPathway();
+    const { initialTop, resizedCard, resizedScale } = run(`
+        (() => {
+            const activeCard = {
+                offsetLeft: 1200, offsetTop: 90, offsetWidth: 360, offsetHeight: 450,
+                classList: { contains: () => false }
+            };
+            const firstCard = { offsetLeft: 90, offsetTop: 90, offsetWidth: 280, offsetHeight: 210 };
+            const stage = {
+                style: {},
+                querySelector: selector => selector === '.visual-flowchart-card-current' ? activeCard : null,
+                querySelectorAll: () => [firstCard, activeCard]
+            };
+            const viewport = { clientWidth: 1700, clientHeight: 900 };
+            const state = appState.visualFlowchartModal = { scale: 1 };
+            document.getElementById = id => id === 'visual-flowchart-stage' ? stage
+                : id === 'visual-flowchart-viewport' ? viewport : null;
+            fitRenderedVisualFlowchart(stage, viewport);
+            const initialTop = state.y + activeCard.offsetTop * state.scale;
+            viewport.clientWidth = 640;
+            viewport.clientHeight = 255;
+            fitRenderedVisualFlowchart(stage, viewport);
+            return { initialTop, resizedScale: state.scale, resizedCard: {
+                left: state.x + activeCard.offsetLeft * state.scale,
+                right: state.x + (activeCard.offsetLeft + activeCard.offsetWidth) * state.scale,
+                top: state.y + activeCard.offsetTop * state.scale,
+                bottom: state.y + (activeCard.offsetTop + activeCard.offsetHeight) * state.scale
+            } };
+        })()
+    `);
+    assert.ok(initialTop >= 90 && initialTop <= 145);
+    assert.ok(resizedScale < 1);
+    assert.ok(resizedCard.left >= 0 && resizedCard.right <= 640);
+    assert.ok(resizedCard.top >= 0 && resizedCard.bottom <= 255);
+});
+
 test('returning to whole class collapses the reviewable individual detour and restores direct-route numbering', () => {
     for (const language of ['en', 'fr']) {
         for (const leaf of individualLeaves) {
@@ -590,16 +629,18 @@ test('returning to whole class collapses the reviewable individual detour and re
             assert.equal(collapsed.entries.at(-1).node.type, 'endpoint');
             assert.equal(collapsed.entries[0].tierId, 'tier1');
 
-            run(`appState.visualFlowchartModal = { expandedTiers: new Set(), x: 10, y: 20, scale: 1 };
-                refreshVisualFlowchartModal = () => {};
-                applyVisualFlowchartTransform = () => {};
-                toggleVisualFlowchartTier('tier1-individual');`);
-            const expanded = run('buildVisualFlowchartDisplayItems(getVisualFlowchartEntries()).filter(item => item.expandedTierId === "tier1-individual")');
-            assert.equal(expanded.length, collapsed.entries.length);
-            assert.equal(expanded.at(-1).endsExpandedTier, true);
-            assert.equal(expanded[0].entry.node.id, 'tier1-student-comprehension');
+            run('appState.visualFlowchartModal = { expandedTiers: new Set() };');
+            const closedHtml = renderVisualPathway(run);
+            assert.match(closedHtml, /id="visual-flowchart-individual-review"[^>]+hidden/);
+            run('appState.visualFlowchartModal.expandedTiers.add("tier1-individual");');
+            const openHtml = renderVisualPathway(run);
+            assert.doesNotMatch(openHtml, /id="visual-flowchart-individual-review"[^>]+hidden/);
+            const coordinates = html => html.match(/style="left:\d+px;top:\d+px;width:\d+px"/g);
+            assert.deepEqual(coordinates(openHtml), coordinates(closedHtml));
+            const panel = openHtml.slice(openHtml.indexOf('id="visual-flowchart-individual-review"'));
+            assert.match(panel, new RegExp(run('t("tier1_student_comprehension")')));
             assert.equal(run('getVisualFlowchartEntries().at(-1).number'), 3);
-            run("toggleVisualFlowchartTier('tier1-individual')");
+            run('appState.visualFlowchartModal.expandedTiers.clear();');
             assert.equal(run('buildVisualFlowchartDisplayItems(getVisualFlowchartEntries()).filter(item => item.type === "collapsed").length'), 1);
             run(`appState.visualFlowchart = validateTierPathway(serializeTierPathway(appState.visualFlowchart));
                 appState.visualFlowchart.currentNodeId = appState.visualFlowchart.selectedPath.at(-1).nodeId;`);

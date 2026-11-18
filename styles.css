@@ -9528,6 +9528,54 @@ body.step-review-modal-open { overflow: hidden; }
     opacity: 1;
   }
 
+  .visual-flowchart-individual-group {
+    position: absolute;
+  }
+
+  .visual-flowchart-individual-group > .visual-flowchart-card {
+    position: relative;
+    width: 100%;
+  }
+
+  .visual-flowchart-individual-review {
+    position: absolute;
+    top: 100%;
+    left: -12px;
+    right: -12px;
+    z-index: 1;
+    display: grid;
+    gap: 12px;
+    max-height: var(--individual-review-height, 400px);
+    padding: 12px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+
+  .visual-flowchart-individual-review > .visual-flowchart-card {
+    position: relative;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .visual-flowchart-individual-review[hidden] {
+    display: none;
+  }
+
+  .visual-flowchart-individual-hint {
+    display: grid;
+  }
+
+  .visual-flowchart-individual-hint > span {
+    grid-area: 1 / 1;
+  }
+
+  .visual-flowchart-individual-group [aria-expanded="false"] .visual-flowchart-individual-collapse,
+  .visual-flowchart-individual-group [aria-expanded="true"] .visual-flowchart-individual-expand {
+    visibility: hidden;
+  }
+
   /* The last card labels the same collapse action available on every tier card. */
   .visual-flowchart-collapse-tier {
     display: inline-flex;
@@ -9724,8 +9772,7 @@ body.step-review-modal-open { overflow: hidden; }
     transition: none;
   }
 
-  /* Desktop: the header and tier bar sit in the dialog grid as normal; the
-     drawer wrapper, its menu button and scrim only take effect on mobile. */
+  /* When controls are tucked away, the canvas takes both header rows. */
   .visual-flowchart-chrome {
     display: contents;
   }
@@ -9735,19 +9782,16 @@ body.step-review-modal-open { overflow: hidden; }
     display: none;
   }
 
-  /* Mobile: the whole screen is the pathway canvas. The header and tier bar
-     move into a slide-out drawer opened from a small floating menu button. */
-  .visual-flowchart-mobile .visual-flowchart-dialog {
-    display: block;
-    position: relative;
+  .visual-flowchart-compact-controls .visual-flowchart-controls-toggle {
+    display: none;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-viewport {
+  .visual-flowchart-overlay-controls .visual-flowchart-viewport {
     position: absolute;
     inset: 0;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-drawer-toggle {
+  .visual-flowchart-overlay-controls .visual-flowchart-drawer-toggle {
     position: absolute;
     top: 8px;
     left: 8px;
@@ -9766,11 +9810,11 @@ body.step-review-modal-open { overflow: hidden; }
     cursor: pointer;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-drawer-toggle .material-symbols-rounded {
+  .visual-flowchart-overlay-controls .visual-flowchart-drawer-toggle .material-symbols-rounded {
     font-size: 22px;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-drawer-scrim {
+  .visual-flowchart-overlay-controls .visual-flowchart-drawer-scrim {
     position: absolute;
     inset: 0;
     z-index: 7;
@@ -9781,12 +9825,12 @@ body.step-review-modal-open { overflow: hidden; }
     transition: opacity 0.18s ease;
   }
 
-  .visual-flowchart-mobile.visual-flowchart-drawer-open .visual-flowchart-drawer-scrim {
+  .visual-flowchart-overlay-controls.visual-flowchart-drawer-open .visual-flowchart-drawer-scrim {
     opacity: 1;
     pointer-events: auto;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-chrome {
+  .visual-flowchart-overlay-controls .visual-flowchart-chrome {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -9804,13 +9848,13 @@ body.step-review-modal-open { overflow: hidden; }
     transition: transform 0.2s ease, visibility 0s linear 0.2s;
   }
 
-  .visual-flowchart-mobile.visual-flowchart-drawer-open .visual-flowchart-chrome {
+  .visual-flowchart-overlay-controls.visual-flowchart-drawer-open .visual-flowchart-chrome {
     transform: none;
     visibility: visible;
     transition: transform 0.2s ease;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-header {
+  .visual-flowchart-overlay-controls .visual-flowchart-header {
     position: relative;
     flex-direction: column;
     flex-wrap: nowrap;
@@ -9819,35 +9863,31 @@ body.step-review-modal-open { overflow: hidden; }
     padding: 14px 16px;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-header-text {
+  .visual-flowchart-overlay-controls .visual-flowchart-header-text {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
-    padding-right: 84px;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-header h2 {
+  .visual-flowchart-overlay-controls .visual-flowchart-header h2 {
     font-size: 1.05rem;
     white-space: normal;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-header p {
+  .visual-flowchart-overlay-controls .visual-flowchart-header p {
     white-space: normal;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-header-controls {
+  .visual-flowchart-overlay-controls .visual-flowchart-header-controls {
     justify-content: flex-start;
     min-width: 0;
   }
 
-  /* Full screen + close stay in the drawer's top-right corner. */
-  .visual-flowchart-mobile .visual-flowchart-header-actions {
-    position: absolute;
-    top: 12px;
-    right: 12px;
+  .visual-flowchart-overlay-controls .visual-flowchart-header-actions {
+    flex-wrap: wrap;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-tier-bar {
+  .visual-flowchart-overlay-controls .visual-flowchart-tier-bar {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
@@ -9855,16 +9895,16 @@ body.step-review-modal-open { overflow: hidden; }
     border-bottom: 0;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-tier-bar-info {
+  .visual-flowchart-overlay-controls .visual-flowchart-tier-bar-info {
     flex-wrap: wrap;
     gap: 8px 10px;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-tier-tabs {
+  .visual-flowchart-overlay-controls .visual-flowchart-tier-tabs {
     margin-left: 0;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-toolbar {
+  .visual-flowchart-overlay-controls .visual-flowchart-toolbar {
     margin-left: 0;
     padding-top: 12px;
     padding-left: 0;
@@ -9873,11 +9913,11 @@ body.step-review-modal-open { overflow: hidden; }
   }
 
   /* In the drawer the guidance opens inline, below its button. */
-  .visual-flowchart-mobile .tier1-guidance {
+  .visual-flowchart-overlay-controls .tier1-guidance {
     flex-basis: 100%;
   }
 
-  .visual-flowchart-mobile .tier1-guidance-popup.tier1-success-sidebar {
+  .visual-flowchart-overlay-controls .tier1-guidance-popup.tier1-success-sidebar {
     position: static;
     width: auto;
     max-height: none;
