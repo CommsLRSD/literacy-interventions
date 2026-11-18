@@ -15,10 +15,10 @@ const PRECACHE_URLS = [
     './',
     'index.html',
     'theme.js?v=dark-mode-1',
-    'styles.css?v=pathway-alignment-1',
+    'styles.css?v=resource-styling-1',
     'app.js?v=pathway-alignment-1',
     'transfer.js?v=settings-screen-1',
-    'translations.js?v=pathway-card-footer-1',
+    'translations.js?v=resource-styling-1',
     'manifest.webmanifest'
 ];
 
