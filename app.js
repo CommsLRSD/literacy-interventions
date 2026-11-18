@@ -5330,8 +5330,10 @@ function createIntegratedSelectionNode(nodeData) {
                         </details>
                     </div>`}
                     <div id="fw-results" class="fw-results"></div>
-                    <p class="fw-recommended-legend"><span class="fw-recommended-swatch" aria-hidden="true">★</span>${escapeHtml(t('fw_recommended_legend'))}</p>
-                    ${getEvidenceLegendTriggerHtml()}
+                    <div class="pathway-resource-legends">
+                        <p class="fw-recommended-legend"><span class="fw-recommended-swatch" aria-hidden="true">★</span>${escapeHtml(t('fw_recommended_legend'))}</p>
+                        ${getEvidenceLegendTriggerHtml()}
+                    </div>
                     ${nodeData.options === 'interventions' ? buildProgressMonitoringLinksHtml(tierId) : ''}
                 </div>
             </div>

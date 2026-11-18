@@ -4674,8 +4674,8 @@ details > p {
               background var(--duration) var(--ease);
 }
 
-.flowchart-step[data-node-id="tier2-principles"] .checklist-line {
-  width: fit-content;
+.flowchart-step[data-node-id="tier2-principles"] .checklist-lines {
+  width: max-content;
   max-width: 100%;
 }
 
@@ -5169,9 +5169,24 @@ details > p {
   padding-bottom: var(--space-sm);
 }
 
-.step-content-resource-picker > .pathway-resource-selection > .evidence-legend-trigger {
-  display: block;
-  margin: var(--space-sm) 0 0 auto;
+.pathway-resource-legends {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+
+.pathway-resource-legends > .fw-recommended-legend {
+  margin: 0;
+}
+
+.pathway-resource-legends .fw-recommended-swatch {
+  flex-shrink: 0;
+}
+
+.pathway-resource-legends > .evidence-legend-trigger {
+  min-width: 0;
   text-align: right;
 }
 
