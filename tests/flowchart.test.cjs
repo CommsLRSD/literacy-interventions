@@ -545,6 +545,27 @@ test('individual decisions and outcomes remain on a single row', () => {
     }
 });
 
+test('classic layout restores outcome-based row shifts while keeping classic straight-route exceptions', () => {
+    const { run } = setupIndividualPathway();
+    const { single, classic } = JSON.parse(run(`JSON.stringify((() => {
+        const items = [
+            { type: 'entry', variant: 'effective', entry: { node: { id: 'tier1-effectiveness' } } },
+            { type: 'entry', variant: 'ineffective', entry: { node: { id: 'tier2-progress' } } },
+            { type: 'entry', variant: 'effective', entry: { node: { approach: 'individual' } } },
+            { type: 'entry', variant: 'ineffective', entry: { node: { id: 'tier1-percentage' }, choice: { id: 'less-20' } } },
+            { type: 'collapsed', variant: 'ineffective' },
+            { type: 'tier-review', variant: 'step1' }
+        ];
+        return {
+            single: layoutVisualFlowchartCards(items, () => 220),
+            classic: layoutVisualFlowchartCards(items, () => 220, true)
+        };
+    })())`));
+    assert.deepEqual(classic.positions.map(({ y }) => y), [270, 90, 270, 270, 270, 270]);
+    assert.deepEqual(classic.positions.map(({ x }) => x), single.positions.map(({ x }) => x));
+    assert.ok(classic.stageHeight > single.stageHeight);
+});
+
 test('tier changes, expanded history and review cards keep one row and independent card variants', () => {
     const { run } = setupIndividualPathway();
     run(`

@@ -4251,6 +4251,44 @@ function isVisualFlowchartFitHeightEntry(entry) {
     return !!entry && entry.isTierFirstStep && entry.tierId !== 'tier1';
 }
 
+// Set to true to restore the classic branching rows without changing card styling or controls.
+const VISUAL_FLOWCHART_CLASSIC_ROWS = false;
+
+function getClassicVisualFlowchartRowShift(item) {
+    if (item.type === 'collapsed') return 0;
+    const entry = item.entry;
+    if (entry?.node.approach === 'individual') return 0;
+    if (entry?.node.id === 'tier1-percentage' && entry.choice?.id === 'less-20') return 0;
+    if (item.variant === 'effective') return -1;
+    if (item.variant === 'ineffective') return 1;
+    return 0;
+}
+
+function layoutVisualFlowchartCards(items, getCardWidth, classicRows = VISUAL_FLOWCHART_CLASSIC_ROWS) {
+    const columnGap = 50;
+    const rowGap = 180;
+    const stagePadding = 90;
+    let cursorX = stagePadding;
+    let row = 0;
+    let minRow = 0;
+    let maxRow = 0;
+    const positions = items.map((item, index) => {
+        if (classicRows && index > 0) row += getClassicVisualFlowchartRowShift(items[index - 1]);
+        minRow = Math.min(minRow, row);
+        maxRow = Math.max(maxRow, row);
+        const width = getCardWidth(item);
+        const position = { x: cursorX, y: stagePadding + row * rowGap, width };
+        cursorX += width + columnGap;
+        return position;
+    });
+    for (const position of positions) position.y -= minRow * rowGap;
+    return {
+        positions,
+        stageWidth: Math.max(900, cursorX - columnGap + stagePadding),
+        stageHeight: Math.max(560, stagePadding + (maxRow - minRow) * rowGap + 460)
+    };
+}
+
 function refreshVisualFlowchartModal() {
     const stage = document.getElementById('visual-flowchart-stage');
     const viewport = document.getElementById('visual-flowchart-viewport');
@@ -4304,17 +4342,8 @@ function refreshVisualFlowchartModal() {
         }
         return item.type === 'collapsed' ? 220 : cardWidth;
     };
-    const columnGap = 50;
-    let cursorX = 90;
-    const positions = items.map(item => {
-        const width = getItemCardWidth(item);
-        const position = { x: cursorX, y: 90, width };
-        cursorX += width + columnGap;
-        return position;
-    });
+    const { positions, stageWidth, stageHeight } = layoutVisualFlowchartCards(items, getItemCardWidth);
     const cardMidY = 90;
-    const stageWidth = Math.max(900, cursorX - columnGap + 90);
-    const stageHeight = 560;
 
     const connectorHtml = items.slice(1).map((item, index) => {
         const from = positions[index];
