@@ -9602,8 +9602,8 @@ body.step-review-modal-open { overflow: hidden; }
     justify-self: start;
     align-self: start;
     color: var(--step-text);
-    font-size: 2.75rem;
-    font-weight: 900;
+    font-size: 1.65rem;
+    font-weight: 800;
     line-height: 1;
     font-variant-numeric: tabular-nums;
   }
@@ -9636,6 +9636,18 @@ body.step-review-modal-open { overflow: hidden; }
     gap: 10px;
   }
 
+  .visual-flowchart-card-header:has(~ .visual-flowchart-active-host, + .visual-flowchart-card-copy > *) {
+    margin: -14px -14px 0;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-muted);
+  }
+
+  .visual-flowchart-card-header:has(~ .visual-flowchart-active-host, + .visual-flowchart-card-copy > *) strong {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+  }
+
   .visual-flowchart-card-header .visual-flowchart-card-icon {
     width: 28px;
     height: 28px;
@@ -9649,16 +9661,25 @@ body.step-review-modal-open { overflow: hidden; }
     gap: 3px;
   }
 
-  .visual-flowchart-card-completed {
+  .visual-flowchart-card:has(> .visual-flowchart-card-header) {
     align-content: start;
   }
 
   .visual-flowchart-card-header + .visual-flowchart-card-copy {
     grid-column: 1 / -1;
+    gap: 8px;
+  }
+
+  .visual-flowchart-card-header + .visual-flowchart-card-copy:not(:has(> *)) {
+    display: none;
+  }
+
+  .visual-flowchart-card-header + .visual-flowchart-card-copy:has(> *) {
+    padding-top: 8px;
   }
 
   .visual-flowchart-card-meta {
-    color: var(--text-light);
+    color: var(--text-secondary);
     font-size: 0.64rem;
     font-weight: 900;
     letter-spacing: 0.08em;
@@ -9679,6 +9700,13 @@ body.step-review-modal-open { overflow: hidden; }
     line-height: 1.35;
   }
 
+  .visual-flowchart-card-header + .visual-flowchart-card-copy > .visual-flowchart-card-answer {
+    color: var(--text);
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+
   .visual-flowchart-individual-heading {
     margin: 0.5rem 0;
     color: var(--text);
@@ -9689,8 +9717,7 @@ body.step-review-modal-open { overflow: hidden; }
   .visual-flowchart-active-host {
     grid-column: 1 / -1;
     min-width: 0;
-    margin: 2px -8px -8px;
-    border-top: 1px solid var(--border);
+    margin: 0 -8px -8px;
   }
 
   .visual-flowchart-active-host .flowchart-step {
@@ -9708,7 +9735,7 @@ body.step-review-modal-open { overflow: hidden; }
   }
 
   .visual-flowchart-active-host .flowchart-step[data-node-id="tier1-percentage"] {
-    padding-top: 8px;
+    padding-top: 12px;
   }
 
   .flowchart-step[data-node-id="tier1-percentage"] .step-content {
