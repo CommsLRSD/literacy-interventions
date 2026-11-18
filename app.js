@@ -1084,6 +1084,7 @@ window.cancelProgramPromptLanguage = cancelProgramPromptLanguage;
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Literacy Interventions - Initializing...');
     restoreProgramPreference();
+    initializeVisualFlowchartLayoutPreference();
 
     // Apply initial translations (English by default) and sync controls
     applyTranslations();
@@ -3722,13 +3723,10 @@ function isVisualFlowchartMobile() {
     return window.matchMedia(VISUAL_FLOWCHART_MOBILE_QUERY).matches;
 }
 
-// The visual pathway is desktop-only and the Alt view mobile-only, so keep the
-// flowchart consistent when the window crosses the mobile breakpoint.
+// Keep an open pathway when a desktop window gets narrow. Only default to the
+// alternate view when the pathway was not already open.
 window.matchMedia(VISUAL_FLOWCHART_MOBILE_QUERY).addEventListener('change', event => {
-    if (event.matches) {
-        if (appState.visualFlowchartModal) closeVisualFlowchartModal({ immediate: true });
-        return;
-    }
+    if (event.matches || appState.visualFlowchartModal) return;
     if (appState.visualFlowchart?.layoutMode === 'standard') setJourneyLayoutMode('horizontal');
     openDefaultVisualFlowchart();
 });
@@ -3756,26 +3754,38 @@ function updateVisualFlowchartMobileLayout() {
     modal.classList.toggle('visual-flowchart-rotated', rotate);
     modal.style.setProperty('--vf-screen-w', `${window.innerWidth}px`);
     modal.style.setProperty('--vf-screen-h', `${window.innerHeight}px`);
-    const changed = state.rotated !== rotate || state.mobile !== isMobile;
     state.rotated = rotate;
     state.mobile = isMobile;
-    if (!isMobile) state.drawerOpen = false;
+    state.compactControls = isMobile || window.innerHeight < 560;
     syncVisualFlowchartDrawer();
-    return changed;
 }
 
-// On mobile the whole screen is the pathway canvas: the title, view switcher,
+// With the controls tucked away, the whole screen is the pathway canvas: the title, view switcher,
 // tier info/toggle, Tier 1 guidance and zoom controls live in a slide-out
 // drawer opened from a small floating menu button.
 function syncVisualFlowchartDrawer() {
     const modal = document.getElementById('visual-flowchart-modal');
     const state = appState.visualFlowchartModal;
     if (!modal || !state) return;
-    const open = !!(state.mobile && state.drawerOpen);
+    const overlay = state.compactControls || state.controlsCollapsed;
+    const open = !!(overlay && state.drawerOpen);
+    modal.classList.toggle('visual-flowchart-overlay-controls', !!overlay);
+    modal.classList.toggle('visual-flowchart-compact-controls', state.compactControls);
     modal.classList.toggle('visual-flowchart-drawer-open', open);
     const chrome = modal.querySelector('.visual-flowchart-chrome');
-    if (chrome) chrome.inert = !!state.mobile && !open;
+    if (chrome) chrome.inert = !!overlay && !open;
     modal.querySelector('.visual-flowchart-drawer-toggle')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function toggleVisualFlowchartControls() {
+    const state = appState.visualFlowchartModal;
+    const modal = document.getElementById('visual-flowchart-modal');
+    if (!state || !modal) return;
+    state.controlsCollapsed = !state.controlsCollapsed;
+    state.drawerOpen = false;
+    if (state.guidanceOpen) setTier1GuidanceOpen('visual-flowchart', false);
+    syncVisualFlowchartDrawer();
+    modal.querySelector(state.controlsCollapsed ? '.visual-flowchart-drawer-toggle' : '.visual-flowchart-controls-toggle')?.focus({ preventScroll: true });
 }
 
 function setVisualFlowchartDrawerOpen(open, options = {}) {
@@ -3852,6 +3862,10 @@ function openVisualFlowchartModal() {
                 </div>
                 ${renderVisualFlowchartHeaderControlsHtml()}
                 <div class="visual-flowchart-header-actions">
+                    <button class="visual-flowchart-fullscreen-btn visual-flowchart-controls-toggle" type="button" onclick="toggleVisualFlowchartControls()"
+                            aria-label="${escapeHtml(t('fc_visual_toggle_controls'))}" title="${escapeHtml(t('fc_visual_toggle_controls'))}">
+                        <span class="material-symbols-rounded" aria-hidden="true" translate="no">toolbar</span>
+                    </button>
                     ${renderSessionCloseButtonHtml()}
                     <button class="visual-flowchart-fullscreen-btn" id="visual-flowchart-fullscreen-btn" type="button" onclick="toggleVisualFlowchartFullscreen()" aria-label="${escapeHtml(t('fc_visual_fullscreen'))}" title="${escapeHtml(t('fc_visual_fullscreen'))}">
                         <span class="material-symbols-rounded" aria-hidden="true" translate="no">fullscreen</span>
@@ -3932,14 +3946,17 @@ function openVisualFlowchartModal() {
     };
     appState.visualFlowchartModal.keyHandler = keyHandler;
     document.addEventListener('keydown', keyHandler);
-    // Switch between the desktop and mobile/landscape layouts (and re-fit the
-    // canvas) as the window is resized or the phone is rotated.
+    const refit = () => fitRenderedVisualFlowchart(modal.querySelector('#visual-flowchart-stage'), viewport);
     const resizeHandler = () => {
-        if (updateVisualFlowchartMobileLayout()) refreshVisualFlowchartModal();
+        updateVisualFlowchartMobileLayout();
+        refit();
     };
     appState.visualFlowchartModal.resizeHandler = resizeHandler;
     window.addEventListener('resize', resizeHandler);
     window.addEventListener('orientationchange', resizeHandler);
+    const viewportObserver = new ResizeObserver(refit);
+    viewportObserver.observe(viewport);
+    appState.visualFlowchartModal.viewportObserver = viewportObserver;
     const fullscreenHandler = () => updateVisualFlowchartFullscreenBtn();
     appState.visualFlowchartModal.fullscreenHandler = fullscreenHandler;
     document.addEventListener('fullscreenchange', fullscreenHandler);
@@ -3951,7 +3968,7 @@ function openVisualFlowchartModal() {
         // Focus that was on the (now covered) flowchart page moves into the pathway.
         const active = document.activeElement;
         if (!active || active === document.body || active.closest('#flowchart-section')) {
-            if (appState.visualFlowchartModal?.mobile) modal.querySelector('.visual-flowchart-drawer-toggle')?.focus();
+            if (appState.visualFlowchartModal?.compactControls) modal.querySelector('.visual-flowchart-drawer-toggle')?.focus();
             else focusActivePathwayStep();
         }
     });
@@ -3983,6 +4000,7 @@ function closeVisualFlowchartModal(options = {}) {
     modal.querySelector('#visual-flowchart-stage')?.removeAttribute('id');
     modal.querySelector('#visual-flowchart-viewport')?.removeAttribute('id');
     if (modalState?.keyHandler) document.removeEventListener('keydown', modalState.keyHandler);
+    modalState?.viewportObserver?.disconnect();
     if (modalState?.resizeHandler) {
         window.removeEventListener('resize', modalState.resizeHandler);
         window.removeEventListener('orientationchange', modalState.resizeHandler);
@@ -4140,6 +4158,15 @@ function openScoresFromVisualFlowchart() {
 function toggleVisualFlowchartTier(tierId) {
     const state = appState.visualFlowchartModal;
     if (!state) return;
+    if (tierId === 'tier1-individual') {
+        const panel = document.getElementById('visual-flowchart-individual-review');
+        if (!panel) return;
+        panel.hidden = !panel.hidden;
+        if (panel.hidden) state.expandedTiers.delete(tierId);
+        else state.expandedTiers.add(tierId);
+        document.getElementById('visual-flowchart-individual-toggle')?.setAttribute('aria-expanded', String(!panel.hidden));
+        return;
+    }
     state.tierViewMemory = state.tierViewMemory || {};
     let restore = null;
     if (state.expandedTiers.has(tierId)) {
@@ -4185,17 +4212,10 @@ function buildVisualFlowchartDisplayItems(entries) {
                 i += 1;
             }
             const groupId = 'tier1-individual';
-            if (expandedTiers.has(groupId)) {
-                group.forEach((individualEntry, index) => items.push({
-                    type: 'entry', entry: individualEntry, variant: individualEntry.variant,
-                    expandedTierId: groupId, endsExpandedTier: index === group.length - 1
-                }));
-            } else {
-                items.push({
-                    type: 'collapsed', tierId: groupId, tierLabel: t('tier1_individual'),
-                    entries: group, variant: 'step1'
-                });
-            }
+            items.push({
+                type: 'collapsed', tierId: groupId, tierLabel: t('tier1_individual'),
+                entries: group, variant: 'step1', expanded: expandedTiers.has(groupId)
+            });
         } else {
             const expandedTierId = entry.tierId !== currentTierId && expandedTiers.has(entry.tierId) ? entry.tierId : null;
             items.push({ type: 'entry', entry, variant: entry.variant, expandedTierId,
@@ -4232,17 +4252,68 @@ function isVisualFlowchartFitHeightEntry(entry) {
     return !!entry && entry.isTierFirstStep && entry.tierId !== 'tier1';
 }
 
-function getVisualFlowchartRouteDirection(item) {
-    if (!item) return 'straight';
-    if (item.type === 'collapsed') return 'straight';
-    if (item.type === 'entry') {
-        const entry = item.entry;
-        if (entry?.node?.approach === 'individual') return 'straight';
-        if (entry?.node?.id === 'tier1-percentage' && entry.choice?.id === 'less-20') return 'straight';
+const VISUAL_FLOWCHART_LAYOUT_KEY = `${STORAGE_KEY_PREFIX}-visual-flowchart-layout`;
+let visualFlowchartLayout = 'single';
+
+function initializeVisualFlowchartLayoutPreference() {
+    const select = document.getElementById('settings-visual-flowchart-layout');
+    const status = document.getElementById('settings-visual-flowchart-layout-status');
+    if (!select || !status) return;
+
+    try {
+        visualFlowchartLayout = localStorage.getItem(VISUAL_FLOWCHART_LAYOUT_KEY) === 'classic' ? 'classic' : 'single';
+    } catch (error) {
+        console.warn('Unable to read the saved visual pathway layout.', error);
+        status.textContent = t('settings_pathway_layout_storage_error');
     }
-    if (item.variant === 'effective') return 'up';
-    if (item.variant === 'ineffective') return 'down';
-    return 'straight';
+
+    select.value = visualFlowchartLayout;
+    select.addEventListener('change', () => {
+        visualFlowchartLayout = select.value === 'classic' ? 'classic' : 'single';
+        try {
+            localStorage.setItem(VISUAL_FLOWCHART_LAYOUT_KEY, visualFlowchartLayout);
+            status.textContent = '';
+        } catch (error) {
+            console.warn('Unable to save the visual pathway layout.', error);
+            status.textContent = t('settings_pathway_layout_storage_error');
+        }
+        if (appState.visualFlowchartModal) refreshVisualFlowchartModal();
+    });
+}
+
+function getClassicVisualFlowchartRowShift(item) {
+    if (item.type === 'collapsed') return 0;
+    const entry = item.entry;
+    if (entry?.node.approach === 'individual') return 0;
+    if (entry?.node.id === 'tier1-percentage' && entry.choice?.id === 'less-20') return 0;
+    if (item.variant === 'effective') return -1;
+    if (item.variant === 'ineffective') return 1;
+    return 0;
+}
+
+function layoutVisualFlowchartCards(items, getCardWidth, classicRows = visualFlowchartLayout === 'classic') {
+    const columnGap = 50;
+    const rowGap = 180;
+    const stagePadding = 90;
+    let cursorX = stagePadding;
+    let row = 0;
+    let minRow = 0;
+    let maxRow = 0;
+    const positions = items.map((item, index) => {
+        if (classicRows && index > 0) row += getClassicVisualFlowchartRowShift(items[index - 1]);
+        minRow = Math.min(minRow, row);
+        maxRow = Math.max(maxRow, row);
+        const width = getCardWidth(item);
+        const position = { x: cursorX, y: stagePadding + row * rowGap, width };
+        cursorX += width + columnGap;
+        return position;
+    });
+    for (const position of positions) position.y -= minRow * rowGap;
+    return {
+        positions,
+        stageWidth: Math.max(900, cursorX - columnGap + stagePadding),
+        stageHeight: Math.max(560, stagePadding + (maxRow - minRow) * rowGap + 460)
+    };
 }
 
 function refreshVisualFlowchartModal() {
@@ -4298,29 +4369,8 @@ function refreshVisualFlowchartModal() {
         }
         return item.type === 'collapsed' ? 220 : cardWidth;
     };
-    const columnGap = 50;
-    const rowGap = 180;
-    let routeRow = 0;
-    let cursorX = 90;
-    const positions = items.map((item, index) => {
-        if (index > 0) {
-            const priorDirection = getVisualFlowchartRouteDirection(items[index - 1]);
-            if (priorDirection === 'up') routeRow -= 1;
-            if (priorDirection === 'down') routeRow += 1;
-        }
-        const width = getItemCardWidth(item);
-        const position = { x: cursorX, routeRow, width };
-        cursorX += width + columnGap;
-        return position;
-    });
-    const rows = positions.map(position => position.routeRow);
-    const minRow = Math.min(0, ...rows);
-    const maxRow = Math.max(0, ...rows);
+    const { positions, stageWidth, stageHeight } = layoutVisualFlowchartCards(items, getItemCardWidth);
     const cardMidY = 90;
-    const topPadding = cardMidY - minRow * rowGap;
-    positions.forEach(position => { position.y = topPadding + position.routeRow * rowGap; });
-    const stageWidth = Math.max(900, cursorX - columnGap + 90);
-    const stageHeight = Math.max(560, topPadding + maxRow * rowGap + 460);
 
     const connectorHtml = items.slice(1).map((item, index) => {
         const from = positions[index];
@@ -4334,13 +4384,14 @@ function refreshVisualFlowchartModal() {
         return `<path class="visual-flowchart-connector visual-flowchart-connector-${escapeAttr(variant)}" d="M ${startX} ${startY} C ${startX + bend} ${startY}, ${endX - bend} ${endY}, ${endX} ${endY}" marker-end="url(#visual-arrow-${escapeAttr(variant)})"/>`;
     }).join('');
 
-    const cardsHtml = items.map((item, index) => {
-        const position = positions[index];
+    const renderCard = (item, position) => {
+        const positionStyle = position ? `style="left:${position.x}px;top:${position.y}px;width:${position.width}px"` : '';
         if (item.type === 'tier-review') {
             const targetNum = String(item.targetTierId).replace(/\D/g, '');
             const number = (entries.filter(entry => entry.tierId === appState.visualFlowchart.tierId).at(-1)?.number || 0) + 1;
             return `<div class="visual-flowchart-card visual-flowchart-card-tier-review visual-flowchart-card-current"
-                        style="left:${position.x}px;top:${position.y}px;width:${position.width}px" role="group" aria-label="${escapeHtml(t('fc_visual_tier_review_label'))}">
+                        data-tier="${escapeAttr(appState.visualFlowchart.tierId)}"
+                        ${positionStyle} role="group" aria-label="${escapeHtml(t('fc_visual_tier_review_label'))}">
                     <span class="visual-flowchart-card-header">
                         <span class="visual-flowchart-step-number">${number}</span>
                         <span class="visual-flowchart-card-icon"><span class="material-symbols-rounded" aria-hidden="true" translate="no">fact_check</span></span>
@@ -4366,16 +4417,31 @@ function refreshVisualFlowchartModal() {
                 : typeof t('fc_visual_tier_collapsed') === 'function'
                 ? t('fc_visual_tier_collapsed')(tierNum, item.entries.length)
                 : `${item.tierLabel} · ${item.entries.length} steps`;
-            return `<button type="button" class="visual-flowchart-card visual-flowchart-card-collapsed visual-flowchart-card-${escapeAttr(variant)}"
-                        data-tier="${escapeAttr(item.tierId)}" aria-expanded="false"
-                        style="left:${position.x}px;top:${position.y}px;width:${position.width}px" onclick="toggleVisualFlowchartTier('${escapeAttr(item.tierId)}')" aria-label="${escapeAttr(isIndividual ? `${item.tierLabel}: ${collapsedLabel}` : collapsedLabel)}">
+            const individualAttributes = isIndividual
+                ? 'id="visual-flowchart-individual-toggle" aria-controls="visual-flowchart-individual-review" aria-labelledby="visual-flowchart-individual-title"'
+                : '';
+            const button = `<button type="button" class="visual-flowchart-card visual-flowchart-card-collapsed visual-flowchart-card-${escapeAttr(variant)}"
+                        data-tier="${escapeAttr(item.entries[0].tierId)}" aria-expanded="${!!item.expanded}"
+                        ${isIndividual ? individualAttributes : `${positionStyle} aria-label="${escapeAttr(collapsedLabel)}"`}
+                        onclick="toggleVisualFlowchartTier('${escapeAttr(item.tierId)}')">
                     <span class="visual-flowchart-card-icon"><span class="material-symbols-rounded" aria-hidden="true" translate="no">unfold_more</span></span>
                     <span class="visual-flowchart-card-copy">
                         <span class="visual-flowchart-card-meta">${escapeHtml(isIndividual ? t('step_type_outcome') : item.tierLabel)}</span>
-                        <strong>${escapeHtml(isIndividual ? item.tierLabel : collapsedLabel)}</strong>
-                        ${isIndividual ? `<span class="visual-flowchart-card-answer">${escapeHtml(collapsedLabel)}</span>` : ''}
+                        <strong${isIndividual ? ' id="visual-flowchart-individual-title"' : ''}>${escapeHtml(isIndividual ? item.tierLabel : collapsedLabel)}</strong>
+                        ${isIndividual ? `<span class="visual-flowchart-individual-hint">
+                            <span class="visual-flowchart-card-answer visual-flowchart-individual-expand">${escapeHtml(collapsedLabel)}</span>
+                            <span class="visual-flowchart-card-answer visual-flowchart-individual-collapse">${escapeHtml(t('fc_visual_individual_collapse'))}</span>
+                        </span>` : ''}
                     </span>
                 </button>`;
+            if (!isIndividual) return button;
+            return `<div class="visual-flowchart-individual-group" ${positionStyle}>
+                ${button}
+                <div class="visual-flowchart-individual-review" id="visual-flowchart-individual-review" role="region"
+                     aria-labelledby="visual-flowchart-individual-title" tabindex="0"${item.expanded ? '' : ' hidden'}>
+                    ${item.entries.map(entry => renderCard({ type: 'entry', entry })).join('')}
+                </div>
+            </div>`;
         }
         const entry = item.entry;
         const isIndividualOutcome = entry.node.type === 'endpoint' && entry.node.approach === 'individual';
@@ -4387,9 +4453,8 @@ function refreshVisualFlowchartModal() {
             ? (ICONS[entry.node.status] || ICONS.info)
             : getStepTypeIcon(entry.node.type);
         const isInteractive = entry.isCurrent && entry.node.type !== 'endpoint';
-        const tag = item.expandedTierId || (entry.canRevisit && entry.node.type !== 'endpoint') ? 'button' : 'article';
-        const collapseLabel = t(item.expandedTierId === 'tier1-individual'
-            ? 'fc_visual_individual_collapse' : 'fc_visual_tier_collapse');
+        const tag = position && (item.expandedTierId || (entry.canRevisit && entry.node.type !== 'endpoint')) ? 'button' : 'article';
+        const collapseLabel = t('fc_visual_tier_collapse');
         const revisit = item.expandedTierId
             ? ` type="button" data-visual-collapse-tier="${escapeAttr(item.expandedTierId)}" aria-expanded="true" aria-label="${escapeAttr(`${collapseLabel}: ${entry.tierLabel} · ${displayTitle}`)}"`
             : tag === 'button'
@@ -4417,7 +4482,7 @@ function refreshVisualFlowchartModal() {
                <button type="button" class="visual-flowchart-tier-review-btn" onclick="closePathwaySession()">${escapeHtml(t('session_end'))}</button>`
             : '';
         return `<${tag} data-tier="${escapeAttr(entry.tierId)}" class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ' visual-flowchart-card-completed'}${isIndividualOutcome ? ' individual-outcome' : ''}${item.expandedTierId ? ' visual-flowchart-card-expanded-tier' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
-                    style="left:${position.x}px;top:${position.y}px;width:${position.width}px" ${revisit}>
+                    ${positionStyle} ${revisit}>
                 <span class="visual-flowchart-card-header">
                     <span class="visual-flowchart-step-number">${entry.number}</span>
                     <span class="visual-flowchart-card-icon">${cardIcon}</span>
@@ -4430,12 +4495,13 @@ function refreshVisualFlowchartModal() {
                     ${entry.node.approach === 'individual' && !isInteractive && !isIndividualOutcome ? `<h3 class="visual-flowchart-individual-heading">${escapeHtml(entry.node.title)}</h3>` : ''}
                     ${!usesChoiceAsTitle && answer && !isDuplicateStepSummary(answer, displayTitle) ? `<span class="visual-flowchart-card-answer">${escapeHtml(answer)}</span>` : ''}
                     ${entry.node.type === 'endpoint' && endpointDescription ? (isIndividualOutcome ? `<h3 class="individual-recommendation">${endpointDescription}</h3>` : `<span class="visual-flowchart-card-answer">${endpointDescription}</span>`) : ''}
-                    ${entry.node.type === 'endpoint' && !item.expandedTierId ? (isIndividualOutcome ? `<span class="individual-outcome-actions">${endpointAction + sessionActions}</span>` : endpointAction + sessionActions) : ''}
+                    ${entry.node.type === 'endpoint' && position && !item.expandedTierId ? (isIndividualOutcome ? `<span class="individual-outcome-actions">${endpointAction + sessionActions}</span>` : endpointAction + sessionActions) : ''}
                     ${collapseLabelHTML}
                 </span>
                 ${isInteractive ? '<div class="visual-flowchart-active-host"></div>' : ''}
             </${tag}>`;
-    }).join('');
+    };
+    const cardsHtml = items.map((item, index) => renderCard(item, positions[index])).join('');
 
     stage.style.width = `${stageWidth}px`;
     stage.style.height = `${stageHeight}px`;
@@ -4492,8 +4558,7 @@ function refreshVisualFlowchartModal() {
     wireVisualFlowchartPanZoom(viewport);
     updateVisualFlowchartTierBar();
     const state = appState.visualFlowchartModal;
-    fitVisualFlowchartCardToViewportHeight(stage, viewport);
-    autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId);
+    fitRenderedVisualFlowchart(stage, viewport);
     // Card heights are not final until the browser has laid the fresh markup
     // out (and until the --visual-card-max-height cap above has been applied),
     // so re-fit on the next frame: without this the first open of the pathway
@@ -4502,9 +4567,14 @@ function refreshVisualFlowchartModal() {
     requestAnimationFrame(() => {
         if (appState.visualFlowchartModal !== state) return;
         if (!document.getElementById('visual-flowchart-stage')) return;
-        fitVisualFlowchartCardToViewportHeight(stage, viewport);
-        autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId);
+        fitRenderedVisualFlowchart(stage, viewport);
     });
+}
+
+function fitRenderedVisualFlowchart(stage, viewport) {
+    if (!stage || !viewport?.clientWidth || !viewport.clientHeight) return;
+    fitVisualFlowchartCardToViewportHeight(stage, viewport);
+    autoFitVisualFlowchartActiveCard(stage, viewport);
 }
 
 // Tier 2 / Tier 3 step 1 is a single column of long entry information. Make
@@ -4519,7 +4589,7 @@ function fitVisualFlowchartCardToViewportHeight(stage, viewport) {
     if (!card || !viewport) return;
     const padding = getVisualFlowchartPadding();
     const fitHeightPad = Math.min(VISUAL_FLOWCHART_FIT_HEIGHT_PADDING, padding.top);
-    const availableHeight = viewport.clientHeight - fitHeightPad * 2;
+    const availableHeight = viewport.clientHeight - fitHeightPad - padding.bottom;
     if (!card.dataset.baseWidth) card.dataset.baseWidth = String(Math.round(parseFloat(card.style.width) || card.offsetWidth));
     const minWidth = Number(card.dataset.baseWidth);
     const maxWidth = Math.max(minWidth, viewport.clientWidth - padding.left - padding.right);
@@ -4556,16 +4626,16 @@ function fitVisualFlowchartCardToViewportHeight(stage, viewport) {
 // Scale and position the canvas so the active (live) step card sits fully
 // inside the viewport. Re-measures the rendered cards on every call so it can
 // be run again once layout has settled.
-function autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId) {
+function autoFitVisualFlowchartActiveCard(stage, viewport) {
     const state = appState.visualFlowchartModal;
     if (!state || !stage || !viewport) return;
     const bounds = measureVisualFlowchartContent(stage);
     state.contentBounds = bounds;
     const pad = getVisualFlowchartPadding();
-    const cards = Array.from(stage.querySelectorAll('.visual-flowchart-card'));
-    let activeIndex = items.findIndex(item => item.type === 'tier-review');
-    if (activeIndex === -1) activeIndex = items.findIndex(item => item.type === 'entry' && item.entry.isCurrent);
-    const activeCard = activeIndex !== -1 ? cards[activeIndex] : cards[0];
+    const activeNodeId = appState.visualFlowchart?.currentNodeId;
+    const activeCard = stage.querySelector('.visual-flowchart-card-tier-review')
+        || stage.querySelector('.visual-flowchart-card-current')
+        || stage.querySelector('.visual-flowchart-card');
     // Once a step is completed and the pathway moves on, drop any manual zoom so
     // the canvas automatically zooms back in around the (now smaller) live card.
     if (state.fitNodeId !== activeNodeId) {
@@ -4576,14 +4646,10 @@ function autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId) 
     if (activeCard && activeCard.offsetWidth && activeCard.offsetHeight) {
         // The live step card (checklists, option grids) is by far the tallest piece
         // of the pathway, so scale the canvas down until it fits entirely on screen.
-        const fillsHeight = activeCard.classList.contains('visual-flowchart-card-fit-height');
-        const padY = fillsHeight || state.topAligned ? Math.min(VISUAL_FLOWCHART_FIT_HEIGHT_PADDING, pad.top) : pad.top;
-        // Phones keep the text readable instead of shrinking the card to fit;
-        // the card is top-aligned and the rest is reached by dragging.
-        const minFitScale = state.mobile ? VISUAL_FLOWCHART_MOBILE_MIN_FIT_SCALE : 0.35;
-        const fitScale = Math.max(minFitScale, Math.min(1,
+        const padY = state.topAligned ? Math.min(VISUAL_FLOWCHART_FIT_HEIGHT_PADDING, pad.top) : pad.top;
+        const fitScale = Math.max(0.01, Math.min(1,
             (viewport.clientWidth - pad.left - pad.right) / activeCard.offsetWidth,
-            (viewport.clientHeight - padY * 2) / activeCard.offsetHeight));
+            (viewport.clientHeight - padY - pad.bottom) / activeCard.offsetHeight));
         // Auto-fit unless the user has taken manual control of the zoom, in which
         // case only shrink further when their zoom would cut the active card off.
         state.scale = state.userZoom ? Math.min(state.scale, fitScale) : fitScale;
@@ -4593,16 +4659,10 @@ function autoFitVisualFlowchartActiveCard(stage, viewport, items, activeNodeId) 
         const revealActive = viewport.clientWidth - pad.right
             - (activeCard.offsetLeft + activeCard.offsetWidth) * state.scale;
         state.x = Math.min(leftAnchor, revealActive);
-        const activeHeight = activeCard.offsetHeight * state.scale;
-        // Vertically, the card prefers to sit in the upper part of the viewport
-        // rather than dead centre: true centring (0.5) reads as too low once the
-        // header/tier-bar/toolbar above the viewport are accounted for.
-        // Tier 2/3 entry cards share the same top margin.
         state.y = state.topAligned
             ? padY - activeCard.offsetTop * state.scale
-            : activeHeight + pad.top + pad.bottom <= viewport.clientHeight
-                ? (viewport.clientHeight - activeHeight) * VISUAL_FLOWCHART_VERTICAL_BIAS - activeCard.offsetTop * state.scale
-                : pad.top - activeCard.offsetTop * state.scale;
+            : Math.min(getVisualFlowchartRowInset(viewport), viewport.clientHeight - pad.bottom - activeCard.offsetHeight * state.scale)
+                - activeCard.offsetTop * state.scale;
     }
     applyVisualFlowchartTransform();
 }
@@ -4619,24 +4679,22 @@ function getVisualFlowchartPadding() {
         return { left: VISUAL_FLOWCHART_MOBILE_MENU_GUTTER, right: pad, top: pad, bottom: pad };
     }
     const pad = VISUAL_FLOWCHART_EDGE_PADDING;
-    return { left: pad, right: pad, top: pad, bottom: pad };
+    const left = appState.visualFlowchartModal?.compactControls || appState.visualFlowchartModal?.controlsCollapsed
+        ? VISUAL_FLOWCHART_MOBILE_MENU_GUTTER : pad;
+    return { left, right: pad, top: pad, bottom: pad };
 }
-// Smallest automatic zoom used for the live card on the mobile pathway.
-const VISUAL_FLOWCHART_MOBILE_MIN_FIT_SCALE = 0.7;
 // Top/bottom margin kept around the height-fitted Tier 2 / Tier 3 step 1 card,
 // which is sized to fill the viewport height at 100% zoom.
 const VISUAL_FLOWCHART_FIT_HEIGHT_PADDING = 20;
-// How far down the viewport the active card's vertical anchor sits when it
-// fits without scaling: 0 = flush with the top, 0.5 = true centre. A low
-// fraction keeps it feeling anchored near the top, since true centring
-// reads as too low with the header/tier-bar/toolbar stacked above the canvas.
-const VISUAL_FLOWCHART_VERTICAL_BIAS = 0.22;
+function getVisualFlowchartRowInset(viewport) {
+    return Math.max(getVisualFlowchartPadding().top, viewport.clientHeight * 0.06);
+}
 
 // Measure the real bounding box of the rendered cards (in unscaled stage
 // coordinates) so panning and fitting are driven by actual content, not by the
 // stage element's padded size.
 function measureVisualFlowchartContent(stage) {
-    const cards = Array.from(stage.querySelectorAll('.visual-flowchart-card'));
+    const cards = stage.querySelectorAll(':scope > .visual-flowchart-card, :scope > .visual-flowchart-individual-group');
     if (!cards.length) {
         return { minX: 0, minY: 0, maxX: stage.offsetWidth, maxY: stage.offsetHeight };
     }
@@ -4661,18 +4719,15 @@ function clampVisualFlowchartPan(state, viewport) {
     const pad = getVisualFlowchartPadding();
     const scale = state.scale;
     const contentWidth = (bounds.maxX - bounds.minX) * scale;
-    const contentHeight = (bounds.maxY - bounds.minY) * scale;
     const maxX = pad.left - bounds.minX * scale;
     const minX = viewport.clientWidth - pad.right - bounds.maxX * scale;
     state.x = contentWidth + pad.left + pad.right <= viewport.clientWidth
         ? maxX
         : Math.min(maxX, Math.max(minX, state.x));
-    const topPadding = state.topAligned ? Math.min(VISUAL_FLOWCHART_FIT_HEIGHT_PADDING, pad.top) : pad.top;
+    const topPadding = state.topAligned ? Math.min(VISUAL_FLOWCHART_FIT_HEIGHT_PADDING, pad.top) : getVisualFlowchartRowInset(viewport);
     const maxY = topPadding - bounds.minY * scale;
     const minY = viewport.clientHeight - pad.bottom - bounds.maxY * scale;
-    state.y = contentHeight + pad.top + pad.bottom <= viewport.clientHeight
-        ? state.topAligned ? maxY : (viewport.clientHeight - contentHeight) / 2 - bounds.minY * scale
-        : Math.min(maxY, Math.max(minY, state.y));
+    state.y = Math.min(maxY, Math.max(Math.min(minY, maxY), state.y));
 }
 
 function wireVisualFlowchartPanZoom(viewport) {
@@ -4693,7 +4748,7 @@ function wireVisualFlowchartPanZoom(viewport) {
         // sit inside the card's scroll container) must also be excluded, or
         // capturing the pointer here for panning hijacks their click event
         // and the selection never registers.
-        if (event.target.closest('button, input, select, textarea, a, label, summary, [role="button"], [role="checkbox"]')) return;
+        if (event.target.closest('button, input, select, textarea, a, label, summary, [role="button"], [role="checkbox"], .visual-flowchart-individual-review')) return;
         // Let a card that has overflowed its max height be dragged/scrolled
         // internally instead of starting a canvas pan.
         const overflowingCard = event.target.closest('.visual-flowchart-card');
@@ -4734,6 +4789,7 @@ function wireVisualFlowchartPanZoom(viewport) {
     viewport.addEventListener('pointerup', stopPan);
     viewport.addEventListener('pointercancel', stopPan);
     viewport.addEventListener('wheel', event => {
+        if (event.target.closest('.visual-flowchart-individual-review')) return;
         // A card that has overflowed its max height scrolls internally instead
         // of the wheel always zooming the whole canvas.
         const card = event.target.closest('.visual-flowchart-card');
@@ -4750,6 +4806,11 @@ function applyVisualFlowchartTransform() {
     if (!stage || !state) return;
     if (!state.contentBounds) state.contentBounds = measureVisualFlowchartContent(stage);
     clampVisualFlowchartPan(state, viewport);
+    const reviewGroup = stage.querySelector('.visual-flowchart-individual-group');
+    if (reviewGroup && viewport) {
+        const spaceBelow = (viewport.clientHeight - state.y) / state.scale - reviewGroup.offsetTop - reviewGroup.offsetHeight;
+        reviewGroup.style.setProperty('--individual-review-height', `${Math.max(0, spaceBelow - 18)}px`);
+    }
     stage.style.transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
     const output = document.getElementById('visual-flowchart-zoom-value');
     if (output) output.value = `${Math.round(state.scale * 100)}%`;
@@ -4784,11 +4845,12 @@ function fitVisualFlowchart() {
     const contentWidth = Math.max(1, bounds.maxX - bounds.minX);
     const contentHeight = Math.max(1, bounds.maxY - bounds.minY);
     const availableWidth = viewport.clientWidth - padding.left - padding.right;
-    state.scale = Math.min(1, Math.max(0.35,
+    state.scale = Math.min(1, Math.max(0.01,
         Math.min(availableWidth / contentWidth,
             (viewport.clientHeight - padding.top - padding.bottom) / contentHeight)));
     state.x = padding.left + (availableWidth - contentWidth * state.scale) / 2 - bounds.minX * state.scale;
-    state.y = (viewport.clientHeight - contentHeight * state.scale) / 2 - bounds.minY * state.scale;
+    state.y = Math.min(getVisualFlowchartRowInset(viewport), viewport.clientHeight - padding.bottom - contentHeight * state.scale)
+        - bounds.minY * state.scale;
     applyVisualFlowchartTransform();
 }
 

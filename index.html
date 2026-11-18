@@ -25,7 +25,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
     <script src="theme.js?v=dark-mode-1"></script>
-    <link rel="stylesheet" href="styles.css?v=settings-screen-1">
+    <link rel="stylesheet" href="styles.css?v=pathway-layout-1">
 </head>
 <body data-page="home">
     <svg xmlns="http://www.w3.org/2000/svg" class="resource-centre-symbols" aria-hidden="true">
@@ -223,6 +223,17 @@
                         <span class="settings-switch-track" aria-hidden="true"></span>
                     </label>
                     <p id="settings-theme-status" role="status" aria-atomic="true"></p>
+                    <div class="settings-pathway-layout">
+                        <div class="settings-theme-copy">
+                            <label for="settings-visual-flowchart-layout" class="settings-option-title" data-i18n="settings_pathway_layout">Visual pathway layout</label>
+                            <span id="settings-pathway-layout-hint" data-i18n="settings_pathway_layout_hint">Keep cards on one row, or let the next card move up or down based on the choice. This preference is saved on this device.</span>
+                        </div>
+                        <select id="settings-visual-flowchart-layout" aria-describedby="settings-pathway-layout-hint">
+                            <option value="single" data-i18n="settings_pathway_layout_single">Single row</option>
+                            <option value="classic" data-i18n="settings_pathway_layout_classic">Classic branching</option>
+                        </select>
+                    </div>
+                    <p id="settings-visual-flowchart-layout-status" role="status" aria-atomic="true"></p>
                 </section>
                 <section id="settings-transfer" class="settings-card" aria-labelledby="settings-transfer-title">
                     <h3 id="settings-transfer-title" data-i18n="settings_transfer_title">Transfer saved data</h3>
@@ -1721,8 +1732,8 @@
         </div>
     </dialog>
 
-    <script src="translations.js?v=settings-screen-1"></script>
-    <script src="app.js?v=settings-screen-1"></script>
+    <script src="translations.js?v=pathway-layout-1"></script>
+    <script src="app.js?v=pathway-layout-1"></script>
     <script src="transfer.js?v=settings-screen-1"></script>
 
     <script>

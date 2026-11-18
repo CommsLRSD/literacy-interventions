@@ -9418,7 +9418,9 @@ body.step-review-modal-open { overflow: hidden; }
     color: var(--text);
     font: inherit;
     text-align: left;
-    box-shadow: 0 12px 30px rgba(12, 49, 90, 0.12);
+    /* Tier identity stays outside; the fill and border retain the card's meaning. */
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--visual-tier-colour) 20%, transparent),
+                0 0 24px color-mix(in srgb, var(--visual-tier-colour) 35%, transparent);
     opacity: 0;
     transform: translateY(15px);
     overflow-y: auto;
@@ -9442,7 +9444,8 @@ body.step-review-modal-open { overflow: hidden; }
   }
 
   button.visual-flowchart-card:hover {
-    box-shadow: 0 16px 36px rgba(12, 49, 90, 0.2);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--visual-tier-colour) 30%, transparent),
+                0 0 32px color-mix(in srgb, var(--visual-tier-colour) 45%, transparent);
     transform: translateY(-2px);
   }
 
@@ -9463,8 +9466,8 @@ body.step-review-modal-open { overflow: hidden; }
 
   .visual-flowchart-card-current {
     border-width: 3px;
-    background: var(--bg);
-    box-shadow: 0 0 0 5px var(--step-soft), 0 18px 45px rgba(12, 49, 90, 0.2);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--visual-tier-colour) 30%, transparent),
+                0 0 32px color-mix(in srgb, var(--visual-tier-colour) 45%, transparent);
   }
 
   /* Interstitial "review this tier, then continue" card shown in the visual
@@ -9518,8 +9521,6 @@ body.step-review-modal-open { overflow: hidden; }
   .visual-flowchart-card-collapsed {
     align-items: center;
     min-height: 90px;
-    border-color: var(--visual-tier-colour);
-    background: color-mix(in srgb, var(--visual-tier-colour) 12%, var(--bg));
     opacity: 0.9;
   }
 
@@ -9527,12 +9528,52 @@ body.step-review-modal-open { overflow: hidden; }
     opacity: 1;
   }
 
-  .visual-flowchart-card-expanded-tier,
-  button.visual-flowchart-card-expanded-tier:hover {
-    border-color: var(--visual-tier-colour);
-    background: color-mix(in srgb, var(--visual-tier-colour) 8%, var(--bg));
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--visual-tier-colour) 20%, transparent),
-                0 0 24px color-mix(in srgb, var(--visual-tier-colour) 35%, transparent);
+  .visual-flowchart-individual-group {
+    position: absolute;
+  }
+
+  .visual-flowchart-individual-group > .visual-flowchart-card {
+    position: relative;
+    width: 100%;
+  }
+
+  .visual-flowchart-individual-review {
+    position: absolute;
+    top: 100%;
+    left: -12px;
+    right: -12px;
+    z-index: 1;
+    display: grid;
+    gap: 12px;
+    max-height: var(--individual-review-height, 400px);
+    padding: 12px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+
+  .visual-flowchart-individual-review > .visual-flowchart-card {
+    position: relative;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .visual-flowchart-individual-review[hidden] {
+    display: none;
+  }
+
+  .visual-flowchart-individual-hint {
+    display: grid;
+  }
+
+  .visual-flowchart-individual-hint > span {
+    grid-area: 1 / 1;
+  }
+
+  .visual-flowchart-individual-group [aria-expanded="false"] .visual-flowchart-individual-collapse,
+  .visual-flowchart-individual-group [aria-expanded="true"] .visual-flowchart-individual-expand {
+    visibility: hidden;
   }
 
   /* The last card labels the same collapse action available on every tier card. */
@@ -9731,8 +9772,7 @@ body.step-review-modal-open { overflow: hidden; }
     transition: none;
   }
 
-  /* Desktop: the header and tier bar sit in the dialog grid as normal; the
-     drawer wrapper, its menu button and scrim only take effect on mobile. */
+  /* When controls are tucked away, the canvas takes both header rows. */
   .visual-flowchart-chrome {
     display: contents;
   }
@@ -9742,19 +9782,16 @@ body.step-review-modal-open { overflow: hidden; }
     display: none;
   }
 
-  /* Mobile: the whole screen is the pathway canvas. The header and tier bar
-     move into a slide-out drawer opened from a small floating menu button. */
-  .visual-flowchart-mobile .visual-flowchart-dialog {
-    display: block;
-    position: relative;
+  .visual-flowchart-compact-controls .visual-flowchart-controls-toggle {
+    display: none;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-viewport {
+  .visual-flowchart-overlay-controls .visual-flowchart-viewport {
     position: absolute;
     inset: 0;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-drawer-toggle {
+  .visual-flowchart-overlay-controls .visual-flowchart-drawer-toggle {
     position: absolute;
     top: 8px;
     left: 8px;
@@ -9773,11 +9810,11 @@ body.step-review-modal-open { overflow: hidden; }
     cursor: pointer;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-drawer-toggle .material-symbols-rounded {
+  .visual-flowchart-overlay-controls .visual-flowchart-drawer-toggle .material-symbols-rounded {
     font-size: 22px;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-drawer-scrim {
+  .visual-flowchart-overlay-controls .visual-flowchart-drawer-scrim {
     position: absolute;
     inset: 0;
     z-index: 7;
@@ -9788,12 +9825,12 @@ body.step-review-modal-open { overflow: hidden; }
     transition: opacity 0.18s ease;
   }
 
-  .visual-flowchart-mobile.visual-flowchart-drawer-open .visual-flowchart-drawer-scrim {
+  .visual-flowchart-overlay-controls.visual-flowchart-drawer-open .visual-flowchart-drawer-scrim {
     opacity: 1;
     pointer-events: auto;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-chrome {
+  .visual-flowchart-overlay-controls .visual-flowchart-chrome {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -9811,13 +9848,13 @@ body.step-review-modal-open { overflow: hidden; }
     transition: transform 0.2s ease, visibility 0s linear 0.2s;
   }
 
-  .visual-flowchart-mobile.visual-flowchart-drawer-open .visual-flowchart-chrome {
+  .visual-flowchart-overlay-controls.visual-flowchart-drawer-open .visual-flowchart-chrome {
     transform: none;
     visibility: visible;
     transition: transform 0.2s ease;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-header {
+  .visual-flowchart-overlay-controls .visual-flowchart-header {
     position: relative;
     flex-direction: column;
     flex-wrap: nowrap;
@@ -9826,35 +9863,31 @@ body.step-review-modal-open { overflow: hidden; }
     padding: 14px 16px;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-header-text {
+  .visual-flowchart-overlay-controls .visual-flowchart-header-text {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
-    padding-right: 84px;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-header h2 {
+  .visual-flowchart-overlay-controls .visual-flowchart-header h2 {
     font-size: 1.05rem;
     white-space: normal;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-header p {
+  .visual-flowchart-overlay-controls .visual-flowchart-header p {
     white-space: normal;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-header-controls {
+  .visual-flowchart-overlay-controls .visual-flowchart-header-controls {
     justify-content: flex-start;
     min-width: 0;
   }
 
-  /* Full screen + close stay in the drawer's top-right corner. */
-  .visual-flowchart-mobile .visual-flowchart-header-actions {
-    position: absolute;
-    top: 12px;
-    right: 12px;
+  .visual-flowchart-overlay-controls .visual-flowchart-header-actions {
+    flex-wrap: wrap;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-tier-bar {
+  .visual-flowchart-overlay-controls .visual-flowchart-tier-bar {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
@@ -9862,16 +9895,16 @@ body.step-review-modal-open { overflow: hidden; }
     border-bottom: 0;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-tier-bar-info {
+  .visual-flowchart-overlay-controls .visual-flowchart-tier-bar-info {
     flex-wrap: wrap;
     gap: 8px 10px;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-tier-tabs {
+  .visual-flowchart-overlay-controls .visual-flowchart-tier-tabs {
     margin-left: 0;
   }
 
-  .visual-flowchart-mobile .visual-flowchart-toolbar {
+  .visual-flowchart-overlay-controls .visual-flowchart-toolbar {
     margin-left: 0;
     padding-top: 12px;
     padding-left: 0;
@@ -9880,11 +9913,11 @@ body.step-review-modal-open { overflow: hidden; }
   }
 
   /* In the drawer the guidance opens inline, below its button. */
-  .visual-flowchart-mobile .tier1-guidance {
+  .visual-flowchart-overlay-controls .tier1-guidance {
     flex-basis: 100%;
   }
 
-  .visual-flowchart-mobile .tier1-guidance-popup.tier1-success-sidebar {
+  .visual-flowchart-overlay-controls .tier1-guidance-popup.tier1-success-sidebar {
     position: static;
     width: auto;
     max-height: none;
@@ -13339,7 +13372,27 @@ details.pathway-session[open] { box-shadow: none; }
 }
 .settings-theme-copy { display: grid; gap: 0.35rem; }
 .settings-option-title { font-weight: 600; }
-#settings-theme-hint { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; }
+#settings-theme-hint,
+#settings-pathway-layout-hint { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; }
+.settings-pathway-layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-top: 1.25rem;
+}
+.settings-pathway-layout > div { flex: 1 1 18rem; }
+.settings-pathway-layout select {
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
 .settings-theme-toggle input {
   position: absolute;
   right: 0;
@@ -13375,6 +13428,7 @@ details.pathway-session[open] { box-shadow: none; }
   outline-offset: 4px;
 }
 #settings-theme-status:empty,
+#settings-visual-flowchart-layout-status:empty,
 #transfer-status:empty { display: none; }
 .transfer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; margin-top: 1.5rem; }
 .transfer-card-heading { display: flex; align-items: center; gap: 0.65rem; color: var(--primary-text); }
