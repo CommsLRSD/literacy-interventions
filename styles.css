@@ -9649,6 +9649,7 @@ body.step-review-modal-open { overflow: hidden; }
   }
 
   .visual-flowchart-card-header .visual-flowchart-card-icon {
+    align-self: start;
     width: 28px;
     height: 28px;
   }
