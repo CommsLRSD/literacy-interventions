@@ -732,7 +732,7 @@ function renderSessionCloseButtonHtml() {
         title="${escapeAttr(t('session_autosave_hint'))}"><span class="material-symbols-rounded" aria-hidden="true" translate="no">stop_circle</span>${escapeHtml(t('session_end'))}</button>`;
 }
 
-function renderSessionDownloadButtonHtml(buttonClass = 'action-btn') {
+function renderSessionDownloadButtonHtml(buttonClass = 'pathway-card-action') {
     return `<button type="button" class="${buttonClass} session-route-download" onclick="downloadSessionNotes(activePathwaySessionId)"
         aria-label="${escapeAttr(t('notes_download_label'))}">${escapeHtml(t('notes_download'))}</button>`;
 }
@@ -4402,10 +4402,12 @@ function refreshVisualFlowchartModal() {
                     </span>
                     <span class="visual-flowchart-card-copy">
                         <span class="visual-flowchart-card-answer">${escapeHtml(t('go_to_tier_note'))}</span>
-                        <button type="button" class="visual-flowchart-tier-review-btn" onclick="confirmVisualFlowchartTierTransition()">
+                    </span>
+                    <div class="pathway-card-actions">
+                        <button type="button" class="pathway-card-action" onclick="confirmVisualFlowchartTierTransition()">
                             ${escapeHtml(t('continue_to_tier'))} ${escapeHtml(targetNum)}
                         </button>
-                    </span>
+                    </div>
                 </div>`;
         }
         if (item.type === 'collapsed') {
@@ -4468,18 +4470,18 @@ function refreshVisualFlowchartModal() {
             : '';
         const endpointDescription = entry.node.descriptionHtml || escapeHtml(entry.node.description || '');
         const endpointAction = entry.isCurrent && entry.node.approach === 'individual' && entry.node.type === 'endpoint'
-            ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="continueWholeClassIntegrated()">${escapeHtml(t('tier1_return_whole_class'))}</button>`
+            ? `<button type="button" class="pathway-card-action" onclick="continueWholeClassIntegrated()">${escapeHtml(t('tier1_return_whole_class'))}</button>`
             : entry.node.id === 'tier1-reteach'
-            ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="restartTier1VisualIntegrated()">${escapeHtml(entry.node.actionButton.text)}</button>`
+            ? `<button type="button" class="pathway-card-action" onclick="restartTier1VisualIntegrated()">${escapeHtml(entry.node.actionButton.text)}</button>`
             : entry.isCurrent && entry.node.id === 'tier1-move-tier2' && appState.visualFlowchart?.pendingTierTransition === 'tier2'
-                ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="confirmVisualFlowchartTierTransition()">${escapeHtml(t('continue_to_tier'))} 2</button>`
+                ? `<button type="button" class="pathway-card-action" onclick="confirmVisualFlowchartTierTransition()">${escapeHtml(t('continue_to_tier'))} 2</button>`
                 : entry.isCurrent && entry.node.id === 'tier2-move-tier3' && appState.visualFlowchart?.pendingTierTransition === 'tier3'
-                    ? `<button type="button" class="visual-flowchart-tier-review-btn" onclick="confirmVisualFlowchartTierTransition()">${escapeHtml(t('continue_to_tier'))} 3</button>`
+                    ? `<button type="button" class="pathway-card-action" onclick="confirmVisualFlowchartTierTransition()">${escapeHtml(t('continue_to_tier'))} 3</button>`
             : '';
         const sessionActions = entry.isCurrent && entry.node.type === 'endpoint'
             && appState.visualFlowchart?.summaryEndpointNodeData?.id === entry.node.id
-            ? `${renderSessionDownloadButtonHtml('visual-flowchart-tier-review-btn')}
-               <button type="button" class="visual-flowchart-tier-review-btn" onclick="closePathwaySession()">${escapeHtml(t('session_end'))}</button>`
+            ? `${renderSessionDownloadButtonHtml()}
+               <button type="button" class="pathway-card-action" onclick="closePathwaySession()">${escapeHtml(t('session_end'))}</button>`
             : '';
         return `<${tag} data-tier="${escapeAttr(entry.tierId)}" class="visual-flowchart-card visual-flowchart-card-${escapeAttr(variant)}${entry.isCurrent ? ' visual-flowchart-card-current' : ' visual-flowchart-card-completed'}${isIndividualOutcome ? ' individual-outcome' : ''}${item.expandedTierId ? ' visual-flowchart-card-expanded-tier' : ''}${isInteractive ? ' visual-flowchart-card-interactive' : ''}${isInteractive && isVisualFlowchartFitHeightEntry(entry) ? ' visual-flowchart-card-fit-height' : ''}${!isInteractive && entry.isTierFirstStep ? ' visual-flowchart-card-wide' : ''}"
                     ${positionStyle} ${revisit}>
@@ -4495,9 +4497,9 @@ function refreshVisualFlowchartModal() {
                     ${entry.node.approach === 'individual' && !isInteractive && !isIndividualOutcome ? `<h3 class="visual-flowchart-individual-heading">${escapeHtml(entry.node.title)}</h3>` : ''}
                     ${!usesChoiceAsTitle && answer && !isDuplicateStepSummary(answer, displayTitle) ? `<span class="visual-flowchart-card-answer">${escapeHtml(answer)}</span>` : ''}
                     ${entry.node.type === 'endpoint' && endpointDescription ? (isIndividualOutcome ? `<h3 class="individual-recommendation">${endpointDescription}</h3>` : `<span class="visual-flowchart-card-answer">${endpointDescription}</span>`) : ''}
-                    ${entry.node.type === 'endpoint' && position && !item.expandedTierId ? (isIndividualOutcome ? `<span class="individual-outcome-actions">${endpointAction + sessionActions}</span>` : endpointAction + sessionActions) : ''}
                     ${collapseLabelHTML}
                 </span>
+                ${entry.node.type === 'endpoint' && position && !item.expandedTierId && (endpointAction || sessionActions) ? `<div class="pathway-card-actions">${endpointAction + sessionActions}</div>` : ''}
                 ${isInteractive ? '<div class="visual-flowchart-active-host"></div>' : ''}
             </${tag}>`;
     };
@@ -5713,20 +5715,20 @@ function createIntegratedEndpointNode(nodeData) {
     const allowedActions = ['startTier2Visual', 'startTier3Visual', 'restartTier1Visual', 'restartTier2Visual', 'continueWholeClass'];
     
     const actionButtonHTML = nodeData.actionButton && allowedActions.includes(nodeData.actionButton.action) ? `
-        <button class="action-btn action-primary" onclick="${nodeData.actionButton.action}Integrated()">
+        <button type="button" class="pathway-card-action" onclick="${nodeData.actionButton.action}Integrated()">
             ${nodeData.actionButton.text}
         </button>
     ` : '';
     
     const secondaryActionHTML = nodeData.secondaryAction && allowedActions.includes(nodeData.secondaryAction.action) ? `
-        <button class="action-btn action-secondary" onclick="${nodeData.secondaryAction.action}Integrated()">
+        <button type="button" class="pathway-card-action" onclick="${nodeData.secondaryAction.action}Integrated()">
             ${nodeData.secondaryAction.text}
         </button>
     ` : '';
 
     // Terminal routes can be officially ended without discarding their notes.
     const defaultActionsHTML = isTerminalEndpoint ? `
-        <button class="action-btn action-secondary" onclick="closePathwaySession()">
+        <button type="button" class="pathway-card-action" onclick="closePathwaySession()">
             ${escapeHtml(t('session_end'))}
         </button>
     ` : '';
@@ -5743,7 +5745,7 @@ function createIntegratedEndpointNode(nodeData) {
                 : `<p>${nodeData.descriptionHtml || escapeHtml(nodeData.description)}</p>`) : ''}
             ${warningBoxHTML}
             ${recommendationsHTML}
-            <div class="endpoint-actions">
+            <div class="pathway-card-actions">
                 ${downloadButtonHTML}
                 ${actionButtonHTML}
                 ${secondaryActionHTML}
@@ -6715,9 +6717,9 @@ function showRouteCompleteGate(endpointNodeData) {
             </div>
             <h2 class="gate-title">${escapeHtml(t('gate_title'))}</h2>
             <p class="gate-subtitle">${escapeHtml(typeof t('gate_subtitle_steps') === 'function' ? t('gate_subtitle_steps')(totalSteps) : `You completed ${totalSteps} step${totalSteps !== 1 ? 's' : ''} across`)} ${tierPillsHTML}</p>
-            <div class="endpoint-actions">
+            <div class="pathway-card-actions">
                 ${renderSessionDownloadButtonHtml()}
-                <button type="button" class="action-btn action-secondary" onclick="closePathwaySession()">${escapeHtml(t('session_end'))}</button>
+                <button type="button" class="pathway-card-action" onclick="closePathwaySession()">${escapeHtml(t('session_end'))}</button>
             </div>
         </div>
     `;

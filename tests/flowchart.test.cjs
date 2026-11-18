@@ -523,6 +523,52 @@ function renderVisualPathway(run) {
     return run('testStage.innerHTML');
 }
 
+test('terminal pathway actions use a separate footer in both languages and endpoint renderers', () => {
+    for (const language of ['en', 'fr']) {
+        const { run } = setupIndividualPathway(language);
+        choose(run, 'individual');
+        choose(run, 'proficient');
+        run('appState.visualFlowchartModal = { expandedTiers: new Set() };');
+        const visual = renderVisualPathway(run);
+        const integrated = run('createIntegratedEndpointNode(appState.visualFlowchart.summaryEndpointNodeData)');
+        for (const html of [visual, integrated]) {
+            const footer = html.match(/<div class="pathway-card-actions">([\s\S]*?)<\/div>/)?.[1];
+            assert.ok(footer, 'Endpoint actions must be in a separate footer');
+            assert.match(footer, /onclick="continueWholeClassIntegrated\(\)"/);
+            assert.match(footer, /onclick="downloadSessionNotes\(activePathwaySessionId\)"/);
+            assert.match(footer, /onclick="closePathwaySession\(\)"/);
+            assert.ok(footer.includes(language === 'en' ? 'Download summary' : 'Télécharger le résumé'));
+            assert.doesNotMatch(footer, /action-primary|action-secondary|visual-flowchart-tier-review-btn/);
+        }
+        assert.match(visual, /<\/span>\s*<div class="pathway-card-actions">/);
+        run('continueWholeClassIntegrated()');
+        const decision = run('createIntegratedDecisionNode(getFlowchartDefs().tier1.nodes[appState.visualFlowchart.currentNodeId])');
+        assert.doesNotMatch(decision, /pathway-card-actions|pathway-card-action"/);
+    }
+});
+
+test('potential endpoints and tier review cards keep their continuation controls in the footer', () => {
+    for (const choice of ['more-20', 'less-20']) {
+        const { run } = setupIndividualPathway();
+        run('requestAnimationFrame = () => {};');
+        choose(run, 'whole-class');
+        choose(run, choice);
+        run('appState.visualFlowchartModal = { expandedTiers: new Set() };');
+        const html = renderVisualPathway(run);
+        const handler = choice === 'more-20' ? 'restartTier1VisualIntegrated' : 'confirmVisualFlowchartTierTransition';
+        assert.match(html, new RegExp(`<div class="pathway-card-actions">\\s*<button[^>]+onclick="${handler}\\(\\)"`));
+        if (choice === 'less-20') {
+            run(`
+                appState.visualFlowchart.pendingTierTransition = 'tier3';
+                appState.visualFlowchart.currentNodeId = null;
+            `);
+            const review = renderVisualPathway(run);
+            assert.match(review, /visual-flowchart-card-tier-review/);
+            assert.match(review, /<\/span>\s*<div class="pathway-card-actions">\s*<button[^>]+onclick="confirmVisualFlowchartTierTransition\(\)"/);
+        }
+    }
+});
+
 function assertSingleRow(html) {
     const tops = [...html.matchAll(/style="left:(\d+)px;top:(\d+)px;width:(\d+)px"/g)];
     assert.ok(tops.length > 1);
