@@ -4674,6 +4674,11 @@ details > p {
               background var(--duration) var(--ease);
 }
 
+.flowchart-step[data-node-id="tier2-principles"] .checklist-line {
+  width: fit-content;
+  max-width: 100%;
+}
+
 .checklist-line:hover {
   border-color: var(--tier-color, var(--step));
   background: color-mix(in srgb, var(--tier-color, var(--step)) 4%, var(--bg));
