@@ -258,6 +258,7 @@ test('every intervention step appends monitoring links after existing card conte
                 assert.ok(html.indexOf('progress-monitoring-tools') > html.indexOf(node.description));
                 assert.match(html, /DIBELS Progress Monitoring Forms/);
                 assert.match(html, /DIBELS Progress Monitoring Charts \(Excel Sheets\)/);
+                assert.equal((html.match(/<a class="pathway-card-action" href="[^"]+" target="_blank" rel="noopener noreferrer">DIBELS Progress Monitoring/g) || []).length, 2);
                 assert.equal((html.match(/rel="noopener noreferrer"/g) || []).length >= 2, true);
                 assert.match(html, /d=w9f0016a4415a47b59c2ae08f59485ee1&amp;csf=1&amp;web=1&amp;e=DinOuP/);
                 assert.match(html, /DIBELS%20Intervention%20and%20Tracking&amp;viewid=/);

@@ -516,13 +516,17 @@ strong { font-weight: 600; }
 }
 
 .progress-monitoring-tools ul {
-  padding-left: 1.25rem;
+  padding-left: 0;
   margin-bottom: 0;
-  list-style: disc outside;
+  list-style: none;
 }
 
-.progress-monitoring-tools li + li { margin-top: var(--space-sm); }
-.progress-monitoring-tools a { overflow-wrap: anywhere; }
+.progress-monitoring-tools .pathway-card-action {
+  display: inline-block;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
 .progress-monitoring-tools a .material-symbols-rounded {
   font-size: 1em;
   margin-left: 0.35em;
@@ -13115,7 +13119,7 @@ details.pathway-session[open] { box-shadow: none; }
   margin-bottom: calc(-1 * var(--space-md));
 }
 
-.pathway-card-actions > .pathway-card-action {
+.pathway-card-action {
   position: relative;
   width: auto;
   min-width: 24px;
@@ -13131,17 +13135,18 @@ details.pathway-session[open] { box-shadow: none; }
   font-size: 0.78rem;
   font-weight: 600;
   line-height: 1.4;
-  text-align: right;
   box-shadow: none;
   cursor: pointer;
 }
 
+.pathway-card-actions > .pathway-card-action { text-align: right; }
+
 @media (hover: hover) {
-  .pathway-card-actions > .pathway-card-action:hover {
+  .pathway-card-action:hover {
     color: color-mix(in srgb, var(--primary-text) 35%, var(--primary-light-text));
   }
 
-  .pathway-card-actions > .pathway-card-action:hover::before {
+  .pathway-card-action:hover::before {
     content: "";
     position: absolute;
     top: 50%;
@@ -13152,7 +13157,7 @@ details.pathway-session[open] { box-shadow: none; }
   }
 }
 
-.pathway-card-actions > .pathway-card-action:focus-visible {
+.pathway-card-action:focus-visible {
   outline: 3px solid var(--border-focus);
   outline-offset: 3px;
 }

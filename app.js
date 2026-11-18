@@ -8691,13 +8691,13 @@ function buildProgressMonitoringLinksHtml(tier) {
     };
     const links = getFilteredResources(state).flatMap(item =>
         getResourceUrls(item, state).map(url =>
-            `<li><a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.name)}<span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a></li>`
+            `<li><a class="pathway-card-action" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.name)}<span class="material-symbols-rounded" aria-hidden="true" translate="no">open_in_new</span></a></li>`
         )).join('');
     if (!links) return '';
     return `<section class="progress-monitoring-tools">
         <h4>${escapeHtml(t('progress_monitoring_tools'))}</h4>
         <p>${escapeHtml(t('progress_monitoring_tools_hint'))}</p>
-        <ul>${links}</ul>
+        <ul role="list">${links}</ul>
     </section>`;
 }
 
