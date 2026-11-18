@@ -5164,7 +5164,7 @@ details > p {
   padding-bottom: var(--space-sm);
 }
 
-.step-content-resource-picker > .evidence-legend-trigger {
+.step-content-resource-picker > .pathway-resource-selection > .evidence-legend-trigger {
   display: block;
   margin: var(--space-sm) 0 0 auto;
   text-align: right;
@@ -13185,18 +13185,21 @@ details.pathway-session[open] { box-shadow: none; }
 }
 
 .pathway-resource-selection {
-  margin-block: var(--space-md);
+  margin-block: var(--space-md) 0;
   padding: 0.75rem 14px;
-  border-block: 1px solid color-mix(in srgb, var(--primary-light-text) 25%, var(--border));
+  border-top: 1px solid color-mix(in srgb, var(--primary-light-text) 25%, var(--border));
   background: color-mix(in srgb, var(--primary-light-text) 12%, var(--bg));
 }
 
 .visual-flowchart-active-host .pathway-resource-selection {
   margin-inline: -14px;
+  margin-bottom: -14px;
+  border-radius: 0 0 15px 15px;
 }
 
 .visual-flowchart-active-host .step-content:has(> .pathway-resource-selection) {
   padding-inline: 0;
+  padding-bottom: 0;
 }
 
 .pathway-card-actions {
