@@ -6,6 +6,21 @@
 
 const TRANSLATIONS = {
     en: {
+        tutorial_title: 'App tutorials',
+        tutorial_intro: 'New here? Take the full tour or pick a section. Use Next and Back to explore. Highlighted controls are for demonstration; your saved work won’t change.',
+        tutorial_full: 'Full app tour',
+        tutorial_setup: 'Getting started',
+        tutorial_close: 'Exit tutorial',
+        tutorial_steps: 'Tutorial steps',
+        tutorial_menu: 'Sections',
+        tutorial_back: 'Back',
+        tutorial_next: 'Next',
+        tutorial_done: 'Finish',
+        tutorial_progress: (section, step, total) => `${section} · ${step} of ${total}`,
+        tutorial_example: 'Example — this control appears when available',
+        tutorial_dibels_title: 'What is DIBELS?',
+        tutorial_dibels_text: 'DIBELS (Dynamic Indicators of Basic Early Literacy Skills) is a set of brief measures used to screen reading skills and monitor progress. Results guide instruction; they are not report-card grades.',
+        tutorial_open_faq: 'Open the DIBELS FAQ',
         // ── Page title ──
         page_title: 'Literacy Interventions — LRSD Literacy Resource',
 
@@ -586,6 +601,21 @@ const TRANSLATIONS = {
     },
 
     fr: {
+        tutorial_title: 'Tutoriels de l’application',
+        tutorial_intro: 'Vous découvrez l’application? Suivez la visite complète ou choisissez une section. Utilisez Suivant et Retour. Les commandes mises en évidence servent de démonstration; vos données enregistrées ne changeront pas.',
+        tutorial_full: 'Visite complète',
+        tutorial_setup: 'Premiers pas',
+        tutorial_close: 'Quitter le tutoriel',
+        tutorial_steps: 'Étapes du tutoriel',
+        tutorial_menu: 'Sections',
+        tutorial_back: 'Retour',
+        tutorial_next: 'Suivant',
+        tutorial_done: 'Terminer',
+        tutorial_progress: (section, step, total) => `${section} · ${step} sur ${total}`,
+        tutorial_example: 'Exemple — cette commande apparaît lorsqu’elle est disponible',
+        tutorial_dibels_title: 'Qu’est-ce que DIBELS?',
+        tutorial_dibels_text: 'DIBELS (Dynamic Indicators of Basic Early Literacy Skills) regroupe de courtes mesures de dépistage en lecture et de suivi des progrès. Les résultats guident l’enseignement; ils ne servent pas à attribuer des notes au bulletin.',
+        tutorial_open_faq: 'Ouvrir la FAQ sur DIBELS (en anglais)',
         // ── Page title ──
         page_title: 'Literacy Interventions — Ressource en littératie de la DSLR',
 

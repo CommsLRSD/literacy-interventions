@@ -1,0 +1,182 @@
+.tutorial-choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    gap: .75rem;
+    margin-block: 1.25rem;
+}
+
+.tutorial-choices button,
+.tutorial-panel button {
+    border: 1px solid currentColor;
+    border-radius: .65rem;
+    padding: .6rem .85rem;
+    min-height: 2.75rem;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.tutorial-choices button {
+    text-align: start;
+}
+
+.tutorial-choices .tutorial-primary {
+    grid-column: 1 / -1;
+}
+
+.tutorial-choices .tutorial-primary,
+.tutorial-panel .tutorial-primary {
+    background: #2459a4;
+    border-color: #2459a4;
+    color: #fff;
+}
+
+.tutorial-choices button:focus-visible,
+.tutorial-panel :is(button, summary):focus-visible {
+    outline: 3px solid #568df7;
+    outline-offset: 3px;
+}
+
+.tutorial-panel button:disabled {
+    opacity: .5;
+    cursor: default;
+}
+
+#app-tutorial:not([open]),
+#app-tutorial [hidden] {
+    display: none;
+}
+
+#app-tutorial {
+    --tutorial-shade: rgb(5 10 20 / 88%);
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    background: var(--tutorial-shade);
+    color: #152238;
+}
+
+#app-tutorial.tutorial-has-target,
+#app-tutorial::backdrop {
+    background: transparent;
+}
+
+body:has(#app-tutorial[open]) {
+    overflow: hidden;
+}
+
+.tutorial-spotlight {
+    position: absolute;
+    border-radius: .5rem;
+    box-shadow: 0 0 0 2px #ffe182, 0 0 0 200vmax var(--tutorial-shade);
+    pointer-events: none;
+}
+
+.tutorial-example,
+.tutorial-panel {
+    position: absolute;
+    left: 50%;
+    translate: -50% 0;
+    width: min(33rem, calc(100% - 24px));
+    box-sizing: border-box;
+}
+
+.tutorial-example {
+    top: 20%;
+    text-align: center;
+}
+
+#tutorial-example-label {
+    color: #fff;
+    margin: 0 0 .45rem;
+    position: relative;
+    z-index: 1;
+    text-shadow: 0 1px 5px #000;
+}
+
+#tutorial-example-control {
+    display: inline-block;
+    border: 1px solid #7894b8;
+    border-radius: .65rem;
+    padding: .65rem .85rem;
+    background: #f0f6ff;
+    font-weight: 700;
+}
+
+.tutorial-panel {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    max-height: calc(100% - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: .9rem 1rem 1rem;
+    border: 1px solid #aebdd2;
+    border-radius: .9rem;
+    background: #fff;
+    box-shadow: 0 12px 50px #0008;
+}
+
+.tutorial-panel.tutorial-place-top {
+    bottom: auto;
+    top: max(12px, env(safe-area-inset-top));
+}
+
+.tutorial-panel-header,
+#tutorial-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+}
+
+#tutorial-progress {
+    margin: 0;
+    font-size: .9rem;
+    font-weight: 700;
+}
+
+.tutorial-close,
+#tutorial-next {
+    margin-inline-start: auto;
+}
+
+#tutorial-heading {
+    font-size: 1.25rem;
+    line-height: 1.3;
+    margin: .55rem 0;
+}
+
+#tutorial-description,
+#tutorial-reference p {
+    margin: 0 0 .75rem;
+}
+
+#tutorial-reference {
+    margin-block: .75rem;
+}
+
+#tutorial-reference summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+#tutorial-reference[open] summary {
+    margin-block-end: .45rem;
+}
+
+:root[data-theme="dark"] #app-tutorial {
+    color: #ecf4ff;
+}
+
+:root[data-theme="dark"] .tutorial-panel,
+:root[data-theme="dark"] #tutorial-example-control {
+    background: #152238;
+}

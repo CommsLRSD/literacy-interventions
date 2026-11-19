@@ -1128,6 +1128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     appReady = true;
     updateGuidedHome();
+    document.getElementById('tutorial-choices').inert = false;
     
     // Add resize listener to update connection line positions and tier titles
     let resizeTimeout;
@@ -1228,7 +1229,7 @@ function openLiteracyPillars(trigger) {
 // ============================================
 // Navigation
 // ============================================
-const RESOURCE_CENTRE_PAGES = ['favourites', 'scores', 'pillars', 'resources', 'faq', 'about'];
+const RESOURCE_CENTRE_PAGES = ['favourites', 'scores', 'pillars', 'resources', 'tutorials', 'faq', 'about'];
 let resourceCentrePage = 'favourites';
 
 function getNavigationPage(pageName) {
@@ -1380,7 +1381,7 @@ function updateMobilePageTitle() {
     titleEl.textContent = heading ? heading.textContent.trim() : '';
 }
 
-function navigateToPage(pageName, { sessionNotesOnly = false } = {}) {
+function navigateToPage(pageName, { sessionNotesOnly = false, tutorial = false } = {}) {
     closeResourceCentreDrawer();
     const centrePage = RESOURCE_CENTRE_PAGES.includes(pageName) ? pageName : resourceCentrePage;
     if (RESOURCE_CENTRE_PAGES.includes(pageName)) pageName = 'resource-centre';
@@ -1392,7 +1393,7 @@ function navigateToPage(pageName, { sessionNotesOnly = false } = {}) {
     }
     setHomeDrawerOpen(false);
     document.getElementById('pathway-sessions-drawer')?.close();
-    if (appState.currentPage === 'settings') clearProgressTransfer();
+    if (appState.currentPage === 'settings' && !tutorial) clearProgressTransfer();
 
     // Update state
     appState.currentPage = pageName;
@@ -1434,7 +1435,7 @@ function navigateToPage(pageName, { sessionNotesOnly = false } = {}) {
         initializeInterventionsFilterMenu();
     } else if (pageName === 'resource-centre') {
         selectResourceCentrePage(centrePage);
-    } else if (pageName === 'settings') {
+    } else if (pageName === 'settings' && !tutorial) {
         initializeSettings();
     }
     updateGuidedHome();
@@ -1446,7 +1447,7 @@ function navigateToPage(pageName, { sessionNotesOnly = false } = {}) {
     }
     
     // Smooth scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: tutorial ? 'instant' : 'smooth' });
 }
 
 function getScheduleProgramIdForSelection(program) {
