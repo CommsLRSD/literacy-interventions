@@ -1,7 +1,7 @@
 .tutorial-choices {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
-    gap: .75rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: 1rem;
     margin-block: 1.25rem;
 }
 
@@ -19,7 +19,32 @@
 }
 
 .tutorial-choices button {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
     text-align: start;
+    border-color: var(--border);
+    background: var(--bg-alt);
+    box-shadow: var(--shadow-sm);
+}
+
+.tutorial-choices button:hover {
+    border-color: currentColor;
+}
+
+.tutorial-choices img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    background: var(--bg-alt);
+    border-bottom: 1px solid var(--border);
+}
+
+.tutorial-card-label {
+    padding: .8rem 1rem;
 }
 
 .tutorial-panel .tutorial-primary {

@@ -49,6 +49,8 @@
 
     const tableFilter = '#toolkit-table-head .toolkit-column-filter[data-field="program"]';
     const tableSort = '#toolkit-table-head .toolkit-sort-btn[data-field="name"]';
+    const centreNext = '.resource-centre-cycle-next';
+    let startingTheme;
     const tours = [
         ['nav_flowchart', [
             ...setup,
@@ -67,9 +69,9 @@
         ]],
         ['nav_interventions', [
             step('interventions', '#menu-type-filter',
-                ['Choose Intervention', 'In the regular app, the Toolkit follows your teaching program and can prefill your grade. This practice starts fresh. Select Intervention to reveal the next filters.'],
-                ['Choisir Intervention', 'Dans l’application, la Boîte à outils suit votre programme et peut reprendre votre niveau. Cet exercice repart de zéro. Sélectionnez Intervention pour afficher les filtres suivants.'],
-                () => menuState.resourceType === 'Intervention'),
+                ['Choose a resource type', 'In the regular app, the Toolkit follows your teaching program and can prefill your grade. This practice starts fresh. Choose any resource type to reveal the next filters.'],
+                ['Choisir un type de ressource', 'Dans l’application, la Boîte à outils suit votre programme et peut reprendre votre niveau. Cet exercice repart de zéro. Choisissez un type de ressource pour afficher les filtres suivants.'],
+                () => !!menuState.resourceType),
             step('interventions', '#menu-pillar-filter',
                 ['Open the skills menu', 'Select the Literacy pillars heading to open its real dropdown.'],
                 ['Ouvrir le menu des habiletés', 'Sélectionnez le titre des piliers de la littératie pour ouvrir le menu.'],
@@ -122,8 +124,41 @@
             step('schedule', '.cal-item-assessment',
                 ['Explore an assessment', 'Hover over, focus, or tap a calendar item to read its details. The calendar now reflects the grades you selected. Finish discards your practice choices.'],
                 ['Explorer une évaluation', 'Survolez, sélectionnez au clavier ou touchez un élément pour lire les détails. Le calendrier tient compte de vos niveaux. Terminer efface vos choix d’exercice.'])
+        ]],
+        ['tutorial_centre_settings', [
+            step('resource-centre', centreNext,
+                ['Start in My Saved Items', 'This is where you’ll find saved pathway sessions and bookmarked resources. Select Next to open the guide to scores and percentiles.'],
+                ['Commencer dans Mes éléments enregistrés', 'Retrouvez ici vos séances enregistrées et vos ressources favorites. Sélectionnez Suivant pour ouvrir le guide des scores et des rangs centiles.'],
+                () => resourceCentrePage === 'scores', () => selectResourceCentrePage('favourites')),
+            step('resource-centre', centreNext,
+                ['Browse the reference guides', 'Scores & Percentiles explains how to interpret screening results. Select Next to explore the literacy pillars.'],
+                ['Parcourir les guides de référence', 'Le guide des scores et des rangs centiles explique comment interpréter les résultats du dépistage. Sélectionnez Suivant pour explorer les piliers de la littératie.'],
+                () => resourceCentrePage === 'pillars'),
+            step('resource-centre', () => [...document.querySelectorAll('#pillars-section .pillar-definition summary')][0],
+                ['Open a literacy pillar', 'Select a heading to reveal its definition. You can refer to these definitions when choosing resources.'],
+                ['Ouvrir un pilier de la littératie', 'Sélectionnez un titre pour afficher sa définition. Vous pouvez consulter ces définitions au moment de choisir des ressources.'],
+                () => !!document.querySelector('#pillars-section .pillar-definition[open]')),
+            step('resource-centre', () => visibleTarget('.nav-settings')
+                || (appState.mobileMenuOpen ? '.mobile-nav-item[data-page="settings"]' : '.mobile-menu-btn'),
+                ['Open Settings', 'Select Settings in the navigation. On a smaller screen, open the navigation menu first.'],
+                ['Ouvrir les paramètres', 'Sélectionnez Paramètres dans la navigation. Sur un petit écran, ouvrez d’abord le menu de navigation.'],
+                () => appState.currentPage === 'settings'),
+            step('settings', '.settings-theme-toggle',
+                ['Try changing the appearance', 'Toggle Dark mode to see the appearance change. This practice change won’t affect your app.'],
+                ['Essayer une autre apparence', 'Actionnez le mode sombre pour voir l’apparence changer. Ce changement ne touche pas votre application.'],
+                () => byId('settings-dark-mode').checked !== startingTheme,
+                () => { startingTheme = byId('settings-dark-mode').checked; }),
+            step('settings', '#settings-transfer-title',
+                ['Find the data transfer tools', 'Use Transfer saved data in the regular app to move saved sessions and bookmarks to another device. No data will be sent or replaced in this tutorial.'],
+                ['Repérer les outils de transfert', 'Dans l’application, utilisez Transférer les données enregistrées pour déplacer vos séances et vos favoris vers un autre appareil. Cet exercice n’envoie ni ne remplace aucune donnée.'])
         ]]
     ];
+    const previews = {
+        nav_flowchart: 'flowchart',
+        nav_interventions: 'literacy-toolkit',
+        nav_schedule: 'assessment-schedule',
+        tutorial_centre_settings: 'resource-centre'
+    };
     let activeTour;
     let index = 0;
     let target;
@@ -138,7 +173,16 @@
         tours.forEach(([key]) => {
             const button = document.createElement('button');
             button.type = 'button';
-            button.textContent = t(key);
+            const image = document.createElement('img');
+            image.src = `images/tutorials/${previews[key]}.webp`;
+            image.alt = '';
+            image.width = 640;
+            image.height = 360;
+            image.loading = 'lazy';
+            const label = document.createElement('span');
+            label.className = 'tutorial-card-label';
+            label.textContent = t(key);
+            button.append(image, label);
             button.setAttribute('aria-haspopup', 'dialog');
             button.addEventListener('click', () => launchPractice(key, button));
             choices.append(button);

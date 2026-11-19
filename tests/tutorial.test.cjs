@@ -44,9 +44,10 @@ function setup(tour = 'nav_flowchart', query = '') {
     const windowEvents = new Map();
     const messages = [];
     const state = { currentPage: 'home', language: 'en', selectedProgram: null };
+    const menuState = { resourceType: '' };
     const context = vm.createContext({
         URL, Element, Event, CSS: { escape: value => value }, tutorialPractice: true, appState: state,
-        menuState: { resourceType: '' },
+        menuState,
         openVisualFlowchartModal() {},
         document: {
             documentElement: { lang: 'en' }, body: get('body'),
@@ -71,7 +72,7 @@ function setup(tour = 'nav_flowchart', query = '') {
     vm.runInContext(readFileSync(join(__dirname, '..', 'tutorial.js'), 'utf8'), context);
     events.get('app-ready')();
     return {
-        get, state, messages, checks, viewport: context.window,
+        get, state, messages, checks, menuState, viewport: context.window,
         action: (id, type = 'change') => events.get(type)({ type, target: get(id) }),
         clickBlocked(id) {
             let blocked = false;
@@ -154,7 +155,16 @@ test('toolkit opens directly without applying carried-over filters', () => {
     const { get, state } = setup('nav_interventions', '&program=French+Immersion&grade=2');
     assert.equal(state.currentPage, 'interventions');
     assert.equal(state.selectedProgram, null);
-    assert.equal(get('tutorial-heading').textContent, 'Choose Intervention');
+    assert.equal(get('tutorial-heading').textContent, 'Choose a resource type');
+});
+
+test('Toolkit advances for a non-Intervention resource type, but not a blank selection', () => {
+    const { get, menuState, action } = setup('nav_interventions');
+    action('menu-type-filter');
+    assert.equal(get('tutorial-heading').textContent, 'Choose a resource type');
+    menuState.resourceType = 'Classroom Resource';
+    action('menu-type-filter');
+    assert.equal(get('tutorial-heading').textContent, 'Open the skills menu');
 });
 
 test('clicks outside the highlight are blocked and the allowed control follows the step', () => {

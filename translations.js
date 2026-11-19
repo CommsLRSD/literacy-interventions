@@ -7,6 +7,7 @@
 const TRANSLATIONS = {
     en: {
         tutorial_title: 'App tutorials',
+        tutorial_centre_settings: 'Resource Centre & Settings',
         tutorial_intro: 'Choose a hands-on practice walkthrough. Use the highlighted controls to advance automatically. Each walkthrough runs in a separate practice copy; your saved work stays untouched.',
         tutorial_practice: 'Practice session — your saved work stays untouched',
         tutorial_target_missing: 'This control is not visible. Return to the app page for this step, or exit and restart the walkthrough.',
@@ -595,6 +596,7 @@ const TRANSLATIONS = {
 
     fr: {
         tutorial_title: 'Tutoriels de l’application',
+        tutorial_centre_settings: 'Centre de ressources et paramètres',
         tutorial_intro: 'Choisissez un exercice guidé. Utilisez les commandes mises en évidence pour passer automatiquement à l’étape suivante. Chaque exercice utilise une copie distincte; vos données enregistrées restent intactes.',
         tutorial_practice: 'Exercice — vos données enregistrées restent intactes',
         tutorial_target_missing: 'Cette commande n’est pas visible. Revenez à la page de cette étape ou quittez et recommencez l’exercice.',
