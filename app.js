@@ -43,6 +43,24 @@ const appState = {
 
 const STORAGE_KEY_PREFIX = 'literacy-interventions';
 const LEGACY_STORAGE_KEY_PREFIX = 'litlab';
+const tutorialPractice = new URL(window.location.href).searchParams.get('tutorial-practice') === '1';
+const tutorialStorage = new Map();
+
+// The practice iframe runs the real app, but never reads or writes saved work.
+function getAppStorage(kind) {
+    if (!tutorialPractice) return kind === 'localStorage' ? localStorage : sessionStorage;
+    if (!tutorialStorage.has(kind)) {
+        const values = new Map();
+        tutorialStorage.set(kind, {
+            getItem: key => values.get(key) ?? null,
+            setItem: (key, value) => values.set(key, String(value)),
+            removeItem: key => values.delete(key),
+            key: index => [...values.keys()][index] ?? null,
+            get length() { return values.size; }
+        });
+    }
+    return tutorialStorage.get(kind);
+}
 const PROGRAM_ENGLISH = 'English';
 const PROGRAM_FRENCH_IMMERSION = 'French Immersion';
 // Choice id recorded when no drill-down/intervention matches the pathway filters.
@@ -81,10 +99,11 @@ function parseProgressStorage(raw) {
 }
 
 async function readProgressStorage() {
+    if (tutorialPractice) return null;
     // Do not revive legacy localStorage progress after browser caches are cleared.
     try {
-        localStorage.removeItem(PATHWAY_PREFERENCE_KEY);
-        localStorage.removeItem(`${LEGACY_STORAGE_KEY_PREFIX}-pathway`);
+        getAppStorage('localStorage').removeItem(PATHWAY_PREFERENCE_KEY);
+        getAppStorage('localStorage').removeItem(`${LEGACY_STORAGE_KEY_PREFIX}-pathway`);
     } catch (e) { /* Storage may be disabled. */ }
     let state = null;
     try {
@@ -93,7 +112,7 @@ async function readProgressStorage() {
         state = response ? parseProgressStorage(await response.text()) : null;
     } catch (e) { /* A failed write may have saved a session-only fallback. */ }
     try {
-        const fallback = parseProgressStorage(sessionStorage.getItem(PATHWAY_SESSION_KEY));
+        const fallback = parseProgressStorage(getAppStorage('sessionStorage').getItem(PATHWAY_SESSION_KEY));
         if (fallback) state = fallback;
     } catch (e) { /* Session storage is optional. */ }
     pathwayDefaults = state?.defaults || {};
@@ -107,7 +126,8 @@ function persistProgressStorage() {
     const epoch = progressStorageEpoch;
     const payload = JSON.stringify({ pathway: savedPathway, defaults: pathwayDefaults,
         sessions: pathwaySessions, activeSessionId: activePathwaySessionId });
-    try { sessionStorage.setItem(PATHWAY_SESSION_KEY, payload); } catch (e) { /* Session storage is optional. */ }
+    try { getAppStorage('sessionStorage').setItem(PATHWAY_SESSION_KEY, payload); } catch (e) { /* Session storage is optional. */ }
+    if (tutorialPractice) return Promise.resolve();
     return queueProgressStorage(async () => {
         if (epoch !== progressStorageEpoch) return;
         try {
@@ -116,13 +136,13 @@ function persistProgressStorage() {
             await cache.put(PATHWAY_CACHE_URL, new Response(payload, { headers: { 'Content-Type': 'application/json' } }));
             if (epoch === progressStorageEpoch) {
                 try {
-                    if (sessionStorage.getItem(PATHWAY_SESSION_KEY) === payload) sessionStorage.removeItem(PATHWAY_SESSION_KEY);
+                    if (getAppStorage('sessionStorage').getItem(PATHWAY_SESSION_KEY) === payload) getAppStorage('sessionStorage').removeItem(PATHWAY_SESSION_KEY);
                 } catch (error) { /* Session storage is optional. */ }
             }
         } catch (e) {
             if (epoch !== progressStorageEpoch) return;
             try {
-                if (sessionStorage.getItem(PATHWAY_SESSION_KEY) === null) sessionStorage.setItem(PATHWAY_SESSION_KEY, payload);
+                if (getAppStorage('sessionStorage').getItem(PATHWAY_SESSION_KEY) === null) getAppStorage('sessionStorage').setItem(PATHWAY_SESSION_KEY, payload);
             } catch (error) { /* Current visit still works. */ }
         }
     });
@@ -331,13 +351,14 @@ async function hardResetApp() {
     await queueProgressStorage(async () => {
         for (const storageName of ['localStorage', 'sessionStorage']) {
             try {
-                const storage = window[storageName];
+                const storage = getAppStorage(storageName);
                 const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index));
                 keys.filter(key => key && (key.startsWith(`${STORAGE_KEY_PREFIX}-`) ||
                     key.startsWith(`${LEGACY_STORAGE_KEY_PREFIX}-`) || key.startsWith(`${LEGACY_STORAGE_KEY_PREFIX}_`)))
                     .forEach(key => storage.removeItem(key));
             } catch (e) { /* Storage may be disabled. */ }
         }
+        if (tutorialPractice) return;
         try {
             const keys = await caches.keys();
             await Promise.all(keys.filter(key => key === PATHWAY_CACHE_NAME || /^literacy-interventions-v\d+$/.test(key))
@@ -400,7 +421,7 @@ function normalizeProgramLanguage(program, language) {
 
 function restoreProgramPreference() {
     try {
-        const preference = JSON.parse(getStoredValue(localStorage, PROGRAM_PREFERENCE_KEY, LEGACY_PROGRAM_PREFERENCE_KEY));
+        const preference = JSON.parse(getStoredValue(getAppStorage('localStorage'), PROGRAM_PREFERENCE_KEY, LEGACY_PROGRAM_PREFERENCE_KEY));
         if (![PROGRAM_ENGLISH, PROGRAM_FRENCH_IMMERSION].includes(preference?.program)) return;
         appState.selectedProgram = preference.program;
         appState.language = normalizeProgramLanguage(preference.program, preference.language);
@@ -411,7 +432,7 @@ function restoreProgramPreference() {
 
 function storeProgramPreference() {
     try {
-        setStoredValue(localStorage, PROGRAM_PREFERENCE_KEY, JSON.stringify({
+        setStoredValue(getAppStorage('localStorage'), PROGRAM_PREFERENCE_KEY, JSON.stringify({
             program: appState.selectedProgram, language: appState.language
         }));
     } catch (e) {
@@ -747,7 +768,7 @@ function focusActivePathwayStep() {
 
 function getStoredScheduleGradePreferences() {
     try {
-        const raw = getStoredValue(localStorage, SCHEDULE_GRADE_PREFERENCE_KEY, LEGACY_SCHEDULE_GRADE_PREFERENCE_KEY);
+        const raw = getStoredValue(getAppStorage('localStorage'), SCHEDULE_GRADE_PREFERENCE_KEY, LEGACY_SCHEDULE_GRADE_PREFERENCE_KEY);
         if (!raw) return {};
         const parsed = JSON.parse(raw);
         return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
@@ -773,7 +794,7 @@ function storeScheduleGradePreference(programId, gradeIds) {
     const stored = getStoredScheduleGradePreferences();
     stored[programId] = normalizeScheduleGradeIds(gradeIds);
     try {
-        setStoredValue(localStorage, SCHEDULE_GRADE_PREFERENCE_KEY, JSON.stringify(stored));
+        setStoredValue(getAppStorage('localStorage'), SCHEDULE_GRADE_PREFERENCE_KEY, JSON.stringify(stored));
     } catch (e) {
         // Ignore storage failures so the UI still works for the current visit.
     }
@@ -1129,6 +1150,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     appReady = true;
     updateGuidedHome();
     document.getElementById('tutorial-choices').inert = false;
+    document.dispatchEvent(new Event('app-ready'));
     
     // Add resize listener to update connection line positions and tier titles
     let resizeTimeout;
@@ -1656,7 +1678,7 @@ function setupSidebarToggle() {
     const sideNav = document.getElementById('side-nav');
     if (!toggleBtn || !sideNav) return;
 
-    const collapsed = getStoredValue(localStorage, SIDE_NAV_COLLAPSED_KEY, LEGACY_SIDE_NAV_COLLAPSED_KEY) === 'true';
+    const collapsed = getStoredValue(getAppStorage('localStorage'), SIDE_NAV_COLLAPSED_KEY, LEGACY_SIDE_NAV_COLLAPSED_KEY) === 'true';
     setSidebarCollapsed(collapsed);
 
     toggleBtn.addEventListener('click', () => {
@@ -1715,7 +1737,7 @@ function setSidebarCollapsed(collapsed, options = {}) {
     toggleBtn.setAttribute('aria-expanded', String(!collapsed));
     toggleBtn.setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Collapse navigation');
     document.getElementById('side-nav-tooltip')?.classList.remove('is-visible');
-    if (options.persist !== false) setStoredValue(localStorage, SIDE_NAV_COLLAPSED_KEY, String(collapsed));
+    if (options.persist !== false) setStoredValue(getAppStorage('localStorage'), SIDE_NAV_COLLAPSED_KEY, String(collapsed));
 }
 
 // ============================================
@@ -3735,6 +3757,7 @@ window.matchMedia(VISUAL_FLOWCHART_MOBILE_QUERY).addEventListener('change', even
 // The visual pathway is the default view on desktop: open it whenever the
 // flowchart page is shown there, unless it is already open.
 function openDefaultVisualFlowchart() {
+    if (tutorialPractice) return;
     if (appState.currentPage !== 'flowchart' || appState.visualFlowchartModal || appState.visualFlowchartDismissed) return;
     if (!appState.visualFlowchart?.tierId || isVisualFlowchartMobile()) return;
     openVisualFlowchartModal();
@@ -4262,7 +4285,7 @@ function initializeVisualFlowchartLayoutPreference() {
     if (!select || !status) return;
 
     try {
-        visualFlowchartLayout = localStorage.getItem(VISUAL_FLOWCHART_LAYOUT_KEY) === 'classic' ? 'classic' : 'single';
+        visualFlowchartLayout = getAppStorage('localStorage').getItem(VISUAL_FLOWCHART_LAYOUT_KEY) === 'classic' ? 'classic' : 'single';
     } catch (error) {
         console.warn('Unable to read the saved visual pathway layout.', error);
         status.textContent = t('settings_pathway_layout_storage_error');
@@ -4272,7 +4295,7 @@ function initializeVisualFlowchartLayoutPreference() {
     select.addEventListener('change', () => {
         visualFlowchartLayout = select.value === 'classic' ? 'classic' : 'single';
         try {
-            localStorage.setItem(VISUAL_FLOWCHART_LAYOUT_KEY, visualFlowchartLayout);
+            getAppStorage('localStorage').setItem(VISUAL_FLOWCHART_LAYOUT_KEY, visualFlowchartLayout);
             status.textContent = '';
         } catch (error) {
             console.warn('Unable to save the visual pathway layout.', error);
@@ -9077,7 +9100,7 @@ const MENU_LANGUAGE_VALUES = [PROGRAM_ENGLISH, PROGRAM_FRENCH_IMMERSION];
 
 function getStoredMenuLanguage() {
     try {
-        const stored = getStoredValue(localStorage, MENU_LANGUAGE_KEY, LEGACY_MENU_LANGUAGE_KEY);
+        const stored = getStoredValue(getAppStorage('localStorage'), MENU_LANGUAGE_KEY, LEGACY_MENU_LANGUAGE_KEY);
         return MENU_LANGUAGE_VALUES.includes(stored) ? stored : MENU_LANGUAGE_DEFAULT;
     } catch (e) {
         // Private browsing modes can throw on localStorage access.
@@ -9087,7 +9110,7 @@ function getStoredMenuLanguage() {
 
 function storeMenuLanguage(value) {
     try {
-        setStoredValue(localStorage, MENU_LANGUAGE_KEY, value);
+        setStoredValue(getAppStorage('localStorage'), MENU_LANGUAGE_KEY, value);
     } catch (e) {
         // Ignore storage failures — the toggle still works for this session.
     }
@@ -9182,14 +9205,14 @@ function showFavouriteFeedback(selected, anchor, context) {
 function getFavouriteIds() {
     if (!favouriteIds) {
         let stored = [];
-        try { stored = JSON.parse(localStorage.getItem(FAVOURITES_KEY) || '[]'); } catch (e) { /* Storage is optional. */ }
+        try { stored = JSON.parse(getAppStorage('localStorage').getItem(FAVOURITES_KEY) || '[]'); } catch (e) { /* Storage is optional. */ }
         favouriteIds = new Set(Array.isArray(stored) ? stored.filter(id => typeof id === 'string') : []);
     }
     if (appState.interventionMenuDataLoaded && appState.interventionMenuData && favouriteCatalog !== appState.interventionMenuData) {
         favouriteCatalog = appState.interventionMenuData;
         const validIds = new Set(getAllResources().map(item => item.id));
         favouriteIds = new Set([...favouriteIds].filter(id => validIds.has(id)));
-        try { localStorage.setItem(FAVOURITES_KEY, JSON.stringify([...favouriteIds])); } catch (e) { /* Keep favourites for this visit. */ }
+        try { getAppStorage('localStorage').setItem(FAVOURITES_KEY, JSON.stringify([...favouriteIds])); } catch (e) { /* Keep favourites for this visit. */ }
     }
     return favouriteIds;
 }
@@ -9664,7 +9687,7 @@ document.addEventListener('click', event => {
     const ids = getFavouriteIds();
     if (ids.has(id)) ids.delete(id);
     else ids.add(id);
-    try { localStorage.setItem(FAVOURITES_KEY, JSON.stringify([...ids])); } catch (e) { /* Storage is optional. */ }
+    try { getAppStorage('localStorage').setItem(FAVOURITES_KEY, JSON.stringify([...ids])); } catch (e) { /* Storage is optional. */ }
     renderFavourites();
     document.querySelectorAll('[data-favourite-id]').forEach(toggle => {
         const item = getAllResources().find(resource => resource.id === toggle.dataset.favouriteId);
@@ -11587,7 +11610,7 @@ function isAppInstalled() {
 // Whether the install banner should still be offered (not dismissed before).
 function isInstallBannerDismissed() {
     try {
-        return getStoredValue(localStorage, INSTALL_BANNER_DISMISSED_KEY, LEGACY_INSTALL_BANNER_DISMISSED_KEY) === 'true';
+        return getStoredValue(getAppStorage('localStorage'), INSTALL_BANNER_DISMISSED_KEY, LEGACY_INSTALL_BANNER_DISMISSED_KEY) === 'true';
     } catch (e) {
         // Private browsing modes can throw on localStorage access.
         return false;
@@ -11597,7 +11620,7 @@ function isInstallBannerDismissed() {
 // Remember the user's choice so the banner is not shown again.
 function rememberInstallBannerDismissed() {
     try {
-        setStoredValue(localStorage, INSTALL_BANNER_DISMISSED_KEY, 'true');
+        setStoredValue(getAppStorage('localStorage'), INSTALL_BANNER_DISMISSED_KEY, 'true');
     } catch (e) {
         /* Ignore storage failures — the banner simply reappears next visit. */
     }
@@ -11797,6 +11820,7 @@ function setupPwaInstall() {
 // Register the service worker. A service worker is required before browsers
 // consider the site installable (and it provides an offline fallback).
 function registerServiceWorker() {
+    if (tutorialPractice) return;
     if (!('serviceWorker' in navigator)) return;
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').catch(error => {

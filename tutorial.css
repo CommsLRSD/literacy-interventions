@@ -22,11 +22,6 @@
     text-align: start;
 }
 
-.tutorial-choices .tutorial-primary {
-    grid-column: 1 / -1;
-}
-
-.tutorial-choices .tutorial-primary,
 .tutorial-panel .tutorial-primary {
     background: #2459a4;
     border-color: #2459a4;
@@ -50,7 +45,7 @@
 }
 
 #app-tutorial {
-    --tutorial-shade: rgb(5 10 20 / 88%);
+    --tutorial-shade: rgb(5 10 20 / 24%);
     position: fixed;
     inset: 0;
     width: 100%;
@@ -63,6 +58,8 @@
     overflow: hidden;
     background: var(--tutorial-shade);
     color: #152238;
+    z-index: 20000;
+    pointer-events: none;
 }
 
 #app-tutorial.tutorial-has-target,
@@ -70,8 +67,51 @@
     background: transparent;
 }
 
-body:has(#app-tutorial[open]) {
+body:has(#app-tutorial.tutorial-host[open]) {
     overflow: hidden;
+}
+
+#app-tutorial.tutorial-host {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    pointer-events: auto;
+}
+
+.tutorial-host > .tutorial-panel,
+.tutorial-host > .tutorial-spotlight {
+    display: none;
+}
+
+.tutorial-host-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .5rem .75rem;
+    background: #eef5ff;
+    font-size: .9rem;
+}
+
+.tutorial-host-bar p {
+    margin: 0;
+}
+
+.tutorial-host-bar button {
+    flex-shrink: 0;
+    min-height: 2.75rem;
+    cursor: pointer;
+}
+
+.tutorial-practice-frame {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    border: 0;
+}
+
+.tutorial-practice .install-banner {
+    display: none;
 }
 
 .tutorial-spotlight {
@@ -81,7 +121,6 @@ body:has(#app-tutorial[open]) {
     pointer-events: none;
 }
 
-.tutorial-example,
 .tutorial-panel {
     position: absolute;
     left: 50%;
@@ -90,38 +129,30 @@ body:has(#app-tutorial[open]) {
     box-sizing: border-box;
 }
 
-.tutorial-example {
-    top: 20%;
-    text-align: center;
-}
-
-#tutorial-example-label {
-    color: #fff;
-    margin: 0 0 .45rem;
-    position: relative;
-    z-index: 1;
-    text-shadow: 0 1px 5px #000;
-}
-
-#tutorial-example-control {
-    display: inline-block;
-    border: 1px solid #7894b8;
-    border-radius: .65rem;
-    padding: .65rem .85rem;
-    background: #f0f6ff;
-    font-weight: 700;
-}
-
 .tutorial-panel {
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
     bottom: max(12px, env(safe-area-inset-bottom));
     max-height: calc(100% - 24px);
-    overflow-y: auto;
+    overflow: hidden;
     overscroll-behavior: contain;
     padding: .9rem 1rem 1rem;
     border: 1px solid #aebdd2;
     border-radius: .9rem;
     background: #fff;
     box-shadow: 0 12px 50px #0008;
+}
+
+.tutorial-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin-block: .5rem;
+}
+
+.tutorial-panel-header,
+#tutorial-controls {
+    flex-shrink: 0;
 }
 
 .tutorial-panel.tutorial-place-top {
@@ -154,22 +185,13 @@ body:has(#app-tutorial[open]) {
     margin: .55rem 0;
 }
 
-#tutorial-description,
-#tutorial-reference p {
+#tutorial-description {
     margin: 0 0 .75rem;
 }
 
-#tutorial-reference {
-    margin-block: .75rem;
-}
-
-#tutorial-reference summary {
-    cursor: pointer;
-    font-weight: 700;
-}
-
-#tutorial-reference[open] summary {
-    margin-block-end: .45rem;
+#tutorial-status {
+    font-size: .9rem;
+    margin: 0 0 .75rem;
 }
 
 :root[data-theme="dark"] #app-tutorial {
@@ -177,6 +199,6 @@ body:has(#app-tutorial[open]) {
 }
 
 :root[data-theme="dark"] .tutorial-panel,
-:root[data-theme="dark"] #tutorial-example-control {
+:root[data-theme="dark"] .tutorial-host-bar {
     background: #152238;
 }

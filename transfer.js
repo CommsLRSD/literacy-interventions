@@ -227,8 +227,8 @@ async function restoreProgressTransfer() {
             [MENU_LANGUAGE_KEY, snapshot.menuLanguage],
             [SCHEDULE_GRADE_PREFERENCE_KEY, JSON.stringify(snapshot.scheduleGrades)]
         ]);
-        for (const key of values.keys()) preferences.set(key, localStorage.getItem(key));
-        for (const [key, value] of values) localStorage.setItem(key, value);
+        for (const key of values.keys()) preferences.set(key, getAppStorage('localStorage').getItem(key));
+        for (const [key, value] of values) getAppStorage('localStorage').setItem(key, value);
         progressStorageEpoch++;
         pathwaySessions = snapshot.sessions;
         savedPathway = snapshot.pathway;
@@ -238,7 +238,7 @@ async function restoreProgressTransfer() {
         const payload = JSON.stringify({ pathway: savedPathway, defaults: pathwayDefaults,
             sessions: pathwaySessions, activeSessionId: activePathwaySessionId });
         let persisted = false;
-        try { persisted = sessionStorage.getItem(PATHWAY_SESSION_KEY) === payload; } catch (error) { /* Try CacheStorage. */ }
+        try { persisted = getAppStorage('sessionStorage').getItem(PATHWAY_SESSION_KEY) === payload; } catch (error) { /* Try CacheStorage. */ }
         if (!persisted) {
             try {
                 const cache = await caches.open(PATHWAY_CACHE_NAME);
@@ -255,8 +255,8 @@ async function restoreProgressTransfer() {
         activePathwaySessionId = previous.activeSessionId;
         for (const [key, value] of preferences) {
             try {
-                if (value === null) localStorage.removeItem(key);
-                else localStorage.setItem(key, value);
+                if (value === null) getAppStorage('localStorage').removeItem(key);
+                else getAppStorage('localStorage').setItem(key, value);
             } catch (storageError) { /* Browser storage may be unavailable. */ }
         }
         transferStatus('transfer_error');

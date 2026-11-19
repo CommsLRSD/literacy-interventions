@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     toggle.addEventListener('change', () => {
         const theme = toggle.checked ? 'dark' : 'light';
         document.documentElement.dataset.theme = theme;
+        if (typeof tutorialPractice !== 'undefined' && tutorialPractice) return;
         try {
             localStorage.setItem(THEME_PREFERENCE_KEY, theme);
             status.textContent = '';

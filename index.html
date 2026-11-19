@@ -24,9 +24,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
-    <script src="theme.js?v=dark-mode-1"></script>
+    <script src="theme.js?v=practice-tutorial-2"></script>
     <link rel="stylesheet" href="styles.css?v=progress-monitoring-actions-3">
-    <link rel="stylesheet" href="tutorial.css?v=1">
+    <link rel="stylesheet" href="tutorial.css?v=2">
 </head>
 <body data-page="home">
     <svg xmlns="http://www.w3.org/2000/svg" class="resource-centre-symbols" aria-hidden="true">
@@ -1513,7 +1513,7 @@
         </section>
 
         <section id="tutorials-section" class="content-section" data-page="tutorials">
-            <p class="section-subtitle" data-i18n="tutorial_intro">New here? Take the full tour or pick a section. Use Next and Back to explore. Highlighted controls are for demonstration; your saved work won’t change.</p>
+            <p class="section-subtitle" data-i18n="tutorial_intro">Choose a hands-on practice walkthrough. Open real menus, make selections, and follow the results. Each walkthrough runs in a separate practice copy; your saved work stays untouched.</p>
             <div id="tutorial-choices" class="tutorial-choices" inert></div>
         </section>
 
@@ -1738,36 +1738,30 @@
         </div>
     </dialog>
 
-    <dialog id="app-tutorial" aria-labelledby="tutorial-heading">
-        <div class="tutorial-example" aria-hidden="true" hidden>
-            <p id="tutorial-example-label"></p>
-            <div id="tutorial-example-control"></div>
-        </div>
+    <dialog id="app-tutorial" aria-labelledby="tutorial-heading" aria-describedby="tutorial-description">
         <div class="tutorial-spotlight" aria-hidden="true" hidden></div>
         <div class="tutorial-panel">
             <header class="tutorial-panel-header">
-                <p id="tutorial-progress" hidden></p>
+                <p id="tutorial-progress"></p>
                 <button class="tutorial-close" type="button" data-i18n="tutorial_close">Exit tutorial</button>
             </header>
-            <h2 id="tutorial-heading" tabindex="-1" autofocus></h2>
-            <p id="tutorial-description"></p>
-            <details id="tutorial-reference" hidden>
-                <summary data-i18n="tutorial_dibels_title">What is DIBELS?</summary>
-                <p id="tutorial-reference-text"></p>
-                <button type="button" id="tutorial-open-faq" data-i18n="tutorial_open_faq">Open the DIBELS FAQ</button>
-            </details>
+            <div class="tutorial-body">
+                <h2 id="tutorial-heading" tabindex="-1" autofocus></h2>
+                <p id="tutorial-description"></p>
+                <p id="tutorial-status" role="status" aria-live="polite"></p>
+            </div>
             <nav id="tutorial-controls" aria-label="Tutorial steps" data-i18n-aria="tutorial_steps" hidden>
                 <button type="button" id="tutorial-menu" data-i18n="tutorial_menu">Sections</button>
-                <button type="button" id="tutorial-back" data-i18n="tutorial_back">Back</button>
+                <button type="button" id="tutorial-try" data-i18n="tutorial_try">Try it</button>
                 <button type="button" id="tutorial-next" class="tutorial-primary"></button>
             </nav>
         </div>
     </dialog>
 
-    <script src="translations.js?v=app-tutorial-1"></script>
-    <script src="app.js?v=app-tutorial-1"></script>
-    <script src="transfer.js?v=settings-screen-1"></script>
-    <script src="tutorial.js?v=1"></script>
+    <script src="translations.js?v=practice-tutorial-2"></script>
+    <script src="app.js?v=practice-tutorial-2"></script>
+    <script src="transfer.js?v=practice-tutorial-2"></script>
+    <script src="tutorial.js?v=2"></script>
 
     <script>
     (function() {
