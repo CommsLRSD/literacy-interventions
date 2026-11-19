@@ -6,8 +6,6 @@ const vm = require('node:vm');
 
 function setup(tour = 'nav_flowchart', query = '') {
     const checks = Array.from({ length: 8 }, () => ({ checked: false, dispatchEvent() {} }));
-    const scheduleFilters = [];
-    const toolkitFilters = [];
     class Element {
         constructor() {
             this.handlers = new Map();
@@ -19,7 +17,7 @@ function setup(tour = 'nav_flowchart', query = '') {
         setAttribute() {}
         replaceChildren() {}
         append() {}
-        contains() { return false; }
+        contains(element) { return this === element; }
         matches(selector) { return this.open && selector === 'details[open]'; }
         querySelector(selector) { return elements.get(selector) || null; }
         querySelectorAll(selector) { return selector === '.checklist-line input' ? checks : []; }
@@ -43,15 +41,11 @@ function setup(tour = 'nav_flowchart', query = '') {
     for (const selector of ['.tutorial-panel', '.tutorial-body', '.tutorial-spotlight', '.tutorial-close', '.tutorial-arrow']) get(selector);
     get('program-prompt-modal').hidden = true;
     const events = new Map();
+    const windowEvents = new Map();
     const messages = [];
     const state = { currentPage: 'home', language: 'en', selectedProgram: null };
     const context = vm.createContext({
         URL, Element, Event, CSS: { escape: value => value }, tutorialPractice: true, appState: state,
-        PROGRAM_ENGLISH: 'English', PROGRAM_FRENCH_IMMERSION: 'French Immersion',
-        finalizeProgramSelection: program => { state.selectedProgram = program; },
-        getValidPathwayGrades: (_program, grades) => grades.filter(grade => /^[1-8]$/.test(grade)),
-        applyPathwaySetupToFilters: ({ grades }) => scheduleFilters.push(...grades),
-        onMenuFilterChange: (field, grades) => toolkitFilters.push([field, grades]),
         menuState: { resourceType: '' },
         openVisualFlowchartModal() {},
         document: {
@@ -65,7 +59,7 @@ function setup(tour = 'nav_flowchart', query = '') {
         window: {
             location: { href: `https://example.org/?tutorial-practice=1&tutorial=${tour}${query}`, origin: 'https://example.org' },
             parent: { postMessage: message => messages.push(message) },
-            innerWidth: 1024, innerHeight: 768, addEventListener() {}
+            innerWidth: 1024, innerHeight: 768, addEventListener: (name, callback) => windowEvents.set(name, callback)
         },
         MutationObserver: class { observe() {} },
         requestAnimationFrame: callback => { callback(); return 1; },
@@ -77,8 +71,17 @@ function setup(tour = 'nav_flowchart', query = '') {
     vm.runInContext(readFileSync(join(__dirname, '..', 'tutorial.js'), 'utf8'), context);
     events.get('app-ready')();
     return {
-        get, state, messages, checks, scheduleFilters, toolkitFilters, viewport: context.window,
-        action: (id, type = 'change') => events.get(type)({ type, target: get(id) })
+        get, state, messages, checks, viewport: context.window,
+        action: (id, type = 'change') => events.get(type)({ type, target: get(id) }),
+        clickBlocked(id) {
+            let blocked = false;
+            windowEvents.get('click')({
+                target: get(id),
+                preventDefault() { blocked = true; },
+                stopImmediatePropagation() {}
+            });
+            return blocked;
+        }
     };
 }
 
@@ -127,11 +130,10 @@ test('flowchart uses real setup selections and leaves only the last practice ite
 });
 
 test('schedule advances on opening the actual menu, changing a grade and closing it', () => {
-    const { get, state, action, scheduleFilters } = setup('nav_schedule', '&program=French+Immersion&grade=3');
+    const { get, state, action } = setup('nav_schedule', '&program=French+Immersion&grade=3');
     const title = () => get('tutorial-heading').textContent;
     assert.equal(state.currentPage, 'schedule');
-    assert.equal(state.selectedProgram, 'French Immersion');
-    assert.deepEqual(scheduleFilters, ['3']);
+    assert.equal(state.selectedProgram, null);
     assert.equal(title(), 'Open the grade filter');
     const dropdown = get('schedule-grade-filter');
     dropdown.open = true;
@@ -148,12 +150,21 @@ test('schedule advances on opening the actual menu, changing a grade and closing
     assert.equal(get('tutorial-finish').hidden, false);
 });
 
-test('toolkit opens directly and keeps the selected grade for guided search', () => {
-    const { get, state, toolkitFilters } = setup('nav_interventions', '&program=French+Immersion&grade=2');
+test('toolkit opens directly without applying carried-over filters', () => {
+    const { get, state } = setup('nav_interventions', '&program=French+Immersion&grade=2');
     assert.equal(state.currentPage, 'interventions');
-    assert.equal(state.selectedProgram, 'French Immersion');
-    assert.deepEqual(toolkitFilters, [['grade', ['2']]]);
+    assert.equal(state.selectedProgram, null);
     assert.equal(get('tutorial-heading').textContent, 'Choose Intervention');
+});
+
+test('clicks outside the highlight are blocked and the allowed control follows the step', () => {
+    const { state, action, clickBlocked } = setup();
+    assert.equal(clickBlocked('home-start-btn'), true);
+    assert.equal(clickBlocked('home-program-select'), false);
+    state.selectedProgram = 'English';
+    action('home-program-select');
+    assert.equal(clickBlocked('home-program-select'), true);
+    assert.equal(clickBlocked('home-screener-select'), false);
 });
 
 test('callout sits beside the highlight and flips above controls near the viewport bottom', () => {

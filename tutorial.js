@@ -47,17 +47,8 @@
         checks.at(-1)?.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    function applyPracticeFilters() {
-        finalizeProgramSelection(
-            params.get('program') === PROGRAM_FRENCH_IMMERSION ? PROGRAM_FRENCH_IMMERSION : PROGRAM_ENGLISH,
-            appState.language
-        );
-        const grades = getValidPathwayGrades(appState.selectedProgram, params.getAll('grade'));
-        if (grades.length) applyPathwaySetupToFilters({ grades });
-        return grades;
-    }
-
-    let practiceGrades = [];
+    const tableFilter = '#toolkit-table-head .toolkit-column-filter[data-field="program"]';
+    const tableSort = '#toolkit-table-head .toolkit-sort-btn[data-field="name"]';
     const tours = [
         ['nav_flowchart', [
             ...setup,
@@ -65,7 +56,7 @@
                 ['Review the checklist', 'The other items are checked for practice. Check the last item, then select Continue to Results.'],
                 ['Vérifier les principes', 'Les autres éléments sont déjà cochés pour l’exercice. Cochez le dernier, puis poursuivez vers les résultats.'],
                 flowChanged, prepareChecklist),
-            step('flowchart', liveNode,
+            step('flowchart', () => `${liveNode()} .decision-grid`,
                 ['Make a practice decision', 'Read the question and choose an answer in the app. This is only an example: use actual learner evidence outside practice. Watch the pathway move to the next step.'],
                 ['Prendre une décision d’exercice', 'Lisez la question et choisissez une réponse dans l’application. Il s’agit d’un exemple : hors exercice, utilisez les données de l’élève. Le parcours passera à l’étape suivante.'],
                 flowChanged, rememberNode),
@@ -76,12 +67,9 @@
         ]],
         ['nav_interventions', [
             step('interventions', '#menu-type-filter',
-                ['Choose Intervention', 'The Toolkit follows your teaching program and can prefill the grade in guided search when you chose one. Select Intervention to reveal the next filters.'],
-                ['Choisir Intervention', 'La Boîte à outils suit votre programme d’enseignement et peut reprendre le niveau choisi dans la recherche guidée. Sélectionnez Intervention pour afficher les filtres suivants.'],
-                () => menuState.resourceType === 'Intervention',
-                () => {
-                    if (practiceGrades.length) onMenuFilterChange('grade', practiceGrades);
-                }),
+                ['Choose Intervention', 'In the regular app, the Toolkit follows your teaching program and can prefill your grade. This practice starts fresh. Select Intervention to reveal the next filters.'],
+                ['Choisir Intervention', 'Dans l’application, la Boîte à outils suit votre programme et peut reprendre votre niveau. Cet exercice repart de zéro. Sélectionnez Intervention pour afficher les filtres suivants.'],
+                () => menuState.resourceType === 'Intervention'),
             step('interventions', '#menu-pillar-filter',
                 ['Open the skills menu', 'Select the Literacy pillars heading to open its real dropdown.'],
                 ['Ouvrir le menu des habiletés', 'Sélectionnez le titre des piliers de la littératie pour ouvrir le menu.'],
@@ -99,21 +87,29 @@
                 ['Lancer la recherche', 'Sélectionnez Rechercher dans l’application pour afficher les ressources correspondantes.'],
                 () => menuUiState.view === 'results'),
             step('interventions', '#toolkit-view-toggle',
-                ['Review results or try the table', 'The app shows matches for your choices. Review them or try Advanced filters, then switch to All resources to browse the catalogue as a table.'],
-                ['Examiner les résultats ou essayer le tableau', 'Consultez les résultats ou essayez les filtres avancés, puis activez Toutes les ressources pour parcourir le catalogue sous forme de tableau.'],
+                ['Review results or try the table', 'The app shows matches for your choices. Review them, then switch to All resources to browse the catalogue as a table.'],
+                ['Examiner les résultats ou essayer le tableau', 'Consultez les résultats, puis activez Toutes les ressources pour parcourir le catalogue sous forme de tableau.'],
                 () => byId('toolkit-view-toggle').getAttribute('aria-checked') === 'true'),
-            step('interventions', '#toolkit-table-search',
-                ['Filter the table yourself', 'Type a word, such as phonics, and watch the rows and result count update.'],
-                ['Filtrer le tableau', 'Entrez un mot et observez les lignes et le nombre de résultats.'],
-                event => event.type === 'input' && event.target === byId('toolkit-table-search') && !!event.target.value.trim()),
-            step('interventions', '#toolkit-table-search',
-                ['Your table is filtered', 'Keep typing, change the word, or clear the search to see how the results respond. Finish when you’re ready to leave practice.'],
-                ['Votre tableau est filtré', 'Continuez de taper, modifiez le mot ou effacez la recherche pour observer les résultats. Terminez quand vous voulez quitter l’exercice.'])
+            step('interventions', `${tableFilter} > summary`,
+                ['Open a column filter', 'Use the arrow beside a column name to filter the table. Open the Program filter to try it.'],
+                ['Ouvrir un filtre de colonne', 'La flèche à côté du nom d’une colonne permet de filtrer le tableau. Essayez le filtre Programme.'],
+                () => document.querySelector(tableFilter).open),
+            step('interventions', tableFilter,
+                ['Filter by program', 'Check a program to see the rows update, then select Done.'],
+                ['Filtrer par programme', 'Cochez un programme pour mettre à jour les lignes, puis sélectionnez Terminé.'],
+                () => !document.querySelector(tableFilter).open && !!toolkitTableState.filters.program?.length),
+            step('interventions', tableSort,
+                ['Sort the table', 'Select the Resource column name to reverse the sort order. You can also sort by Resource Type outside practice.'],
+                ['Trier le tableau', 'Sélectionnez le titre de la colonne Ressource pour inverser l’ordre de tri. Hors exercice, vous pouvez aussi trier par type de ressource.'],
+                () => toolkitTableState.direction === 'descending'),
+            step('interventions', tableSort,
+                ['Review the sorted results', 'The arrow shows the sort direction. Select Resource again to switch it, or select Finish to leave practice.'],
+                ['Consulter les résultats triés', 'La flèche indique le sens du tri. Sélectionnez de nouveau Ressource pour l’inverser, ou Terminer pour quitter l’exercice.'])
         ]],
         ['nav_schedule', [
             step('schedule', '#schedule-grade-filter',
-                ['Open the grade filter', 'The schedule follows your teaching program. If you selected a grade, it starts with that grade where available. Open the grade menu to change the filter.'],
-                ['Ouvrir le filtre des niveaux', 'Le calendrier suit votre programme d’enseignement et affiche le niveau choisi lorsqu’il est disponible. Ouvrez le menu des niveaux pour modifier le filtre.'],
+                ['Open the grade filter', 'In the regular app, the schedule follows your teaching program and can start with your selected grade. This practice shows all grades. Open the grade menu to try the filter.'],
+                ['Ouvrir le filtre des niveaux', 'Dans l’application, le calendrier suit votre programme et peut afficher le niveau choisi. Cet exercice montre tous les niveaux. Ouvrez le menu pour essayer le filtre.'],
                 () => byId('schedule-grade-filter').open),
             step('schedule', '#schedule-grade-filter',
                 ['Change the displayed grades', 'Check a grade in the menu and watch the calendar update. You can select more than one.'],
@@ -173,10 +169,6 @@
         url.searchParams.set('tutorial-practice', '1');
         url.searchParams.set('tutorial', key);
         url.searchParams.set('language', appState.language);
-        if (key !== 'nav_flowchart') {
-            if (appState.selectedProgram) url.searchParams.set('program', appState.selectedProgram);
-            getHomeSetup().grades.forEach(grade => url.searchParams.append('grade', grade));
-        }
         practiceFrame.src = url.href;
         dialog.append(bar, practiceFrame);
         dialog.showModal();
@@ -188,11 +180,11 @@
     }
 
     function visibleTarget(selector) {
-        if (selector instanceof Element) return selector;
-        return [...document.querySelectorAll(selector)].find(el =>
-            el.getClientRects().length && getComputedStyle(el).visibility === 'visible' &&
-            el.getBoundingClientRect().width && el.getBoundingClientRect().height);
+        return (selector instanceof Element ? [selector] : [...document.querySelectorAll(selector)]).find(el =>
+            isVisible(el) && (el.getBoundingClientRect().width || el.matches('details[open]')));
     }
+
+    const isVisible = el => el.getClientRects().length && getComputedStyle(el).visibility === 'visible';
 
     function renderStep() {
         const item = activeTour[index];
@@ -227,7 +219,10 @@
 
     function schedulePlacement(scroll = false) {
         if (!dialog.open || !tutorialPractice) return;
-        if (scroll && target) target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+        if (scroll && target) {
+            const anchor = target.matches('details[open]') ? target.querySelector('summary') : target;
+            anchor?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+        }
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(placeSpotlight);
     }
@@ -241,6 +236,7 @@
         let rect = target?.getBoundingClientRect();
         const dropdownOpen = target?.matches('details[open]');
         if (dropdownOpen) {
+            rect = target.querySelector('summary')?.getBoundingClientRect() || rect;
             const menu = target.querySelector('.cal-grade-options')?.getBoundingClientRect();
             if (menu?.height) rect = {
                 left: Math.min(rect.left, menu.left), top: Math.min(rect.top, menu.top),
@@ -316,11 +312,39 @@
     dialog.querySelector('.tutorial-close').addEventListener('click', close);
     dialog.addEventListener('click', event => event.stopPropagation());
     dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
+    function allowsInteraction(element) {
+        if (dialog.contains(element)) return true;
+        if (!target?.contains(element)) return false;
+        // The final map is for viewing and panning, not starting another branch.
+        return !target.matches('#visual-flowchart-viewport, #journey-map') ||
+            !element.closest('a, button, input, select, summary');
+    }
+
+    function blockInteraction(event) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+    }
+
+    for (const name of ['pointerdown', 'mousedown', 'click', 'auxclick', 'contextmenu']) {
+        window.addEventListener(name, event => {
+            if (tutorialPractice && dialog.open && !allowsInteraction(event.target)) blockInteraction(event);
+        }, true);
+    }
+
     window.addEventListener('keydown', event => {
-        if (dialog.open && event.key === 'Escape' && !event.target.closest('details[open]')) {
+        if (!dialog.open) return;
+        if (event.key === 'Escape' && !event.target.closest('details[open]')) {
+            blockInteraction(event);
+            close();
+        } else if (tutorialPractice && event.key === 'Tab') {
+            const focusable = [...document.querySelectorAll('a[href], button, input, select, summary, [tabindex]')]
+                .filter(el => el.tabIndex >= 0 && !el.disabled && !el.closest('[inert]') && isVisible(el) && allowsInteraction(el));
+            const current = focusable.indexOf(document.activeElement);
+            const next = current === -1 ? (event.shiftKey ? focusable.length - 1 : 0)
+                : (current + (event.shiftKey ? -1 : 1) + focusable.length) % focusable.length;
             event.preventDefault();
             event.stopImmediatePropagation();
-            close();
+            focusable[next]?.focus();
         }
     }, true);
     window.addEventListener('message', event => {
@@ -352,11 +376,9 @@
         if (!tutorialPractice) return;
         activeTour = tours.find(([key]) => key === params.get('tutorial'))?.[1];
         if (!activeTour) return;
-        if (activeTour[0].page !== 'home') practiceGrades = applyPracticeFilters();
         document.body.classList.add('tutorial-practice');
         dialog.show();
         renderStep();
-        heading.focus({ preventScroll: true });
         window.parent.postMessage('tutorial-ready', window.location.origin);
     });
     if (tutorialPractice) appState.language = params.get('language') === 'fr' ? 'fr' : 'en';

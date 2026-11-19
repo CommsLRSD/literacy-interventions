@@ -40,7 +40,7 @@
 }
 
 #app-tutorial {
-    --tutorial-shade: rgb(5 10 20 / 24%);
+    --tutorial-shade: rgb(5 10 20 / 27%);
     --tutorial-surface: #fff;
     --tutorial-border: #aebdd2;
     position: fixed;
