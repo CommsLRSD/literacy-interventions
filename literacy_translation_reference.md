@@ -1,5 +1,14 @@
 # Literacy Translation Reference
 
+## App tutorials
+
+Find the tours under Resource Centre → Help & Background → App tutorials.
+Keep the English and French titles, instructions, and examples in `tutorial.js`
+in sync. Shared tour labels and the DIBELS explanation are in `translations.js`.
+The Resource Centre & Settings tour shows each section's navigation button
+before opening its content. It offers Next for optional actions and explanations;
+the other tours advance on the highlighted action.
+
 ## Literacy Pillars
 
 | English | French |

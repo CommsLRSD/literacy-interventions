@@ -6,7 +6,7 @@ const vm = require('node:vm');
 
 const source = readFileSync(join(__dirname, '..', 'theme.js'), 'utf8');
 
-function setup(saved = null, { readFails = false, writeFails = false } = {}) {
+function setup(saved = null, { readFails = false, writeFails = false, practice = false } = {}) {
     const storage = new Map(saved === null ? [] : [['literacy-interventions-theme', saved]]);
     const dataset = {};
     const toggle = { checked: false, addEventListener(event, listener) { this.change = listener; } };
@@ -14,6 +14,7 @@ function setup(saved = null, { readFails = false, writeFails = false } = {}) {
     const warnings = [];
     let ready;
     const context = vm.createContext({
+        tutorialPractice: practice,
         console: { warn: (...args) => warnings.push(args) },
         document: {
             documentElement: { dataset },
@@ -32,9 +33,19 @@ function setup(saved = null, { readFails = false, writeFails = false } = {}) {
         },
         t: key => `translated:${key}`
     });
+
     vm.runInContext(source, context);
     return { dataset, toggle, status, storage, warnings, ready: () => ready() };
 }
+
+test('practice appearance changes do not replace the saved theme', () => {
+    const { dataset, toggle, ready, storage } = setup('dark', { practice: true });
+    ready();
+    toggle.checked = false;
+    toggle.change();
+    assert.equal(dataset.theme, 'light');
+    assert.equal(storage.get('literacy-interventions-theme'), 'dark');
+});
 
 test('saved dark appearance is applied before DOM ready and synchronized with Settings', () => {
     const { dataset, toggle, ready } = setup('dark');

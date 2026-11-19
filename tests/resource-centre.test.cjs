@@ -42,17 +42,18 @@ test('both main menus group supporting pages under Resource Centre', () => {
     }
     const centre = html.slice(html.indexOf('<section id="resource-centre-section"'), html.indexOf('<!-- ── FLOWCHART'));
     assert.deepEqual([...centre.matchAll(/role="tab" data-page="([^"]+)"/g)].map(match => match[1]),
-        ['favourites', 'scores', 'pillars', 'resources', 'faq', 'about']);
+        ['favourites', 'scores', 'pillars', 'resources', 'tutorials', 'faq', 'about']);
+    assert.match(centre, /data-i18n="resource_centre_help"[^]*?id="rc-tab-tutorials"/);
     assert.match(centre, /onclick="cycleResourceCentre\(-1\)"/);
     assert.match(centre, /onclick="cycleResourceCentre\(1\)"/);
-    for (const page of ['favourites', 'scores', 'pillars', 'resources', 'faq', 'about']) {
+    for (const page of ['favourites', 'scores', 'pillars', 'resources', 'tutorials', 'faq', 'about']) {
         assert.match(html, new RegExp(`id="${page}-section"`));
     }
 });
 
 test('direct supporting-page destinations highlight Resource Centre without changing their destination', () => {
     const { run } = setup();
-    for (const page of ['scores', 'pillars', 'resources', 'faq', 'favourites', 'about', 'resource-centre']) {
+    for (const page of ['scores', 'pillars', 'resources', 'tutorials', 'faq', 'favourites', 'about', 'resource-centre']) {
         assert.equal(run(`getNavigationPage('${page}')`), 'resource-centre');
     }
     for (const page of ['flowchart', 'interventions', 'schedule']) {
@@ -93,7 +94,7 @@ test('Saved Items tab badge includes sessions and bookmarked resources', () => {
 function setupCentre() {
     const setupResult = setup();
     const { run, context } = setupResult;
-    const pages = ['favourites', 'scores', 'pillars', 'resources', 'faq', 'about'];
+    const pages = ['favourites', 'scores', 'pillars', 'resources', 'tutorials', 'faq', 'about'];
     const elements = new Map();
     const element = (id, text = '') => {
         const classes = new Set(['content-section']);

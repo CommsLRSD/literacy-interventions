@@ -8,7 +8,7 @@ const { webcrypto } = require('node:crypto');
 const root = join(__dirname, '..');
 const read = path => readFileSync(join(root, path), 'utf8');
 
-function setup() {
+function setup({ practice = false } = {}) {
     const elements = new Map();
     const listeners = new Map();
     const storage = new Map();
@@ -58,7 +58,7 @@ function setup() {
                 : selector === '.content-section' ? pages.map(page => getElement(`${page}-section`)) : []
         },
         window: {
-            location: { href: 'https://example.org/literacy-interventions/', hash: '', pathname: '/literacy-interventions/', search: '', reloads: 0,
+            location: { href: `https://example.org/literacy-interventions/${practice ? '?tutorial-practice=1' : ''}`, hash: '', pathname: '/literacy-interventions/', search: '', reloads: 0,
                 reload() { this.reloads++; } },
             confirm: () => true,
             scrollTo() {},
@@ -117,6 +117,43 @@ function setup() {
     `);
     return { context, run, getElement, storage, listeners };
 }
+
+test('practice preferences and bookmarks never read or replace saved app data', () => {
+    const { run, storage } = setup({ practice: true });
+    storage.set('literacy-interventions-program-preference', JSON.stringify({ program: 'French Immersion', language: 'fr' }));
+    storage.set('literacy-interventions-favourites', '["saved-bookmark"]');
+    const before = [...storage];
+    run(`
+        appState.selectedProgram = null;
+        favouriteIds = null;
+        restoreProgramPreference();
+    `);
+    assert.equal(run('appState.selectedProgram'), null);
+    assert.equal(run('getFavouriteIds().size'), 0);
+    run(`
+        appState.selectedProgram = PROGRAM_ENGLISH;
+        storeProgramPreference();
+        storeScheduleGradePreference('english', ['1']);
+        getAppStorage('localStorage').setItem(FAVOURITES_KEY, '["practice-bookmark"]');
+    `);
+    assert.equal(run("getAppStorage('localStorage').getItem(FAVOURITES_KEY)"), '["practice-bookmark"]');
+    assert.deepEqual([...storage], before);
+});
+
+test('practice progress stays in memory without touching real session storage or caches', async () => {
+    const { run, context, storage } = setup({ practice: true });
+    storage.set('session:literacy-interventions-progress-session', 'saved-session');
+    const before = [...storage];
+    let cacheCalls = 0;
+    context.caches = { open() { cacheCalls++; throw new Error('Practice must not open persistent caches'); } };
+    assert.equal(await run('readProgressStorage()'), null);
+    await run('persistProgressStorage()');
+    assert.ok(run("JSON.parse(getAppStorage('sessionStorage').getItem(PATHWAY_SESSION_KEY)).pathway"));
+    assert.equal(cacheCalls, 0);
+    assert.deepEqual([...storage], before);
+    const fresh = setup({ practice: true });
+    assert.equal(fresh.run("getAppStorage('sessionStorage').getItem(PATHWAY_SESSION_KEY)"), null);
+});
 
 test('Settings is a full screen in both navigation menus with visible transfer steps', () => {
     const html = read('index.html');

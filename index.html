@@ -24,8 +24,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0&display=swap" rel="stylesheet">
-    <script src="theme.js?v=dark-mode-1"></script>
+    <script src="theme.js?v=practice-tutorial-2"></script>
     <link rel="stylesheet" href="styles.css?v=progress-monitoring-actions-3">
+    <link rel="stylesheet" href="tutorial.css?v=8">
 </head>
 <body data-page="home">
     <svg xmlns="http://www.w3.org/2000/svg" class="resource-centre-symbols" aria-hidden="true">
@@ -516,6 +517,10 @@
                             <span class="resource-centre-tab-label" data-i18n="nav_resources">Resources</span>
                         </button>
                         <span class="resource-centre-nav-caption" role="presentation" data-i18n="resource_centre_help">Help &amp; Background</span>
+                        <button type="button" id="rc-tab-tutorials" class="resource-centre-tab" role="tab" data-page="tutorials" aria-selected="false" aria-controls="tutorials-section" tabindex="-1">
+                            <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-help"/></svg>
+                            <span class="resource-centre-tab-label" data-i18n="tutorial_title">App tutorials</span>
+                        </button>
                         <button type="button" id="rc-tab-faq" class="resource-centre-tab" role="tab" data-page="faq" aria-selected="false" aria-controls="faq-section" tabindex="-1">
                             <svg class="resource-centre-icon" aria-hidden="true"><use href="#rc-help"/></svg>
                             <span class="resource-centre-tab-label" data-i18n="nav_faq">FAQs</span>
@@ -1172,7 +1177,7 @@
                       <h3 class="faq-category-title">DIBELS FAQs</h3>
                       <div class="faq-item">
                         <button class="faq-question" onclick="toggleFAQ(this)" aria-expanded="false">
-                          <span>What is the DIBELS?</span>
+                          <span id="tutorial-dibels-reference">What is the DIBELS?</span>
                           <span class="faq-icon"><span class="plus"></span></span>
                         </button>
                         <div class="faq-answer">
@@ -1507,6 +1512,11 @@
             </div><!-- /.faq-page-wrapper -->
         </section>
 
+        <section id="tutorials-section" class="content-section" data-page="tutorials">
+            <p class="section-subtitle" data-i18n="tutorial_intro">Choose a hands-on practice walkthrough. Use the highlighted controls to advance automatically. Each walkthrough runs in a separate practice copy; your saved work stays untouched.</p>
+            <div id="tutorial-choices" class="tutorial-choices" inert></div>
+        </section>
+
         <!-- ── ABOUT ──────────────────────────────────────────── -->
         <section id="about-section" class="content-section" data-page="about">
             <div class="about-page-wrapper">
@@ -1728,9 +1738,28 @@
         </div>
     </dialog>
 
-    <script src="translations.js?v=resource-styling-3"></script>
-    <script src="app.js?v=progress-monitoring-actions-1"></script>
-    <script src="transfer.js?v=settings-screen-1"></script>
+    <dialog id="app-tutorial" aria-labelledby="tutorial-heading" aria-describedby="tutorial-description">
+        <div class="tutorial-spotlight" aria-hidden="true" hidden></div>
+        <div class="tutorial-panel">
+            <header class="tutorial-panel-header">
+                <p id="tutorial-progress"></p>
+                <button class="tutorial-close" type="button" data-i18n="tutorial_close">Exit tutorial</button>
+            </header>
+            <div class="tutorial-body" aria-live="polite" aria-atomic="true">
+                <h2 id="tutorial-heading"></h2>
+                <p id="tutorial-description"></p>
+                <p id="tutorial-status" hidden></p>
+            </div>
+            <button type="button" id="tutorial-next" class="tutorial-primary" data-i18n="tutorial_next" hidden>Next</button>
+            <button type="button" id="tutorial-finish" class="tutorial-primary" data-i18n="tutorial_done" hidden>Finish</button>
+        </div>
+        <div class="tutorial-arrow" aria-hidden="true" hidden></div>
+    </dialog>
+
+    <script src="translations.js?v=practice-tutorial-6"></script>
+    <script src="app.js?v=practice-tutorial-2"></script>
+    <script src="transfer.js?v=practice-tutorial-2"></script>
+    <script src="tutorial.js?v=8"></script>
 
     <script>
     (function() {

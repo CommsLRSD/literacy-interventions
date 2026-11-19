@@ -6,6 +6,16 @@
 
 const TRANSLATIONS = {
     en: {
+        tutorial_title: 'App tutorials',
+        tutorial_centre_settings: 'Resource Centre & Settings',
+        tutorial_intro: 'Choose a hands-on practice walkthrough. Use the highlighted controls to advance automatically. Each walkthrough runs in a separate practice copy; your saved work stays untouched.',
+        tutorial_practice: 'Practice session — your saved work stays untouched',
+        tutorial_target_missing: 'This control is not visible. Return to the app page for this step, or exit and restart the walkthrough.',
+        tutorial_load_error: 'Practice could not start. Exit the tutorial and try again.',
+        tutorial_close: 'Exit tutorial',
+        tutorial_done: 'Finish',
+        tutorial_next: 'Next',
+        tutorial_progress: (section, step, total) => `${section} · ${step} of ${total}`,
         // ── Page title ──
         page_title: 'Literacy Interventions — LRSD Literacy Resource',
 
@@ -586,6 +596,16 @@ const TRANSLATIONS = {
     },
 
     fr: {
+        tutorial_title: 'Tutoriels de l’application',
+        tutorial_centre_settings: 'Centre de ressources et paramètres',
+        tutorial_intro: 'Choisissez un exercice guidé. Utilisez les commandes mises en évidence pour passer automatiquement à l’étape suivante. Chaque exercice utilise une copie distincte; vos données enregistrées restent intactes.',
+        tutorial_practice: 'Exercice — vos données enregistrées restent intactes',
+        tutorial_target_missing: 'Cette commande n’est pas visible. Revenez à la page de cette étape ou quittez et recommencez l’exercice.',
+        tutorial_load_error: 'L’exercice n’a pas pu démarrer. Quittez le tutoriel et réessayez.',
+        tutorial_close: 'Quitter le tutoriel',
+        tutorial_done: 'Terminer',
+        tutorial_next: 'Suivant',
+        tutorial_progress: (section, step, total) => `${section} · ${step} sur ${total}`,
         // ── Page title ──
         page_title: 'Literacy Interventions — Ressource en littératie de la DSLR',
 

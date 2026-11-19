@@ -1,0 +1,241 @@
+.tutorial-choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: 1rem;
+    margin-block: 1.25rem;
+}
+
+.tutorial-choices button,
+.tutorial-panel button {
+    border: 1px solid currentColor;
+    border-radius: .65rem;
+    padding: .6rem .85rem;
+    min-height: 2.75rem;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.tutorial-choices button {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    text-align: start;
+    border-color: var(--border);
+    background: var(--bg-alt);
+    box-shadow: var(--shadow-sm);
+}
+
+.tutorial-choices button:hover {
+    border-color: currentColor;
+}
+
+.tutorial-choices img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    background: var(--bg-alt);
+    border-bottom: 1px solid var(--border);
+}
+
+.tutorial-card-label {
+    padding: .8rem 1rem;
+}
+
+.tutorial-panel .tutorial-primary {
+    background: #2459a4;
+    border-color: #2459a4;
+    color: #fff;
+}
+
+.tutorial-choices button:focus-visible,
+.tutorial-panel :is(button, summary):focus-visible {
+    outline: 3px solid #568df7;
+    outline-offset: 3px;
+}
+
+#app-tutorial:not([open]),
+#app-tutorial [hidden] {
+    display: none;
+}
+
+#app-tutorial {
+    --tutorial-shade: rgb(5 10 20 / 27%);
+    --tutorial-surface: #fff;
+    --tutorial-border: #aebdd2;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    background: var(--tutorial-shade);
+    color: #152238;
+    z-index: 20000;
+    pointer-events: none;
+}
+
+#app-tutorial.tutorial-has-target,
+#app-tutorial::backdrop {
+    background: transparent;
+}
+
+body:has(#app-tutorial.tutorial-host[open]) {
+    overflow: hidden;
+}
+
+#app-tutorial.tutorial-host {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    pointer-events: auto;
+}
+
+.tutorial-host > .tutorial-panel,
+.tutorial-host > .tutorial-arrow,
+.tutorial-host > .tutorial-spotlight {
+    display: none;
+}
+
+.tutorial-host-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .5rem .75rem;
+    background: #eef5ff;
+    font-size: .9rem;
+}
+
+.tutorial-host-bar p {
+    margin: 0;
+}
+
+.tutorial-host-bar button {
+    flex-shrink: 0;
+    min-height: 2.75rem;
+    cursor: pointer;
+}
+
+.tutorial-practice-frame {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    border: 0;
+}
+
+.tutorial-practice .install-banner {
+    display: none;
+}
+
+.tutorial-practice .resource-centre-drawer {
+    z-index: 19999;
+}
+
+.tutorial-practice:has(.tutorial-centre-content[open]) .resource-centre-mobile-browse {
+    display: none;
+}
+
+.tutorial-practice:has(.tutorial-centre-content[open]) .resource-centre-panel:not([hidden]) {
+    padding-block-end: calc(24px + var(--tutorial-content-inset, 0px));
+    scroll-padding-block-end: var(--tutorial-content-inset, 0px);
+}
+
+.tutorial-spotlight {
+    position: absolute;
+    border-radius: .5rem;
+    box-shadow: 0 0 0 2px #ffe182, 0 0 0 200vmax var(--tutorial-shade);
+    pointer-events: none;
+}
+
+.tutorial-panel {
+    position: absolute;
+    width: min(22rem, calc(100% - 24px));
+    box-sizing: border-box;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: .65rem .85rem;
+    border: 1px solid var(--tutorial-border);
+    border-radius: .9rem;
+    background: var(--tutorial-surface);
+    box-shadow: 0 12px 50px #0008;
+}
+
+.tutorial-arrow {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    translate: -50% -50%;
+    background: var(--tutorial-surface);
+    border-top: 1px solid var(--tutorial-border);
+    border-left: 1px solid var(--tutorial-border);
+    pointer-events: none;
+}
+
+.tutorial-body {
+    flex-shrink: 0;
+    overflow-wrap: anywhere;
+}
+
+.tutorial-panel-header {
+    flex-shrink: 0;
+}
+
+.tutorial-panel .tutorial-primary {
+    flex-shrink: 0;
+    align-self: flex-end;
+    margin-block-start: .5rem;
+}
+
+.tutorial-panel-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+}
+
+#tutorial-progress {
+    margin: 0;
+    font-size: .9rem;
+    font-weight: 700;
+}
+
+.tutorial-close {
+    margin-inline-start: auto;
+}
+
+#tutorial-heading {
+    font-size: 1.25rem;
+    line-height: 1.3;
+    margin: .55rem 0;
+}
+
+#tutorial-description {
+    margin: 0;
+}
+
+#tutorial-status {
+    font-size: .9rem;
+    margin: 0 0 .75rem;
+}
+
+:root[data-theme="dark"] #app-tutorial {
+    --tutorial-surface: #152238;
+    color: #ecf4ff;
+}
+
+:root[data-theme="dark"] .tutorial-host-bar {
+    background: #152238;
+}
