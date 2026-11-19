@@ -126,7 +126,7 @@ body:has(#app-tutorial.tutorial-host[open]) {
     pointer-events: auto;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: auto;
     overscroll-behavior: contain;
     padding: .65rem .85rem;
     border: 1px solid var(--tutorial-border);
@@ -147,8 +147,8 @@ body:has(#app-tutorial.tutorial-host[open]) {
 }
 
 .tutorial-body {
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    flex-shrink: 0;
+    overflow-wrap: anywhere;
 }
 
 .tutorial-panel-header,

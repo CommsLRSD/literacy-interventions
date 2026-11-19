@@ -40,19 +40,31 @@
     };
     const flowChanged = () => !!nodeId() && nodeId() !== nodeAtEntry;
     const rememberNode = () => { nodeAtEntry = nodeId(); };
+    function prepareChecklist() {
+        rememberNode();
+        const checks = [...(document.querySelector(liveNode())?.querySelectorAll('.checklist-line input') || [])];
+        checks.slice(0, -1).forEach(check => { check.checked = true; });
+        checks.at(-1)?.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function applyPracticeFilters() {
+        finalizeProgramSelection(
+            params.get('program') === PROGRAM_FRENCH_IMMERSION ? PROGRAM_FRENCH_IMMERSION : PROGRAM_ENGLISH,
+            appState.language
+        );
+        const grades = getValidPathwayGrades(appState.selectedProgram, params.getAll('grade'));
+        if (grades.length) applyPathwaySetupToFilters({ grades });
+        return grades;
+    }
+
+    let practiceGrades = [];
     const tours = [
-        ['tutorial_setup', [
-            ...setup,
-            step('flowchart', flowTarget,
-                ['Your pathway is ready', 'The app opened Tier 1 with the program, screener and grade you chose. Finish to discard this practice session.'],
-                ['Votre parcours est prêt', 'Le palier 1 s’est ouvert avec le programme, l’outil de dépistage et le niveau choisis. Terminez pour fermer cet exercice.'])
-        ]],
         ['nav_flowchart', [
             ...setup,
             step('flowchart', flowTarget,
-                ['Review the checklist', 'Tick each principle in the actual checklist. The highlight moves to the next item. When all are checked, select Continue to Results in the app.'],
-                ['Vérifier les principes', 'Cochez chaque principe dans la liste. La mise en évidence passe au suivant. Une fois tous les principes cochés, poursuivez vers les résultats dans l’application.'],
-                flowChanged, rememberNode),
+                ['Review the checklist', 'The other items are checked for practice. Check the last item, then select Continue to Results.'],
+                ['Vérifier les principes', 'Les autres éléments sont déjà cochés pour l’exercice. Cochez le dernier, puis poursuivez vers les résultats.'],
+                flowChanged, prepareChecklist),
             step('flowchart', liveNode,
                 ['Make a practice decision', 'Read the question and choose an answer in the app. This is only an example: use actual learner evidence outside practice. Watch the pathway move to the next step.'],
                 ['Prendre une décision d’exercice', 'Lisez la question et choisissez une réponse dans l’application. Il s’agit d’un exemple : hors exercice, utilisez les données de l’élève. Le parcours passera à l’étape suivante.'],
@@ -63,12 +75,13 @@
                 null, () => openVisualFlowchartModal())
         ]],
         ['nav_interventions', [
-            program,
             step('interventions', '#menu-type-filter',
-                ['Choose Intervention', 'Open Resource type and select Intervention for this example. The app will reveal the next filters.'],
-                ['Choisir Intervention', 'Ouvrez le menu du type de ressource et choisissez Intervention pour cet exemple. Les filtres suivants apparaîtront.'],
+                ['Choose Intervention', 'The Toolkit follows your teaching program and can prefill the grade in guided search when you chose one. Select Intervention to reveal the next filters.'],
+                ['Choisir Intervention', 'La Boîte à outils suit votre programme d’enseignement et peut reprendre le niveau choisi dans la recherche guidée. Sélectionnez Intervention pour afficher les filtres suivants.'],
                 () => menuState.resourceType === 'Intervention',
-                () => { setToolkitView('guided'); menuUiState.view = 'search'; applyMenuViewState(); }),
+                () => {
+                    if (practiceGrades.length) onMenuFilterChange('grade', practiceGrades);
+                }),
             step('interventions', '#menu-pillar-filter',
                 ['Open the skills menu', 'Select the Literacy pillars heading to open its real dropdown.'],
                 ['Ouvrir le menu des habiletés', 'Sélectionnez le titre des piliers de la littératie pour ouvrir le menu.'],
@@ -98,10 +111,9 @@
                 ['Votre tableau est filtré', 'Continuez de taper, modifiez le mot ou effacez la recherche pour observer les résultats. Terminez quand vous voulez quitter l’exercice.'])
         ]],
         ['nav_schedule', [
-            program,
             step('schedule', '#schedule-grade-filter',
-                ['Open the grade filter', 'Select the grade heading to open the schedule’s dropdown menu.'],
-                ['Ouvrir le filtre des niveaux', 'Sélectionnez le titre des niveaux pour ouvrir le menu du calendrier.'],
+                ['Open the grade filter', 'The schedule follows your teaching program. If you selected a grade, it starts with that grade where available. Open the grade menu to change the filter.'],
+                ['Ouvrir le filtre des niveaux', 'Le calendrier suit votre programme d’enseignement et affiche le niveau choisi lorsqu’il est disponible. Ouvrez le menu des niveaux pour modifier le filtre.'],
                 () => byId('schedule-grade-filter').open),
             step('schedule', '#schedule-grade-filter',
                 ['Change the displayed grades', 'Check a grade in the menu and watch the calendar update. You can select more than one.'],
@@ -161,6 +173,10 @@
         url.searchParams.set('tutorial-practice', '1');
         url.searchParams.set('tutorial', key);
         url.searchParams.set('language', appState.language);
+        if (key !== 'nav_flowchart') {
+            if (appState.selectedProgram) url.searchParams.set('program', appState.selectedProgram);
+            getHomeSetup().grades.forEach(grade => url.searchParams.append('grade', grade));
+        }
         practiceFrame.src = url.href;
         dialog.append(bar, practiceFrame);
         dialog.showModal();
@@ -183,7 +199,7 @@
         visit(item.page);
         item.enter?.();
         update();
-        panel.querySelector('.tutorial-body').scrollTop = 0;
+        panel.scrollTop = 0;
         schedulePlacement(true);
     }
 
@@ -266,21 +282,13 @@
             x = side === 'right' ? right + gap : left - gap - panelWidth;
             y = clamp(centerY - actualHeight / 2, margin, height - margin - actualHeight);
             point = [side === 'right' ? x : x + panelWidth, clamp(centerY, y + 20, y + actualHeight - 20), side === 'right' ? -45 : 135];
-        } else if (fits && Math.max(above, below) >= Math.min(140, panelHeight)) {
-            const placeBelow = below >= above;
-            const available = placeBelow ? below : above;
-            panel.style.maxHeight = `${available}px`;
-            const actualHeight = panel.getBoundingClientRect().height;
-            y = placeBelow ? bottom + gap : top - gap - actualHeight;
-            point = [clamp(centerX, x + 20, x + preferredWidth - 20), placeBelow ? y : y + actualHeight, placeBelow ? 45 : 225];
         } else {
-            // A full-width map or an open menu may leave no room for an arrow.
+            // Dock at the roomier edge instead of compressing the caption to fit a gap.
             if (!fits) x = (width - preferredWidth) / 2;
-            const dockHeight = Math.min(panelHeight, Math.max(132, height * .42), maxHeight);
-            panel.style.maxHeight = `${dockHeight}px`;
-            y = fits && above > below ? margin : height - margin - dockHeight;
+            y = fits && above > below ? margin : height - margin - panelHeight;
         }
         Object.assign(panel.style, { left: `${x}px`, top: `${y}px` });
+        panel.tabIndex = panel.scrollHeight > panel.clientHeight ? 0 : -1;
         arrow.hidden = !point;
         if (point) Object.assign(arrow.style, {
             left: `${point[0]}px`, top: `${point[1]}px`, rotate: `${point[2]}deg`
@@ -344,6 +352,7 @@
         if (!tutorialPractice) return;
         activeTour = tours.find(([key]) => key === params.get('tutorial'))?.[1];
         if (!activeTour) return;
+        if (activeTour[0].page !== 'home') practiceGrades = applyPracticeFilters();
         document.body.classList.add('tutorial-practice');
         dialog.show();
         renderStep();

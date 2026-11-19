@@ -4,7 +4,10 @@ const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const vm = require('node:vm');
 
-function setup(tour = 'tutorial_setup') {
+function setup(tour = 'nav_flowchart', query = '') {
+    const checks = Array.from({ length: 8 }, () => ({ checked: false, dispatchEvent() {} }));
+    const scheduleFilters = [];
+    const toolkitFilters = [];
     class Element {
         constructor() {
             this.handlers = new Map();
@@ -19,6 +22,7 @@ function setup(tour = 'tutorial_setup') {
         contains() { return false; }
         matches(selector) { return this.open && selector === 'details[open]'; }
         querySelector(selector) { return elements.get(selector) || null; }
+        querySelectorAll(selector) { return selector === '.checklist-line input' ? checks : []; }
         getClientRects() { return [{}]; }
         getBoundingClientRect() { return this.rect || { left: 20, top: 200, right: 200, bottom: 244, width: 180, height: 44 }; }
         closest(selector) { return selector === '[data-schedule-grade]' && this.scheduleGrade ? this : null; }
@@ -42,7 +46,14 @@ function setup(tour = 'tutorial_setup') {
     const messages = [];
     const state = { currentPage: 'home', language: 'en', selectedProgram: null };
     const context = vm.createContext({
-        URL, Element, CSS: { escape: value => value }, tutorialPractice: true, appState: state,
+        URL, Element, Event, CSS: { escape: value => value }, tutorialPractice: true, appState: state,
+        PROGRAM_ENGLISH: 'English', PROGRAM_FRENCH_IMMERSION: 'French Immersion',
+        finalizeProgramSelection: program => { state.selectedProgram = program; },
+        getValidPathwayGrades: (_program, grades) => grades.filter(grade => /^[1-8]$/.test(grade)),
+        applyPathwaySetupToFilters: ({ grades }) => scheduleFilters.push(...grades),
+        onMenuFilterChange: (field, grades) => toolkitFilters.push([field, grades]),
+        menuState: { resourceType: '' },
+        openVisualFlowchartModal() {},
         document: {
             documentElement: { lang: 'en' }, body: get('body'),
             getElementById: get,
@@ -52,7 +63,7 @@ function setup(tour = 'tutorial_setup') {
             addEventListener: (name, callback) => events.set(name, callback)
         },
         window: {
-            location: { href: `https://example.org/?tutorial-practice=1&tutorial=${tour}`, origin: 'https://example.org' },
+            location: { href: `https://example.org/?tutorial-practice=1&tutorial=${tour}${query}`, origin: 'https://example.org' },
             parent: { postMessage: message => messages.push(message) },
             innerWidth: 1024, innerHeight: 768, addEventListener() {}
         },
@@ -66,13 +77,13 @@ function setup(tour = 'tutorial_setup') {
     vm.runInContext(readFileSync(join(__dirname, '..', 'tutorial.js'), 'utf8'), context);
     events.get('app-ready')();
     return {
-        get, state, messages, viewport: context.window,
+        get, state, messages, checks, scheduleFilters, toolkitFilters, viewport: context.window,
         action: (id, type = 'change') => events.get(type)({ type, target: get(id) })
     };
 }
 
-test('setup advances after real selections, with Finish only after the pathway opens', () => {
-    const { get, state, action, messages } = setup();
+test('flowchart uses real setup selections and leaves only the last practice item unchecked', () => {
+    const { get, state, action, messages, checks } = setup();
     const finish = get('tutorial-finish');
     const title = () => get('tutorial-heading').textContent;
     assert.equal(get('app-tutorial').modal, false, 'practice must leave the app controls interactive');
@@ -95,8 +106,20 @@ test('setup advances after real selections, with Finish only after the pathway o
     assert.equal(title(), 'Start the practice pathway');
     assert.equal(finish.hidden, true);
     state.currentPage = 'flowchart';
+    state.visualFlowchart = { currentNodeId: 'tier1-principles' };
+    get('.flowchart-step[data-node-id="tier1-principles"]');
     action('home-start-btn', 'click');
-    assert.equal(title(), 'Your pathway is ready');
+    assert.equal(title(), 'Review the checklist');
+    assert.deepEqual(checks.map(check => check.checked), [true, true, true, true, true, true, true, false]);
+    checks.at(-1).checked = true;
+    action('last-check');
+    assert.equal(title(), 'Review the checklist');
+    state.visualFlowchart.currentNodeId = 'result';
+    action('continue-to-results', 'click');
+    assert.equal(title(), 'Make a practice decision');
+    state.visualFlowchart.currentNodeId = 'outcome';
+    action('decision', 'click');
+    assert.equal(title(), 'See your pathway in action');
     assert.equal(finish.hidden, false);
     finish.click();
     assert.equal(get('app-tutorial').open, false);
@@ -104,10 +127,11 @@ test('setup advances after real selections, with Finish only after the pathway o
 });
 
 test('schedule advances on opening the actual menu, changing a grade and closing it', () => {
-    const { get, state, action } = setup('nav_schedule');
+    const { get, state, action, scheduleFilters } = setup('nav_schedule', '&program=French+Immersion&grade=3');
     const title = () => get('tutorial-heading').textContent;
-    state.selectedProgram = 'English';
-    action('home-program-select');
+    assert.equal(state.currentPage, 'schedule');
+    assert.equal(state.selectedProgram, 'French Immersion');
+    assert.deepEqual(scheduleFilters, ['3']);
     assert.equal(title(), 'Open the grade filter');
     const dropdown = get('schedule-grade-filter');
     dropdown.open = true;
@@ -122,6 +146,14 @@ test('schedule advances on opening the actual menu, changing a grade and closing
     action('schedule-grade-filter', 'toggle');
     assert.equal(title(), 'Explore an assessment');
     assert.equal(get('tutorial-finish').hidden, false);
+});
+
+test('toolkit opens directly and keeps the selected grade for guided search', () => {
+    const { get, state, toolkitFilters } = setup('nav_interventions', '&program=French+Immersion&grade=2');
+    assert.equal(state.currentPage, 'interventions');
+    assert.equal(state.selectedProgram, 'French Immersion');
+    assert.deepEqual(toolkitFilters, [['grade', ['2']]]);
+    assert.equal(get('tutorial-heading').textContent, 'Choose Intervention');
 });
 
 test('callout sits beside the highlight and flips above controls near the viewport bottom', () => {
@@ -139,4 +171,16 @@ test('callout sits beside the highlight and flips above controls near the viewpo
     assert.ok(parseFloat(panel.style.top) + panel.getBoundingClientRect().height < 560);
     assert.equal(arrow.style.rotate, '225deg');
     assert.ok(parseFloat(panel.style.left) + parseFloat(panel.style.width) <= viewport.innerWidth);
+});
+
+test('a large highlight does not reduce the callout height to its remaining gap', () => {
+    const { get, action, viewport } = setup();
+    viewport.innerWidth = 390;
+    viewport.innerHeight = 370;
+    const panel = get('.tutorial-panel');
+    panel.rect = { height: 245 };
+    get('home-program-select').rect = { left: 0, top: 170, right: 390, bottom: 370, width: 390, height: 200 };
+    action('home-program-select', 'click');
+    assert.ok(parseFloat(panel.style.maxHeight) >= panel.rect.height);
+    assert.ok(parseFloat(panel.style.top) + panel.rect.height <= viewport.innerHeight);
 });
