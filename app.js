@@ -862,7 +862,7 @@ function getTier1ApproachNodes() {
             choices: [
                 { id: 'whole-class', label: t('tier1_whole_class'), type: 'info', nextNode: 'tier1-percentage' },
                 { id: 'individual', label: t('tier1_individual'), type: 'info',
-                    nextNode: usesEarlyGradePathway ? 'tier1-student-risk' : 'tier1-student-comprehension' }
+                    nextNode: usesEarlyGradePathway ? 'tier1-student-k2-phonemic-awareness' : 'tier1-student-comprehension' }
             ]
         }
     };
@@ -906,6 +906,38 @@ function getTier1ApproachNodes() {
                 id, label: t(label), type: 'warning', nextNode
             }))
         };
+        const earlyGradeChecks = [
+            ['decoding', 'tier1_k2_decoding', 'Nonsense Word Fluency, etc.', 'accuracy', 'decoding'],
+            ['accuracy', 'tier1_k2_accuracy', 'ORF-Accuracy', 'rate', 'accuracy'],
+            ['rate', 'tier1_k2_rate', 'ORF-Words Correct', 'comprehension', 'rate'],
+            ['comprehension', 'tier1_k2_comprehension', 'MAZE, Reading Comprehension, etc.', null, 'comprehension']
+        ];
+        nodes['tier1-student-k2-phonemic-awareness'] = {
+            id: 'tier1-student-k2-phonemic-awareness', type: 'decision', approach: 'individual',
+            title: t('tier1_k2_phonemic_awareness'),
+            description: `${t('tier1_subtests')}: Phoneme Segmentation Fluency, etc.`,
+            choices: [
+                { id: 'weak', label: t('tier1_weak'), type: 'warning', nextNode: 'tier1-student-k2-awareness' },
+                { id: 'proficient', label: t('tier1_proficient'), type: 'success',
+                    nextNode: 'tier1-student-k2-decoding-check' }
+            ]
+        };
+        earlyGradeChecks.forEach(([skill, label, subtests, nextSkill, recommendation]) => {
+            const id = `tier1-student-k2-${skill}-check`;
+            nodes[id] = {
+                id, type: 'decision', approach: 'individual',
+                title: t(label),
+                description: `${t('tier1_subtests')}: ${subtests}`,
+                choices: [
+                    { id: 'weak', label: t('tier1_weak'), type: 'warning',
+                        nextNode: nextSkill ? `tier1-student-k2-${nextSkill}-check` : `tier1-student-k2-${recommendation}` },
+                    { id: 'proficient', label: t('tier1_proficient'), type: 'success',
+                        nextNode: recommendation === 'comprehension'
+                            ? 'tier1-student-outcome-curriculum'
+                            : `tier1-student-k2-${recommendation}` }
+                ]
+            };
+        });
         const earlyRecommendations = [
             ['awareness', 'tier1_k2_recommend_awareness'],
             ['decoding', 'tier1_recommend_phonics'],
