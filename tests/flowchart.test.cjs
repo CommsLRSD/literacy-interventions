@@ -322,44 +322,23 @@ test('all six PDF routes reach the correct recommendation and return without era
     }
 });
 
-test('Kindergarten through Grade 2 assess individual skills one step at a time, starting with phonemic awareness', () => {
-    const checks = [
-        ['tier1-student-k2-phonemic-awareness', 'tier1-student-k2-awareness', 'tier1-student-k2-decoding-check'],
-        ['tier1-student-k2-decoding-check', 'tier1-student-k2-accuracy-check', 'tier1-student-k2-decoding'],
-        ['tier1-student-k2-accuracy-check', 'tier1-student-k2-rate-check', 'tier1-student-k2-accuracy'],
-        ['tier1-student-k2-rate-check', 'tier1-student-k2-comprehension-check', 'tier1-student-k2-rate'],
-        ['tier1-student-k2-comprehension-check', 'tier1-student-k2-comprehension', 'tier1-student-outcome-curriculum']
-    ];
+test('K-2 individual proficient results recommend phonics and can continue to the whole-class approach', () => {
     for (const grade of ['K', '1', '2']) {
         for (const language of ['en', 'fr']) {
             const { run } = setupIndividualPathway(language, { grade: [grade] });
             choose(run, 'individual');
-            assert.equal(run('appState.visualFlowchart.currentNodeId'), checks[0][0]);
+            assert.equal(run('appState.visualFlowchart.currentNodeId'), 'tier1-student-k2-phonemic-awareness');
             assert.equal(run('getFlowchartDefs().tier1.nodes[appState.visualFlowchart.currentNodeId].title'),
                 run('t("tier1_k2_phonemic_awareness")'));
-            const html = run('createIntegratedDecisionNode(getFlowchartDefs().tier1.nodes[appState.visualFlowchart.currentNodeId])');
-            assert.match(html, /class="decision-grid"/);
-            assert.equal((html.match(/class="decision-btn/g) || []).length, 2);
-            assert.doesNotMatch(html, /<select/);
-
             choose(run, 'proficient');
-            for (const [check, weakNext, proficientNext] of checks.slice(1)) {
-                assert.equal(run('appState.visualFlowchart.currentNodeId'), check);
-                choose(run, 'weak');
-                assert.equal(run('appState.visualFlowchart.currentNodeId'), weakNext);
-                // Recreate this branch to verify the proficient route without changing the weak-path traversal.
-                const branch = setupIndividualPathway(language, { grade: [grade] }).run;
-                choose(branch, 'individual');
-                choose(branch, 'proficient');
-                const checkIndex = checks.findIndex(([id]) => id === check);
-                for (const [priorCheck] of checks.slice(1, checkIndex)) {
-                    if (branch('appState.visualFlowchart.currentNodeId') === priorCheck) choose(branch, 'weak');
-                }
-                assert.equal(branch('appState.visualFlowchart.currentNodeId'), check);
-                choose(branch, 'proficient');
-                assert.equal(branch('appState.visualFlowchart.currentNodeId'), proficientNext);
-            }
-            assert.equal(run('appState.visualFlowchart.currentNodeId'), 'tier1-student-k2-comprehension');
+            assert.equal(run('appState.visualFlowchart.currentNodeId'), 'tier1-student-k2-outcome-phonics');
+            const result = run('getFlowchartDefs().tier1.nodes[appState.visualFlowchart.currentNodeId]');
+            assert.equal(result.description, run('t("tier1_recommend_phonics")'));
+            assert.equal(result.actionButton.action, 'continueWholeClass');
+
+            run('continueWholeClassIntegrated()');
+            assert.equal(run('appState.visualFlowchart.currentNodeId'), 'tier1-percentage');
+            assert.equal(run('appState.visualFlowchart.choices["tier1-approach"].id'), 'individual');
         }
     }
 });

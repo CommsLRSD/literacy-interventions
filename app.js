@@ -919,7 +919,7 @@ function getTier1ApproachNodes() {
             choices: [
                 { id: 'weak', label: t('tier1_weak'), type: 'warning', nextNode: 'tier1-student-k2-awareness' },
                 { id: 'proficient', label: t('tier1_proficient'), type: 'success',
-                    nextNode: 'tier1-student-k2-decoding-check' }
+                    nextNode: 'tier1-student-k2-outcome-phonics' }
             ]
         };
         earlyGradeChecks.forEach(([skill, label, subtests, nextSkill, recommendation]) => {
