@@ -50,8 +50,21 @@
 
     const tableFilter = '#toolkit-table-head .toolkit-column-filter[data-field="program"]';
     const tableSort = '#toolkit-table-head .toolkit-sort-btn[data-field="name"]';
-    const centreStep = (section, selector, en, fr) =>
-        step('resource-centre', selector, en, fr, null, () => selectResourceCentrePage(section));
+    const centreDrawer = () => byId('resource-centre-drawer');
+    const centreStep = (section, en, fr, interaction) => {
+        const tab = () => byId(`rc-tab-${section}`);
+        const navigation = step('resource-centre', tab,
+            [en[0], 'Select the highlighted section button, or use Next to see what’s inside. On a small screen, these buttons are under Browse sections.'],
+            [fr[0], 'Sélectionnez le bouton en surbrillance ou choisissez Suivant pour voir le contenu. Sur un petit écran, ces boutons se trouvent sous Parcourir les sections.'],
+            event => event.type === 'click' && tab().contains(event.target));
+        Object.assign(navigation, { centreTab: tab, optional: true });
+        const content = step('resource-centre', `#${section}-section`, en, fr, null, () => {
+            closeResourceCentreDrawer();
+            if (tab().getAttribute('aria-selected') !== 'true') selectResourceCentrePage(section);
+            byId(`${section}-section`).scrollTop = 0;
+        });
+        return [navigation, { ...content, centreContent: true, interaction }];
+    };
     const tours = [
         ['nav_flowchart', [
             ...setup,
@@ -127,25 +140,27 @@
                 ['Explorer une évaluation', 'Survolez, sélectionnez au clavier ou touchez un élément pour lire les détails. Le calendrier tient compte de vos niveaux. Terminer efface vos choix d’exercice.'])
         ]],
         ['tutorial_centre_settings', [
-            centreStep('favourites', '#resource-centre-reader-title',
-                ['My Saved Items', 'Find saved flowchart sessions under Sessions and bookmarked teaching materials under Resources. This practice copy starts empty. In the regular app, use the section list (Browse sections on a small screen) or the Previous and Next buttons below the content.'],
-                ['Mes éléments enregistrés', 'Retrouvez les parcours enregistrés sous Séances et le matériel mis en favori sous Ressources. Cette copie d’exercice est vide. Dans l’application, utilisez la liste des sections (Parcourir les sections sur petit écran) ou les boutons Précédent et Suivant sous le contenu.']),
-            centreStep('scores', '#resource-centre-reader-title',
+            ...centreStep('favourites',
+                ['My Saved Items', 'Find saved flowchart sessions under Sessions and bookmarked teaching materials under Resources. This practice copy starts empty. You can also move between sections using the Previous and Next buttons below the content.'],
+                ['Mes éléments enregistrés', 'Retrouvez les parcours enregistrés sous Séances et le matériel mis en favori sous Ressources. Cette copie d’exercice est vide. Vous pouvez aussi changer de section à l’aide des boutons Précédent et Suivant sous le contenu.']),
+            ...centreStep('scores',
                 ['Scores & Percentiles', 'Use this guide to understand scores from literacy assessments. It explains how percentile ranks compare a result with a reference group and how to interpret standard scores.'],
                 ['Scores et rangs centiles', 'Ce guide aide à comprendre les résultats des évaluations en littératie. Il explique comment les rangs centiles situent un résultat par rapport à un groupe de référence et comment interpréter les scores standardisés.']),
-            centreStep('pillars', '#pillars-section .pillar-definition summary',
-                ['Literacy Pillars', 'Look up skills such as phonological awareness, phonics, fluency, and vocabulary. Open the highlighted heading to see a definition, or select Next to continue.'],
-                ['Piliers de la littératie', 'Consultez les définitions de notions comme la conscience phonologique, la phonétique, la fluidité et le vocabulaire. Ouvrez le titre en surbrillance ou sélectionnez Suivant.']),
-            centreStep('resources', '#resource-centre-reader-title',
+            ...centreStep('pillars',
+                ['Literacy Pillars', 'Look up skills such as phonological awareness, phonics, fluency, and vocabulary. Open any skill to read its definition, or select Next to continue.'],
+                ['Piliers de la littératie', 'Consultez les définitions de notions comme la conscience phonologique, la phonétique, la fluidité et le vocabulaire. Ouvrez une notion pour lire sa définition ou sélectionnez Suivant.'],
+                '.pillar-definition summary'),
+            ...centreStep('resources',
                 ['Division resources', 'Find the division’s screening and progress-monitoring overview, English and French learning progressions, and structured literacy scope and sequence documents for French Immersion.'],
                 ['Ressources de la division', 'Retrouvez la vue d’ensemble du dépistage et du suivi des progrès, les progressions des apprentissages en anglais et en français et les séquences d’enseignement de la littératie structurée en immersion française.']),
-            centreStep('tutorials', '#resource-centre-reader-title',
+            ...centreStep('tutorials',
                 ['App tutorials', 'Return here to practise the Flowchart, Literacy Toolkit, or Assessment Schedule. Each tutorial opens a separate copy of the app, so you can experiment without changing saved work.'],
                 ['Tutoriels de l’application', 'Revenez ici pour vous exercer avec l’organigramme, la boîte à outils ou le calendrier d’évaluation. Chaque tutoriel ouvre une copie distincte de l’application sans modifier vos données enregistrées.']),
-            centreStep('faq', '#faq-search-input',
+            ...centreStep('faq',
                 ['Frequently asked questions', 'Search by keyword or browse categories for common questions about screening, scoring, and progress monitoring. Try a search if you like, or select Next.'],
-                ['Foire aux questions', 'Faites une recherche par mot-clé ou parcourez les catégories pour trouver des réponses sur le dépistage, la cotation et le suivi des progrès. Essayez la recherche ou sélectionnez Suivant.']),
-            centreStep('about', '#resource-centre-reader-title',
+                ['Foire aux questions', 'Faites une recherche par mot-clé ou parcourez les catégories pour trouver des réponses sur le dépistage, la cotation et le suivi des progrès. Essayez la recherche ou sélectionnez Suivant.'],
+                '#faq-search-input'),
+            ...centreStep('about',
                 ['About this app', 'Read why the division created this guide and how its screening and progress-monitoring schedule supports instructional planning.'],
                 ['À propos de l’application', 'Découvrez pourquoi la division a créé ce guide et comment son calendrier de dépistage et de suivi des progrès aide à planifier l’enseignement.']),
             step('resource-centre', () => visibleTarget('.nav-settings')
@@ -153,6 +168,9 @@
                 ['Open Settings', 'Select Settings in the navigation. On a smaller screen, open the navigation menu first.'],
                 ['Ouvrir les paramètres', 'Sélectionnez Paramètres dans la navigation. Sur un petit écran, ouvrez d’abord le menu de navigation.'],
                 () => appState.currentPage === 'settings'),
+            step('settings', '.settings-theme-toggle',
+                ['Try dark mode', 'Switch between light and dark as often as you like. When you’re ready, select Next. This only changes your practice view, not your saved preference.'],
+                ['Essayer le mode sombre', 'Passez du mode clair au mode sombre autant de fois que vous le souhaitez. Quand vous avez terminé, sélectionnez Suivant. Seul l’affichage de l’exercice change, pas votre préférence enregistrée.']),
             step('settings', '#settings-visual-flowchart-layout',
                 ['Choose a flowchart layout', 'This setting controls whether pathway cards stay on one row or shift up or down based on your decision. You can preview a selection here or leave it unchanged.'],
                 ['Choisir la disposition de l’organigramme', 'Ce réglage permet de garder les cartes sur une seule rangée ou de déplacer la carte suivante vers le haut ou le bas selon votre décision. Vous pouvez essayer un choix ou laisser le réglage tel quel.']),
@@ -161,10 +179,7 @@
                 ['Transférer les données enregistrées', 'Pour déplacer vos séances, votre progression et vos favoris, envoyez-vous un lien de sauvegarde. Sur l’autre appareil, collez le lien dans les paramètres et vérifiez l’aperçu avant de remplacer les données. Rien à envoyer ni à restaurer ici.']),
             step('settings', '#settings-reset-title',
                 ['Reset saved data', 'This option clears saved work and preferences on this device. Use it only when you want to start fresh. This tutorial won’t reset anything.'],
-                ['Réinitialiser les données enregistrées', 'Cette option efface le travail enregistré et les préférences sur cet appareil. Utilisez-la seulement pour repartir de zéro. Cet exercice ne réinitialise rien.']),
-            step('settings', '.settings-theme-toggle',
-                ['Try dark mode', 'Toggle Dark mode to see how it looks, or select Finish to skip it. The practice toggle won’t change your app’s appearance setting.'],
-                ['Essayer le mode sombre', 'Actionnez le mode sombre pour voir le résultat ou sélectionnez Terminer pour passer cette étape. Cet essai ne modifie pas le réglage d’apparence de votre application.'])
+                ['Réinitialiser les données enregistrées', 'Cette option efface le travail enregistré et les préférences sur cet appareil. Utilisez-la seulement pour repartir de zéro. Cet exercice ne réinitialise rien.'])
         ]]
     ];
     const previews = {
@@ -253,21 +268,33 @@
         schedulePlacement(true);
     }
 
+    function showCentreNavigation(item) {
+        const tab = item.centreTab();
+        const drawer = centreDrawer();
+        // Keep the real mobile drawer below the tutorial callout instead of making it modal.
+        if (drawer.contains(tab) && !drawer.open) drawer.show();
+        byId('resource-centre-browse').setAttribute('aria-expanded', String(drawer.open));
+        tab.tabIndex = 0;
+    }
+
     function update(event) {
         if (!tutorialPractice || !dialog.open) return;
         const item = activeTour[index];
         if (event && item.ready?.(event)) {
             index += 1;
             renderStep();
+            if (item.centreTab) next.focus({ preventScroll: true });
             return;
         }
+        if (item.centreTab) showCentreNavigation(item);
+        dialog.classList.toggle('tutorial-centre-content', !!item.centreContent);
         byId('tutorial-progress').textContent = t('tutorial_progress')(t(params.get('tutorial')), index + 1, activeTour.length);
         const text = item[document.documentElement.lang === 'fr' ? 'fr' : 'en'];
         if (heading.textContent !== text[0]) heading.textContent = text[0];
         const description = byId('tutorial-description');
         if (description.textContent !== text[1]) description.textContent = text[1];
         const last = index === activeTour.length - 1;
-        next.hidden = params.get('tutorial') !== 'tutorial_centre_settings' || last || !!item.ready;
+        next.hidden = params.get('tutorial') !== 'tutorial_centre_settings' || last || (!!item.ready && !item.optional);
         finish.hidden = !last;
         const selector = typeof item.selector === 'function' ? item.selector() : item.selector;
         const previous = target;
@@ -281,13 +308,14 @@
         if (!dialog.open || !tutorialPractice) return;
         if (scroll && target) {
             const anchor = target.matches('details[open]') ? target.querySelector('summary') : target;
-            anchor?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+            anchor?.scrollIntoView({ block: activeTour[index].centreContent ? 'nearest' : 'center', inline: 'nearest', behavior: 'instant' });
         }
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(placeSpotlight);
     }
 
     function placeSpotlight() {
+        const centreContent = activeTour[index].centreContent;
         const width = window.innerWidth;
         const height = window.innerHeight;
         const margin = 12;
@@ -338,12 +366,20 @@
             x = side === 'right' ? right + gap : left - gap - panelWidth;
             y = clamp(centerY - actualHeight / 2, margin, height - margin - actualHeight);
             point = [side === 'right' ? x : x + panelWidth, clamp(centerY, y + 20, y + actualHeight - 20), side === 'right' ? -45 : 135];
+        } else if (fits && centreContent) {
+            // Dock below the readable part of the preview and leave room to scroll past the callout.
+            panel.style.maxHeight = `${Math.floor(height * .43)}px`;
+            y = height - margin - panel.getBoundingClientRect().height;
         } else {
             // Dock at the roomier edge instead of compressing the caption to fit a gap.
             if (!fits) x = (width - preferredWidth) / 2;
             y = fits && above > below ? margin : height - margin - panelHeight;
         }
         Object.assign(panel.style, { left: `${x}px`, top: `${y}px` });
+        if (centreContent && target) {
+            const inset = fits && !point ? Math.max(0, bottom - y) : 0;
+            target.style.setProperty('--tutorial-content-inset', `${inset}px`);
+        }
         panel.tabIndex = panel.scrollHeight > panel.clientHeight ? 0 : -1;
         arrow.hidden = !point;
         if (point) Object.assign(arrow.style, {
@@ -356,6 +392,7 @@
         cancelAnimationFrame(frame);
         dialog.close();
         if (tutorialPractice) {
+            if (activeTour[index].centreTab) closeResourceCentreDrawer();
             window.parent.postMessage('tutorial-close', window.location.origin);
         } else {
             practiceFrame?.remove();
@@ -381,6 +418,8 @@
     function allowsInteraction(element) {
         if (dialog.contains(element)) return true;
         if (!target?.contains(element)) return false;
+        const item = activeTour[index];
+        if (item.centreContent) return element === target || !!(item.interaction && element.closest(item.interaction));
         // The final map is for viewing and panning, not starting another branch.
         return !target.matches('#visual-flowchart-viewport, #journey-map') ||
             !element.closest('a, button, input, select, summary');
@@ -402,6 +441,9 @@
         if (event.key === 'Escape' && !event.target.closest('details[open]')) {
             blockInteraction(event);
             close();
+        } else if (tutorialPractice && activeTour[index].centreTab && target?.contains(event.target) &&
+            ['Home', 'End', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+            blockInteraction(event);
         } else if (tutorialPractice && event.key === 'Tab') {
             const focusable = [...document.querySelectorAll('a[href], button, input, select, summary, [tabindex]')]
                 .filter(el => el.tabIndex >= 0 && !el.disabled && !el.closest('[inert]') && isVisible(el) && allowsInteraction(el));

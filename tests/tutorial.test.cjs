@@ -4,24 +4,26 @@ const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const vm = require('node:vm');
 
-function setup(tour = 'nav_flowchart', query = '') {
+function setup(tour = 'nav_flowchart', query = '', compact = false) {
     const checks = Array.from({ length: 8 }, () => ({ checked: false, dispatchEvent() {} }));
     class Element {
         constructor() {
             this.handlers = new Map();
-            this.style = {};
+            this.style = { setProperty(name, value) { this[name] = value; } };
+            this.attributes = new Map();
             this.classList = { add() {}, remove() {}, toggle() {} };
             this.value = '';
         }
         addEventListener(name, callback) { this.handlers.set(name, callback); }
-        setAttribute() {}
+        setAttribute(name, value) { this.attributes.set(name, value); }
+        getAttribute(name) { return this.attributes.get(name); }
         replaceChildren() {}
         append() {}
-        contains(element) { return this === element; }
+        contains(element) { return this === element || (!!element?.parent && this.contains(element.parent)); }
         matches(selector) { return this.open && selector === 'details[open]'; }
         querySelector(selector) { return elements.get(selector) || null; }
         querySelectorAll(selector) { return selector === '.checklist-line input' ? checks : []; }
-        getClientRects() { return [{}]; }
+        getClientRects() { return this.hidden ? [] : [{}]; }
         getBoundingClientRect() { return this.rect || { left: 20, top: 200, right: 200, bottom: 244, width: 180, height: 44 }; }
         closest(selector) { return selector === '[data-schedule-grade]' && this.scheduleGrade ? this : null; }
         scrollIntoView() {}
@@ -39,6 +41,11 @@ function setup(tour = 'nav_flowchart', query = '') {
         return elements.get(id);
     };
     for (const selector of ['.tutorial-panel', '.tutorial-body', '.tutorial-spotlight', '.tutorial-close', '.tutorial-arrow']) get(selector);
+    if (compact) {
+        for (const id of ['favourites', 'scores', 'pillars', 'resources', 'tutorials', 'faq', 'about']) {
+            get(`rc-tab-${id}`).parent = get('resource-centre-drawer');
+        }
+    }
     get('program-prompt-modal').hidden = true;
     const events = new Map();
     const windowEvents = new Map();
@@ -50,7 +57,14 @@ function setup(tour = 'nav_flowchart', query = '') {
         URL, Element, Event, CSS: { escape: value => value }, tutorialPractice: true, appState: state,
         menuState,
         openVisualFlowchartModal() {},
-        selectResourceCentrePage: section => visitedSections.push(section),
+        selectResourceCentrePage: section => {
+            for (const id of ['favourites', 'scores', 'pillars', 'resources', 'tutorials', 'faq', 'about']) {
+                get(`rc-tab-${id}`).setAttribute('aria-selected', String(id === section));
+                get(`${id}-section`).hidden = id !== section;
+            }
+            visitedSections.push(section);
+        },
+        closeResourceCentreDrawer: () => get('resource-centre-drawer').close(),
         document: {
             documentElement: { lang: 'en' }, body: get('body'),
             getElementById: get,
@@ -76,6 +90,7 @@ function setup(tour = 'nav_flowchart', query = '') {
     return {
         get, state, messages, checks, menuState, visitedSections, viewport: context.window,
         action: (id, type = 'change') => events.get(type)({ type, target: get(id) }),
+        selectSection: context.selectResourceCentrePage,
         clickBlocked(id) {
             let blocked = false;
             windowEvents.get('click')({
@@ -133,31 +148,72 @@ test('flowchart uses real setup selections and leaves only the last practice ite
     assert.equal(messages.at(-1), 'tutorial-close');
 });
 
-test('Centre and Settings tours can skip optional interactions and end on dark mode', () => {
-    const { get, state, action, visitedSections, messages } = setup('tutorial_centre_settings');
+test('Centre tour spotlights each navigation button before displaying the real section', () => {
+    const { get, action, selectSection, visitedSections, clickBlocked } = setup('tutorial_centre_settings');
     const next = get('tutorial-next');
-    const finish = get('tutorial-finish');
-    for (const section of ['favourites', 'scores', 'pillars', 'resources', 'tutorials', 'faq', 'about']) {
+    const sections = ['favourites', 'scores', 'pillars', 'resources', 'tutorials', 'faq', 'about'];
+    for (const [index, section] of sections.entries()) {
+        assert.equal(clickBlocked(`rc-tab-${section}`), false);
+        assert.equal(clickBlocked(`rc-tab-${sections[(index + 1) % sections.length]}`), true);
+        assert.equal(next.hidden, false);
+        if (index % 2) {
+            selectSection(section); // The real tab handler runs before the tutorial sees the result.
+            action(`rc-tab-${section}`, 'click');
+        } else {
+            next.click();
+        }
         assert.equal(visitedSections.at(-1), section);
+        assert.equal(get(`${section}-section`).hidden, false);
+        assert.equal(clickBlocked(`rc-tab-${section}`), true);
+        assert.equal(clickBlocked(`${section}-section`), false);
         assert.equal(next.hidden, false);
         next.click();
     }
+    assert.deepEqual(visitedSections, sections);
+    assert.equal(get('tutorial-heading').textContent, 'Open Settings');
+});
+
+test('Settings lets users toggle dark mode repeatedly before advancing with Next', () => {
+    const { get, state, action, messages } = setup('tutorial_centre_settings');
+    const next = get('tutorial-next');
+    const finish = get('tutorial-finish');
+    const title = () => get('tutorial-heading').textContent;
+    for (let i = 0; i < 14; i++) next.click();
     assert.equal(get('tutorial-heading').textContent, 'Open Settings');
     assert.equal(next.hidden, true);
     state.currentPage = 'settings';
     action('settings-nav', 'click');
-    for (const title of ['Choose a flowchart layout', 'Transfer saved data', 'Reset saved data']) {
-        assert.equal(get('tutorial-heading').textContent, title);
+    for (let i = 0; i < 2; i++) {
+        action('settings-dark-mode');
+        assert.equal(title(), 'Try dark mode');
         assert.equal(next.hidden, false);
+        assert.equal(finish.hidden, true);
+    }
+    next.click();
+    for (const expected of ['Choose a flowchart layout', 'Transfer saved data']) {
+        assert.equal(title(), expected);
         next.click();
     }
-    assert.equal(get('tutorial-heading').textContent, 'Try dark mode');
+    assert.equal(title(), 'Reset saved data');
     assert.equal(next.hidden, true);
     assert.equal(finish.hidden, false);
-    action('settings-dark-mode');
-    assert.equal(get('tutorial-heading').textContent, 'Try dark mode');
     finish.click();
     assert.equal(messages.at(-1), 'tutorial-close');
+});
+
+test('mobile Centre tour opens the real tab drawer for navigation and closes it for the preview', () => {
+    const { get } = setup('tutorial_centre_settings', '', true);
+    const drawer = get('resource-centre-drawer');
+    const next = get('tutorial-next');
+    assert.equal(drawer.open, true);
+    assert.equal(drawer.modal, false, 'the callout must remain usable while the drawer is open');
+    next.click();
+    assert.equal(drawer.open, false);
+    assert.equal(get('favourites-section').hidden, false);
+    next.click();
+    assert.equal(drawer.open, true);
+    get('.tutorial-close').click();
+    assert.equal(drawer.open, false);
 });
 
 test('schedule advances on opening the actual menu, changing a grade and closing it', () => {

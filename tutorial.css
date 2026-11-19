@@ -137,6 +137,19 @@ body:has(#app-tutorial.tutorial-host[open]) {
     display: none;
 }
 
+.tutorial-practice .resource-centre-drawer {
+    z-index: 19999;
+}
+
+.tutorial-practice:has(.tutorial-centre-content[open]) .resource-centre-mobile-browse {
+    display: none;
+}
+
+.tutorial-practice:has(.tutorial-centre-content[open]) .resource-centre-panel:not([hidden]) {
+    padding-block-end: calc(24px + var(--tutorial-content-inset, 0px));
+    scroll-padding-block-end: var(--tutorial-content-inset, 0px);
+}
+
 .tutorial-spotlight {
     position: absolute;
     border-radius: .5rem;
