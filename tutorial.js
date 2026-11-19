@@ -5,6 +5,7 @@
     const spotlight = dialog.querySelector('.tutorial-spotlight');
     const arrow = dialog.querySelector('.tutorial-arrow');
     const heading = byId('tutorial-heading');
+    const next = byId('tutorial-next');
     const finish = byId('tutorial-finish');
     const status = byId('tutorial-status');
     const params = new URL(window.location.href).searchParams;
@@ -49,8 +50,8 @@
 
     const tableFilter = '#toolkit-table-head .toolkit-column-filter[data-field="program"]';
     const tableSort = '#toolkit-table-head .toolkit-sort-btn[data-field="name"]';
-    const centreNext = '.resource-centre-cycle-next';
-    let startingTheme;
+    const centreStep = (section, selector, en, fr) =>
+        step('resource-centre', selector, en, fr, null, () => selectResourceCentrePage(section));
     const tours = [
         ['nav_flowchart', [
             ...setup,
@@ -126,31 +127,44 @@
                 ['Explorer une évaluation', 'Survolez, sélectionnez au clavier ou touchez un élément pour lire les détails. Le calendrier tient compte de vos niveaux. Terminer efface vos choix d’exercice.'])
         ]],
         ['tutorial_centre_settings', [
-            step('resource-centre', centreNext,
-                ['Start in My Saved Items', 'This is where you’ll find saved pathway sessions and bookmarked resources. Select Next to open the guide to scores and percentiles.'],
-                ['Commencer dans Mes éléments enregistrés', 'Retrouvez ici vos séances enregistrées et vos ressources favorites. Sélectionnez Suivant pour ouvrir le guide des scores et des rangs centiles.'],
-                () => resourceCentrePage === 'scores', () => selectResourceCentrePage('favourites')),
-            step('resource-centre', centreNext,
-                ['Browse the reference guides', 'Scores & Percentiles explains how to interpret screening results. Select Next to explore the literacy pillars.'],
-                ['Parcourir les guides de référence', 'Le guide des scores et des rangs centiles explique comment interpréter les résultats du dépistage. Sélectionnez Suivant pour explorer les piliers de la littératie.'],
-                () => resourceCentrePage === 'pillars'),
-            step('resource-centre', () => [...document.querySelectorAll('#pillars-section .pillar-definition summary')][0],
-                ['Open a literacy pillar', 'Select a heading to reveal its definition. You can refer to these definitions when choosing resources.'],
-                ['Ouvrir un pilier de la littératie', 'Sélectionnez un titre pour afficher sa définition. Vous pouvez consulter ces définitions au moment de choisir des ressources.'],
-                () => !!document.querySelector('#pillars-section .pillar-definition[open]')),
+            centreStep('favourites', '#resource-centre-reader-title',
+                ['My Saved Items', 'Find saved flowchart sessions under Sessions and bookmarked teaching materials under Resources. This practice copy starts empty. In the regular app, use the section list (Browse sections on a small screen) or the Previous and Next buttons below the content.'],
+                ['Mes éléments enregistrés', 'Retrouvez les parcours enregistrés sous Séances et le matériel mis en favori sous Ressources. Cette copie d’exercice est vide. Dans l’application, utilisez la liste des sections (Parcourir les sections sur petit écran) ou les boutons Précédent et Suivant sous le contenu.']),
+            centreStep('scores', '#resource-centre-reader-title',
+                ['Scores & Percentiles', 'Use this guide to understand scores from literacy assessments. It explains how percentile ranks compare a result with a reference group and how to interpret standard scores.'],
+                ['Scores et rangs centiles', 'Ce guide aide à comprendre les résultats des évaluations en littératie. Il explique comment les rangs centiles situent un résultat par rapport à un groupe de référence et comment interpréter les scores standardisés.']),
+            centreStep('pillars', '#pillars-section .pillar-definition summary',
+                ['Literacy Pillars', 'Look up skills such as phonological awareness, phonics, fluency, and vocabulary. Open the highlighted heading to see a definition, or select Next to continue.'],
+                ['Piliers de la littératie', 'Consultez les définitions de notions comme la conscience phonologique, la phonétique, la fluidité et le vocabulaire. Ouvrez le titre en surbrillance ou sélectionnez Suivant.']),
+            centreStep('resources', '#resource-centre-reader-title',
+                ['Division resources', 'Find the division’s screening and progress-monitoring overview, English and French learning progressions, and structured literacy scope and sequence documents for French Immersion.'],
+                ['Ressources de la division', 'Retrouvez la vue d’ensemble du dépistage et du suivi des progrès, les progressions des apprentissages en anglais et en français et les séquences d’enseignement de la littératie structurée en immersion française.']),
+            centreStep('tutorials', '#resource-centre-reader-title',
+                ['App tutorials', 'Return here to practise the Flowchart, Literacy Toolkit, or Assessment Schedule. Each tutorial opens a separate copy of the app, so you can experiment without changing saved work.'],
+                ['Tutoriels de l’application', 'Revenez ici pour vous exercer avec l’organigramme, la boîte à outils ou le calendrier d’évaluation. Chaque tutoriel ouvre une copie distincte de l’application sans modifier vos données enregistrées.']),
+            centreStep('faq', '#faq-search-input',
+                ['Frequently asked questions', 'Search by keyword or browse categories for common questions about screening, scoring, and progress monitoring. Try a search if you like, or select Next.'],
+                ['Foire aux questions', 'Faites une recherche par mot-clé ou parcourez les catégories pour trouver des réponses sur le dépistage, la cotation et le suivi des progrès. Essayez la recherche ou sélectionnez Suivant.']),
+            centreStep('about', '#resource-centre-reader-title',
+                ['About this app', 'Read why the division created this guide and how its screening and progress-monitoring schedule supports instructional planning.'],
+                ['À propos de l’application', 'Découvrez pourquoi la division a créé ce guide et comment son calendrier de dépistage et de suivi des progrès aide à planifier l’enseignement.']),
             step('resource-centre', () => visibleTarget('.nav-settings')
                 || (appState.mobileMenuOpen ? '.mobile-nav-item[data-page="settings"]' : '.mobile-menu-btn'),
                 ['Open Settings', 'Select Settings in the navigation. On a smaller screen, open the navigation menu first.'],
                 ['Ouvrir les paramètres', 'Sélectionnez Paramètres dans la navigation. Sur un petit écran, ouvrez d’abord le menu de navigation.'],
                 () => appState.currentPage === 'settings'),
-            step('settings', '.settings-theme-toggle',
-                ['Try changing the appearance', 'Toggle Dark mode to see the appearance change. This practice change won’t affect your app.'],
-                ['Essayer une autre apparence', 'Actionnez le mode sombre pour voir l’apparence changer. Ce changement ne touche pas votre application.'],
-                () => byId('settings-dark-mode').checked !== startingTheme,
-                () => { startingTheme = byId('settings-dark-mode').checked; }),
+            step('settings', '#settings-visual-flowchart-layout',
+                ['Choose a flowchart layout', 'This setting controls whether pathway cards stay on one row or shift up or down based on your decision. You can preview a selection here or leave it unchanged.'],
+                ['Choisir la disposition de l’organigramme', 'Ce réglage permet de garder les cartes sur une seule rangée ou de déplacer la carte suivante vers le haut ou le bas selon votre décision. Vous pouvez essayer un choix ou laisser le réglage tel quel.']),
             step('settings', '#settings-transfer-title',
-                ['Find the data transfer tools', 'Use Transfer saved data in the regular app to move saved sessions and bookmarks to another device. No data will be sent or replaced in this tutorial.'],
-                ['Repérer les outils de transfert', 'Dans l’application, utilisez Transférer les données enregistrées pour déplacer vos séances et vos favoris vers un autre appareil. Cet exercice n’envoie ni ne remplace aucune donnée.'])
+                ['Transfer saved data', 'To move sessions, progress, and bookmarks to another device, email yourself a backup link. On the other device, paste the link in Settings and review the preview before replacing saved data. You don’t need to send or restore anything here.'],
+                ['Transférer les données enregistrées', 'Pour déplacer vos séances, votre progression et vos favoris, envoyez-vous un lien de sauvegarde. Sur l’autre appareil, collez le lien dans les paramètres et vérifiez l’aperçu avant de remplacer les données. Rien à envoyer ni à restaurer ici.']),
+            step('settings', '#settings-reset-title',
+                ['Reset saved data', 'This option clears saved work and preferences on this device. Use it only when you want to start fresh. This tutorial won’t reset anything.'],
+                ['Réinitialiser les données enregistrées', 'Cette option efface le travail enregistré et les préférences sur cet appareil. Utilisez-la seulement pour repartir de zéro. Cet exercice ne réinitialise rien.']),
+            step('settings', '.settings-theme-toggle',
+                ['Try dark mode', 'Toggle Dark mode to see how it looks, or select Finish to skip it. The practice toggle won’t change your app’s appearance setting.'],
+                ['Essayer le mode sombre', 'Actionnez le mode sombre pour voir le résultat ou sélectionnez Terminer pour passer cette étape. Cet essai ne modifie pas le réglage d’apparence de votre application.'])
         ]]
     ];
     const previews = {
@@ -252,7 +266,9 @@
         if (heading.textContent !== text[0]) heading.textContent = text[0];
         const description = byId('tutorial-description');
         if (description.textContent !== text[1]) description.textContent = text[1];
-        finish.hidden = index !== activeTour.length - 1;
+        const last = index === activeTour.length - 1;
+        next.hidden = params.get('tutorial') !== 'tutorial_centre_settings' || last || !!item.ready;
+        finish.hidden = !last;
         const selector = typeof item.selector === 'function' ? item.selector() : item.selector;
         const previous = target;
         target = selector ? visibleTarget(selector) : null;
@@ -352,6 +368,12 @@
         }
     }
 
+    next.addEventListener('click', () => {
+        if (next.hidden) return;
+        index += 1;
+        renderStep();
+        (next.hidden ? (finish.hidden ? dialog.querySelector('.tutorial-close') : finish) : next).focus({ preventScroll: true });
+    });
     finish.addEventListener('click', close);
     dialog.querySelector('.tutorial-close').addEventListener('click', close);
     dialog.addEventListener('click', event => event.stopPropagation());

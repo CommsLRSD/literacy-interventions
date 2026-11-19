@@ -14,6 +14,7 @@ const TRANSLATIONS = {
         tutorial_load_error: 'Practice could not start. Exit the tutorial and try again.',
         tutorial_close: 'Exit tutorial',
         tutorial_done: 'Finish',
+        tutorial_next: 'Next',
         tutorial_progress: (section, step, total) => `${section} · ${step} of ${total}`,
         // ── Page title ──
         page_title: 'Literacy Interventions — LRSD Literacy Resource',
@@ -603,6 +604,7 @@ const TRANSLATIONS = {
         tutorial_load_error: 'L’exercice n’a pas pu démarrer. Quittez le tutoriel et réessayez.',
         tutorial_close: 'Quitter le tutoriel',
         tutorial_done: 'Terminer',
+        tutorial_next: 'Suivant',
         tutorial_progress: (section, step, total) => `${section} · ${step} sur ${total}`,
         // ── Page title ──
         page_title: 'Literacy Interventions — Ressource en littératie de la DSLR',

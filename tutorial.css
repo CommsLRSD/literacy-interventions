@@ -176,12 +176,12 @@ body:has(#app-tutorial.tutorial-host[open]) {
     overflow-wrap: anywhere;
 }
 
-.tutorial-panel-header,
-#tutorial-finish {
+.tutorial-panel-header {
     flex-shrink: 0;
 }
 
-.tutorial-panel #tutorial-finish {
+.tutorial-panel .tutorial-primary {
+    flex-shrink: 0;
     align-self: flex-end;
     margin-block-start: .5rem;
 }

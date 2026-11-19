@@ -43,12 +43,14 @@ function setup(tour = 'nav_flowchart', query = '') {
     const events = new Map();
     const windowEvents = new Map();
     const messages = [];
+    const visitedSections = [];
     const state = { currentPage: 'home', language: 'en', selectedProgram: null };
     const menuState = { resourceType: '' };
     const context = vm.createContext({
         URL, Element, Event, CSS: { escape: value => value }, tutorialPractice: true, appState: state,
         menuState,
         openVisualFlowchartModal() {},
+        selectResourceCentrePage: section => visitedSections.push(section),
         document: {
             documentElement: { lang: 'en' }, body: get('body'),
             getElementById: get,
@@ -72,7 +74,7 @@ function setup(tour = 'nav_flowchart', query = '') {
     vm.runInContext(readFileSync(join(__dirname, '..', 'tutorial.js'), 'utf8'), context);
     events.get('app-ready')();
     return {
-        get, state, messages, checks, menuState, viewport: context.window,
+        get, state, messages, checks, menuState, visitedSections, viewport: context.window,
         action: (id, type = 'change') => events.get(type)({ type, target: get(id) }),
         clickBlocked(id) {
             let blocked = false;
@@ -92,6 +94,7 @@ test('flowchart uses real setup selections and leaves only the last practice ite
     const title = () => get('tutorial-heading').textContent;
     assert.equal(get('app-tutorial').modal, false, 'practice must leave the app controls interactive');
     assert.equal(finish.hidden, true);
+    assert.equal(get('tutorial-next').hidden, true);
     action('home-program-select');
     assert.equal(title(), 'Choose a teaching program');
 
@@ -127,6 +130,33 @@ test('flowchart uses real setup selections and leaves only the last practice ite
     assert.equal(finish.hidden, false);
     finish.click();
     assert.equal(get('app-tutorial').open, false);
+    assert.equal(messages.at(-1), 'tutorial-close');
+});
+
+test('Centre and Settings tours can skip optional interactions and end on dark mode', () => {
+    const { get, state, action, visitedSections, messages } = setup('tutorial_centre_settings');
+    const next = get('tutorial-next');
+    const finish = get('tutorial-finish');
+    for (const section of ['favourites', 'scores', 'pillars', 'resources', 'tutorials', 'faq', 'about']) {
+        assert.equal(visitedSections.at(-1), section);
+        assert.equal(next.hidden, false);
+        next.click();
+    }
+    assert.equal(get('tutorial-heading').textContent, 'Open Settings');
+    assert.equal(next.hidden, true);
+    state.currentPage = 'settings';
+    action('settings-nav', 'click');
+    for (const title of ['Choose a flowchart layout', 'Transfer saved data', 'Reset saved data']) {
+        assert.equal(get('tutorial-heading').textContent, title);
+        assert.equal(next.hidden, false);
+        next.click();
+    }
+    assert.equal(get('tutorial-heading').textContent, 'Try dark mode');
+    assert.equal(next.hidden, true);
+    assert.equal(finish.hidden, false);
+    action('settings-dark-mode');
+    assert.equal(get('tutorial-heading').textContent, 'Try dark mode');
+    finish.click();
     assert.equal(messages.at(-1), 'tutorial-close');
 });
 
