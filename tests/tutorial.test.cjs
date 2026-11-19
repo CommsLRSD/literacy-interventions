@@ -4,7 +4,7 @@ const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const vm = require('node:vm');
 
-function setup() {
+function setup(tour = 'tutorial_setup') {
     class Element {
         constructor() {
             this.handlers = new Map();
@@ -17,10 +17,11 @@ function setup() {
         replaceChildren() {}
         append() {}
         contains() { return false; }
-        matches(selector) { return this.control && selector.includes('select'); }
+        matches(selector) { return this.open && selector === 'details[open]'; }
         querySelector(selector) { return elements.get(selector) || null; }
         getClientRects() { return [{}]; }
-        getBoundingClientRect() { return { left: 20, top: 200, right: 200, bottom: 244, width: 180, height: 44 }; }
+        getBoundingClientRect() { return this.rect || { left: 20, top: 200, right: 200, bottom: 244, width: 180, height: 44 }; }
+        closest(selector) { return selector === '[data-schedule-grade]' && this.scheduleGrade ? this : null; }
         scrollIntoView() {}
         focus() { this.focused = true; }
         show() { this.open = true; this.modal = false; }
@@ -31,28 +32,27 @@ function setup() {
     const elements = new Map();
     const get = id => {
         if (!elements.has(id)) {
-            const element = new Element();
-            element.control = id.endsWith('-select');
-            elements.set(id, element);
+            elements.set(id, new Element());
         }
         return elements.get(id);
     };
-    for (const selector of ['.tutorial-panel', '.tutorial-spotlight', '.tutorial-close']) get(selector);
+    for (const selector of ['.tutorial-panel', '.tutorial-body', '.tutorial-spotlight', '.tutorial-close', '.tutorial-arrow']) get(selector);
     get('program-prompt-modal').hidden = true;
     const events = new Map();
     const messages = [];
     const state = { currentPage: 'home', language: 'en', selectedProgram: null };
     const context = vm.createContext({
-        URL, Element, tutorialPractice: true, appState: state,
+        URL, Element, CSS: { escape: value => value }, tutorialPractice: true, appState: state,
         document: {
             documentElement: { lang: 'en' }, body: get('body'),
             getElementById: get,
             createElement: () => new Element(),
+            querySelector: selector => elements.get(selector) || null,
             querySelectorAll: selector => selector.startsWith('#') ? [get(selector.slice(1))] : [],
             addEventListener: (name, callback) => events.set(name, callback)
         },
         window: {
-            location: { href: 'https://example.org/?tutorial-practice=1&tutorial=tutorial_setup', origin: 'https://example.org' },
+            location: { href: `https://example.org/?tutorial-practice=1&tutorial=${tour}`, origin: 'https://example.org' },
             parent: { postMessage: message => messages.push(message) },
             innerWidth: 1024, innerHeight: 768, addEventListener() {}
         },
@@ -66,45 +66,77 @@ function setup() {
     vm.runInContext(readFileSync(join(__dirname, '..', 'tutorial.js'), 'utf8'), context);
     events.get('app-ready')();
     return {
-        get, state, messages,
-        change: id => events.get('change')({ type: 'change', target: get(id) })
+        get, state, messages, viewport: context.window,
+        action: (id, type = 'change') => events.get(type)({ type, target: get(id) })
     };
 }
 
-test('hands-on setup requires real selections and starting the app before it can finish', () => {
-    const { get, state, change, messages } = setup();
-    const next = get('tutorial-next');
+test('setup advances after real selections, with Finish only after the pathway opens', () => {
+    const { get, state, action, messages } = setup();
+    const finish = get('tutorial-finish');
+    const title = () => get('tutorial-heading').textContent;
     assert.equal(get('app-tutorial').modal, false, 'practice must leave the app controls interactive');
-    assert.equal(next.disabled, true);
-    next.click();
-    assert.equal(get('tutorial-heading').textContent, 'Choose a teaching program');
+    assert.equal(finish.hidden, true);
+    action('home-program-select');
+    assert.equal(title(), 'Choose a teaching program');
 
-    state.selectedProgram = 'English';
-    change('home-program-select');
-    assert.equal(next.disabled, false);
-    state.selectedProgram = null;
-    change('home-program-select');
-    assert.equal(next.disabled, true, 'clearing a selection must revoke completion');
-    state.selectedProgram = 'English';
-    change('home-program-select');
-    next.click();
-    assert.equal(next.disabled, true);
-
+    state.selectedProgram = 'French Immersion';
+    get('program-prompt-modal').hidden = false;
+    action('home-program-select');
+    assert.equal(title(), 'Choose a teaching program', 'wait until the app language choice is resolved');
+    get('program-prompt-modal').hidden = true;
+    action('program-prompt-language', 'click');
+    assert.equal(title(), 'Select a screener');
     get('home-screener-select').value = 'dibels';
-    change('home-screener-select');
-    next.click();
-    assert.equal(next.disabled, true);
-    get('tutorial-try').click();
-    assert.equal(get('home-grade-select').focused, true);
+    action('home-screener-select');
+    assert.equal(title(), 'Select a grade');
     get('home-grade-select').value = '3';
-    change('home-grade-select');
-    next.click();
-    assert.equal(next.disabled, true, 'Next must not start a pathway on the user’s behalf');
-
+    action('home-grade-select');
+    assert.equal(title(), 'Start the practice pathway');
+    assert.equal(finish.hidden, true);
     state.currentPage = 'flowchart';
-    change('home-start-btn');
-    assert.equal(next.disabled, false);
-    next.click();
+    action('home-start-btn', 'click');
+    assert.equal(title(), 'Your pathway is ready');
+    assert.equal(finish.hidden, false);
+    finish.click();
     assert.equal(get('app-tutorial').open, false);
     assert.equal(messages.at(-1), 'tutorial-close');
+});
+
+test('schedule advances on opening the actual menu, changing a grade and closing it', () => {
+    const { get, state, action } = setup('nav_schedule');
+    const title = () => get('tutorial-heading').textContent;
+    state.selectedProgram = 'English';
+    action('home-program-select');
+    assert.equal(title(), 'Open the grade filter');
+    const dropdown = get('schedule-grade-filter');
+    dropdown.open = true;
+    action('schedule-grade-filter', 'toggle');
+    assert.equal(title(), 'Change the displayed grades');
+    action('unrelated-input');
+    assert.equal(title(), 'Change the displayed grades');
+    get('sample-grade').scheduleGrade = true;
+    action('sample-grade');
+    assert.equal(title(), 'Close the menu');
+    dropdown.open = false;
+    action('schedule-grade-filter', 'toggle');
+    assert.equal(title(), 'Explore an assessment');
+    assert.equal(get('tutorial-finish').hidden, false);
+});
+
+test('callout sits beside the highlight and flips above controls near the viewport bottom', () => {
+    const { get, action, viewport } = setup();
+    const panel = get('.tutorial-panel');
+    const arrow = get('.tutorial-arrow');
+    assert.ok(parseFloat(panel.style.top) > 244, 'place below the control when there is room');
+    assert.equal(arrow.hidden, false);
+    assert.equal(arrow.style.rotate, '45deg');
+
+    viewport.innerWidth = 390;
+    viewport.innerHeight = 660;
+    get('home-program-select').rect = { left: 20, top: 560, right: 360, bottom: 604, width: 340, height: 44 };
+    action('home-program-select', 'click');
+    assert.ok(parseFloat(panel.style.top) + panel.getBoundingClientRect().height < 560);
+    assert.equal(arrow.style.rotate, '225deg');
+    assert.ok(parseFloat(panel.style.left) + parseFloat(panel.style.width) <= viewport.innerWidth);
 });

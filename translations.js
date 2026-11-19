@@ -7,18 +7,12 @@
 const TRANSLATIONS = {
     en: {
         tutorial_title: 'App tutorials',
-        tutorial_intro: 'Choose a hands-on practice walkthrough. Open real menus, make selections, and follow the results. Each walkthrough runs in a separate practice copy; your saved work stays untouched.',
+        tutorial_intro: 'Choose a hands-on practice walkthrough. Use the highlighted controls to advance automatically. Each walkthrough runs in a separate practice copy; your saved work stays untouched.',
         tutorial_practice: 'Practice session — your saved work stays untouched',
-        tutorial_action_wait: 'Try the highlighted control to continue.',
-        tutorial_action_done: 'Ready — select Next to continue.',
-        tutorial_target_missing: 'This control is not visible. Return to Sections and restart this practice walkthrough.',
+        tutorial_target_missing: 'This control is not visible. Return to the app page for this step, or exit and restart the walkthrough.',
         tutorial_load_error: 'Practice could not start. Exit the tutorial and try again.',
         tutorial_setup: 'Getting started',
         tutorial_close: 'Exit tutorial',
-        tutorial_steps: 'Tutorial steps',
-        tutorial_menu: 'Sections',
-        tutorial_try: 'Try it',
-        tutorial_next: 'Next',
         tutorial_done: 'Finish',
         tutorial_progress: (section, step, total) => `${section} · ${step} of ${total}`,
         // ── Page title ──
@@ -602,18 +596,12 @@ const TRANSLATIONS = {
 
     fr: {
         tutorial_title: 'Tutoriels de l’application',
-        tutorial_intro: 'Choisissez un exercice guidé. Ouvrez les vrais menus, faites des choix et observez les résultats. Chaque exercice utilise une copie distincte; vos données enregistrées restent intactes.',
+        tutorial_intro: 'Choisissez un exercice guidé. Utilisez les commandes mises en évidence pour passer automatiquement à l’étape suivante. Chaque exercice utilise une copie distincte; vos données enregistrées restent intactes.',
         tutorial_practice: 'Exercice — vos données enregistrées restent intactes',
-        tutorial_action_wait: 'Essayez la commande mise en évidence pour continuer.',
-        tutorial_action_done: 'Prêt — sélectionnez Suivant pour continuer.',
-        tutorial_target_missing: 'Cette commande n’est pas visible. Revenez aux sections et recommencez cet exercice.',
+        tutorial_target_missing: 'Cette commande n’est pas visible. Revenez à la page de cette étape ou quittez et recommencez l’exercice.',
         tutorial_load_error: 'L’exercice n’a pas pu démarrer. Quittez le tutoriel et réessayez.',
         tutorial_setup: 'Premiers pas',
         tutorial_close: 'Quitter le tutoriel',
-        tutorial_steps: 'Étapes du tutoriel',
-        tutorial_menu: 'Sections',
-        tutorial_try: 'Essayer',
-        tutorial_next: 'Suivant',
         tutorial_done: 'Terminer',
         tutorial_progress: (section, step, total) => `${section} · ${step} sur ${total}`,
         // ── Page title ──
