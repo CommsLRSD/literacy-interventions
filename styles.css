@@ -9451,7 +9451,7 @@ body.step-review-modal-open { overflow: hidden; }
     position: relative;
     width: 100%;
     max-height: none;
-    overflow: visible;
+    overflow: clip;
   }
 
   .visual-flowchart-individual-review[hidden] {
