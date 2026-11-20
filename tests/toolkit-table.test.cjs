@@ -163,6 +163,20 @@ test('column filters allow several values per column, match any of them, and com
     assert.match(head, /onclick="sortToolkitTable\('resourceType'\)"/);
 });
 
+test('grade filters include resources with no grade information but exclude other tagged grades', () => {
+    const { run, json } = setup();
+    run(`
+        appState.interventionMenuData.resources = [
+            { id: 'unspecified', name: 'Unspecified', tags: [{ program: 'English' }] },
+            { id: 'empty', name: 'Empty grade list', tags: [{ program: 'English', gradeFilter: [] }] },
+            { id: 'matching', name: 'Matching grade', tags: [{ program: 'English', gradeFilter: ['2'] }] },
+            { id: 'different', name: 'Different grade', tags: [{ program: 'English', gradeFilter: ['3'] }] }
+        ];
+    `);
+    assert.deepEqual(json("getFilteredResources({ program: 'English', grade: ['2'] }).map(item => item.id)"),
+        ['unspecified', 'empty', 'matching']);
+});
+
 test('table filters must match the same tag and metadata and links only use matching tags', () => {
     const { run, json, hosts } = setup();
     run(`
