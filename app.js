@@ -9777,7 +9777,8 @@ function tagMatches(tag, state, excludeField) {
     if (excludeField !== 'grade') {
         // Several grades may be chosen at once; a tag matches if it covers any of them.
         const grades = normalizeGradeList(state.grade);
-        if (grades.length && !grades.some(grade => (tag.gradeFilter || []).includes(grade))) return false;
+        const tagGrades = tag.gradeFilter || [];
+        if (grades.length && tagGrades.length && !grades.some(grade => tagGrades.includes(grade))) return false;
     }
     return true;
 }

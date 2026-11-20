@@ -3415,8 +3415,12 @@
           "subtests": [
             "FSP"
           ],
-          "gradeRangeText": "",
-          "gradeFilter": [],
+          "gradeRangeText": "(K-2)",
+          "gradeFilter": [
+            "K",
+            "1",
+            "2"
+          ],
           "notes": "",
           "evidence": "",
           "recommended": true,
@@ -3434,8 +3438,12 @@
             "IDAPEL"
           ],
           "subtests": [],
-          "gradeRangeText": "",
-          "gradeFilter": [],
+          "gradeRangeText": "(3-5)",
+          "gradeFilter": [
+            "3",
+            "4",
+            "5"
+          ],
           "notes": "",
           "evidence": "",
           "recommended": false,
@@ -3447,8 +3455,15 @@
       "programs": [
         "French Immersion"
       ],
-      "gradeFilter": [],
-      "gradeRangeText": "",
+      "gradeFilter": [
+        "K",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "gradeRangeText": "(K-2); (3-5)",
       "url": "https://lrsdcdn.sharepoint.com/:b:/r/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Litt%C3%A9ratie%20structur%C3%A9e/La%20conscience%20phonologique/Pratique%20Phon%C3%A9mique%20-%20version%201.pdf?csf=1&web=1&e=GVZhpR"
     },
     {
@@ -3470,8 +3485,12 @@
           "subtests": [
             "FSP"
           ],
-          "gradeRangeText": "",
-          "gradeFilter": [],
+          "gradeRangeText": "(K-2)",
+          "gradeFilter": [
+            "K",
+            "1",
+            "2"
+          ],
           "notes": "",
           "evidence": "",
           "recommended": false,
@@ -3489,8 +3508,12 @@
             "IDAPEL"
           ],
           "subtests": [],
-          "gradeRangeText": "",
-          "gradeFilter": [],
+          "gradeRangeText": "(3-5)",
+          "gradeFilter": [
+            "3",
+            "4",
+            "5"
+          ],
           "notes": "",
           "evidence": "",
           "recommended": true,
@@ -3502,8 +3525,15 @@
       "programs": [
         "French Immersion"
       ],
-      "gradeFilter": [],
-      "gradeRangeText": "",
+      "gradeFilter": [
+        "K",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "gradeRangeText": "(K-2); (3-5)",
       "url": "https://lrsdcdn.sharepoint.com/:b:/r/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Litt%C3%A9ratie%20structur%C3%A9e/La%20conscience%20phonologique/Pratique%20Phon%C3%A9mique%20-%20r%C3%A9vis%C3%A9.pdf?csf=1&web=1&e=uYTyKd"
     },
     {
@@ -5059,11 +5089,20 @@
             "CTOPP-2"
           ],
           "subtests": [],
-          "gradeRangeText": "",
-          "gradeFilter": [],
+          "gradeRangeText": "(1-8)",
+          "gradeFilter": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8"
+          ],
           "notes": "",
           "evidence": "",
-          "recommended": true,
+          "recommended": false,
           "urls": [
             "https://lrsdcdn.sharepoint.com/:b:/r/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Structured%20Literacy/Assessments%20%26%20Interventions/Phonics/UFLI%20Placement%20Assessment.pdf?csf=1&web=1&e=x8NIof"
           ]
@@ -5078,11 +5117,20 @@
             "CTOPP-2"
           ],
           "subtests": [],
-          "gradeRangeText": "",
-          "gradeFilter": [],
+          "gradeRangeText": "(1-8)",
+          "gradeFilter": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8"
+          ],
           "notes": "",
           "evidence": "",
-          "recommended": true,
+          "recommended": false,
           "urls": [
             "https://lrsdcdn.sharepoint.com/:b:/r/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Structured%20Literacy/Assessments%20%26%20Interventions/Phonics/UFLI%20Placement%20Assessment.pdf?csf=1&web=1&e=x8NIof"
           ]
@@ -5091,8 +5139,17 @@
       "programs": [
         "English"
       ],
-      "gradeFilter": [],
-      "gradeRangeText": "",
+      "gradeFilter": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ],
+      "gradeRangeText": "(1-8)",
       "url": "https://lrsdcdn.sharepoint.com/:b:/r/sites/TeachingLearning/curriculum/Literacy/Early%20Literacy/Structured%20Literacy/Assessments%20%26%20Interventions/Phonics/UFLI%20Placement%20Assessment.pdf?csf=1&web=1&e=x8NIof"
     },
     {
