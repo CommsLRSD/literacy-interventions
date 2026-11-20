@@ -177,6 +177,31 @@ test('grade filters include resources with no grade information but exclude othe
         ['unspecified', 'empty', 'matching']);
 });
 
+test('placement and Phonemique resources carry their grade ranges by use and recommendation status', () => {
+    const { run, json } = setup();
+    for (const name of ['Phonémique version 1', 'Phonémique version 2']) {
+        const tags = json(`getAllResources().find(item => item.name === ${JSON.stringify(name)}).tags.map(tag => ({
+            resourceType: tag.resourceType, gradeFilter: tag.gradeFilter, gradeRangeText: tag.gradeRangeText
+        }))`);
+        assert.deepEqual(tags, [
+            { resourceType: 'Instructional Resource', gradeFilter: ['K', '1', '2'], gradeRangeText: '(K-2)' },
+            { resourceType: 'Intervention', gradeFilter: ['3', '4', '5'], gradeRangeText: '(3-5)' }
+        ]);
+        assert.equal(run(`getMatchingTags(getAllResources().find(item => item.name === ${JSON.stringify(name)}),
+            { resourceType: 'Instructional Resource', grade: ['2'] }).length`), 1);
+        assert.equal(run(`getMatchingTags(getAllResources().find(item => item.name === ${JSON.stringify(name)}),
+            { resourceType: 'Intervention', grade: ['4'] }).length`), 1);
+        assert.equal(run(`getMatchingTags(getAllResources().find(item => item.name === ${JSON.stringify(name)}),
+            { resourceType: 'Instructional Resource', grade: ['4'] }).length`), 0);
+    }
+
+    const ufli = json("getAllResources().find(item => item.name === 'UFLI Placement Assessment').tags.map(tag => ({ gradeFilter: tag.gradeFilter, recommended: tag.recommended }))");
+    assert.deepEqual(ufli, [
+        { gradeFilter: ['1', '2', '3', '4', '5', '6', '7', '8'], recommended: false },
+        { gradeFilter: ['1', '2', '3', '4', '5', '6', '7', '8'], recommended: false }
+    ]);
+});
+
 test('table filters must match the same tag and metadata and links only use matching tags', () => {
     const { run, json, hosts } = setup();
     run(`
